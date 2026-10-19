@@ -174,3 +174,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Папка с загруженными файлами (KYC, договоры)
+uploads/
