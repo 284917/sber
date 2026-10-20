@@ -93,6 +93,13 @@ def logout():
     response.delete_cookie("access_token")
     return response
 
+# --- Обработка выхода---
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("access_token")
+    return response
+
 # --- Обработка входа ---
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -116,18 +123,18 @@ def dashboard(request: Request, user: models.User = Depends(get_current_user), d
     if user.role == "borrower":
         apps = db.query(models.Application).filter(models.Application.user_id == user.id).all()
         return templates.TemplateResponse(
-            request=request,
-            name="borrower.html",
-            context={"user": user, "apps": apps}
+            request=request, name="borrower.html", context={"user": user, "apps": apps}
         )
     elif user.role == "creditor":
         apps = db.query(models.Application).filter(models.Application.status == "published").all()
         return templates.TemplateResponse(
-            request=request,
-            name="creditor.html",
-            context={"user": user, "apps": apps}
+            request=request, name="creditor.html", context={"user": user, "apps": apps}
         )
-    return HTMLResponse("Admin panel in progress...")
+
+    elif user.role == "admin":
+        return RedirectResponse(url="/admin", status_code=303)
+
+    return HTMLResponse("Роль не распознана")
 
 
 # --- Действия Заемщика (Создать заявку) ---
@@ -195,3 +202,54 @@ def view_offers(app_id: int, request: Request, user: models.User = Depends(get_c
         name="offers.html",
         context={"application": application, "offers": offers, "user": user}
     )
+
+
+# --- Кабинет Администратора (Аналитика и Модерация) ---
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Проверка роли
+    if user.role != "admin":
+        raise HTTPException(403, detail="Доступ только для администратора")
+
+    # Получаем все заявки
+    all_apps = db.query(models.Application).order_by(models.Application.created_at.desc()).all()
+    all_offers = db.query(models.Offer).all()
+    all_users = db.query(models.User).all()
+
+    # Считаем базовую аналитику (требование кейса)
+    total_apps = len(all_apps)
+    total_offers = len(all_offers)
+    # Средняя сумма (если заявок нет, то 0)
+    avg_amount = sum([float(a.funding_amount) for a in all_apps]) / total_apps if total_apps > 0 else 0
+
+    # Топ стран (простая группировка)
+    from collections import Counter
+    countries = Counter([a.target_jurisdiction for a in all_apps])
+    top_countries = countries.most_common(3)  # Топ-3 страны
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin.html",
+        context={
+            "user": user,
+            "apps": all_apps,
+            "offers": all_offers,
+            "users": all_users,
+            "total_apps": total_apps,
+            "total_offers": total_offers,
+            "avg_amount": round(avg_amount, 2),
+            "top_countries": top_countries
+        }
+    )
+
+
+# --- Экшн: Изменить статус заявки (Модерация) ---
+@app.post("/admin/application/{app_id}/status")
+def admin_change_app_status(app_id: int, new_status: str = Form(...), user: models.User = Depends(get_current_user),
+                            db: Session = Depends(get_db)):
+    if user.role != "admin": raise HTTPException(403)
+    app = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if app:
+        app.status = new_status
+        db.commit()
+    return RedirectResponse(url="/admin", status_code=303)
