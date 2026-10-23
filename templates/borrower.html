@@ -18,6 +18,9 @@
         .form-control { border-radius: 10px; }
         .btn-logout { color: #6B7280; text-decoration: none; font-weight: 500; transition: 0.2s; }
         .btn-logout:hover { color: #dc3545; }
+        .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 5px 15px; text-decoration: none; font-size: 14px; transition: 0.2s;}
+        .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
+        .kyc-done-badge { background-color: #E3FCEF; color: #21A038; padding: 5px 15px; border-radius: 10px; font-size: 14px; font-weight: 500; border: 1px solid #21A038; cursor: default; }
     </style>
 </head>
 <body>
@@ -25,6 +28,15 @@
     <div class="container">
         <span class="navbar-brand fw-bold" style="color: #21A038;">СБЕР | Ликвидность</span>
         <div class="d-flex align-items-center gap-3">
+            
+            <!-- ЛОГИКА КНОПКИ KYC -->
+            {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
+            {% if approved_count > 0 %}
+                <span class="kyc-done-badge">Верификация пройдена</span>
+            {% else %}
+                <a href="/kyc" class="btn-outline-sber">Верификация (KYC)</a>
+            {% endif %}
+            
             <span class="text-muted">{{ user.email }}</span>
             <a href="/logout" class="btn-logout" style="font-size: 14px;">Выйти</a>
         </div>
@@ -36,6 +48,19 @@
         <div class="col-md-4 mb-4">
             <div class="card card-sber p-4">
                 <h5 class="mb-3">Создать заявку</h5>
+                
+                <!-- Блок статуса KYC в форме -->
+                {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
+                {% set pending_count = user_docs|selectattr('status', 'equalto', 'pending')|list|length if user_docs else 0 %}
+                
+                {% if approved_count > 0 %}
+                    <div class="alert alert-success py-2" style="font-size: 13px; border-radius: 10px;">✅ Верификация пройдена. Вы можете создавать заявки.</div>
+                {% elif pending_count > 0 %}
+                    <div class="alert alert-warning py-2" style="font-size: 13px; border-radius: 10px;">⏳ Документы на проверке у администратора.</div>
+                {% else %}
+                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">❌ Верификация не пройдена. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить документы</a></div>
+                {% endif %}
+                
                 <form method="post" action="/create_application">
                     <div class="mb-2">
                         <input type="number" step="0.01" name="amount" class="form-control" placeholder="Сумма" required>
@@ -72,7 +97,6 @@
                         <td><strong>{{ app.funding_amount }} {{ app.currency_code }}</strong></td>
                         <td><span class="status-badge status-{{ app.status }}">{{ app.status }}</span></td>
                         <td>
-                            <!-- Ссылка на просмотр офферов по конкретной заявке -->
                             <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">Посмотреть офферы</a>
                         </td>
                     </tr>

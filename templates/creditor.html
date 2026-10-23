@@ -12,13 +12,30 @@
         .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; }
         .btn-sber:hover { background-color: #1a7e2c; color: white; }
         .form-control { border-radius: 10px; }
+        .btn-logout { color: #6B7280; text-decoration: none; font-weight: 500; transition: 0.2s; }
+        .btn-logout:hover { color: #dc3545; }
+        .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 5px 15px; text-decoration: none; font-size: 14px; transition: 0.2s;}
+        .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
+        .kyc-done-badge { background-color: #E3FCEF; color: #21A038; padding: 5px 15px; border-radius: 10px; font-size: 14px; font-weight: 500; border: 1px solid #21A038; cursor: default; }
     </style>
 </head>
 <body>
 <nav class="navbar navbar-sber py-3 mb-4">
     <div class="container">
         <span class="navbar-brand fw-bold" style="color: #21A038;">СБЕР | Ликвидность</span>
-        <span class="text-muted">{{ user.email }}</span>
+        <div class="d-flex align-items-center gap-3">
+            
+            <!-- ЛОГИКА КНОПКИ KYC -->
+            {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
+            {% if approved_count > 0 %}
+                <span class="kyc-done-badge">Верификация пройдена</span>
+            {% else %}
+                <a href="/kyc" class="btn-outline-sber">Верификация (KYC)</a>
+            {% endif %}
+            
+            <span class="text-muted">{{ user.email }}</span>
+            <a href="/logout" class="btn-logout" style="font-size: 14px;">Выйти</a>
+        </div>
     </div>
 </nav>
 <div class="container">

@@ -32,3 +32,14 @@ class Offer(Base):
     lender_commission = Column(Numeric(5, 2), nullable=False)
     total_commission = Column(Numeric(5, 2), nullable=False)
     status = Column(String(20), default="pending")
+
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    doc_type = Column(String(50))
+    file_path = Column(String(255))
+    status = Column(String(20), default="uploaded")
+    created_at = Column(DateTime, server_default=func.now())
+    user = relationship("User")
