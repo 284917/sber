@@ -39,6 +39,15 @@
     </div>
 </nav>
 <div class="container">
+
+    <!-- БЛОК УВЕДОМЛЕНИЙ -->
+    {% if request.query_params.get('error') == 'kyc' %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
+        <strong>Внимание!</strong> Вы не можете отправить оффер, пока ваша компания не прошла верификацию (KYC). Пожалуйста, загрузите документы.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     <h4 class="mb-4">Доступные заявки</h4>
     {% for app in apps %}
     <div class="card card-sber p-4 mb-3">
@@ -58,5 +67,8 @@
     </div>
     {% endfor %}
 </div>
+
+<!-- Скрипт для работы крестика на уведомлении -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -125,8 +125,9 @@ def create_application(amount: float = Form(...), currency: str = Form(...), cou
         models.Document.status == "approved"
     ).count()
 
+    # Если KYC не пройден, НЕ выбрасываем ошибку, а редиректим с флагом
     if approved_docs == 0:
-        raise HTTPException(400, detail="Вы не можете создать заявку, пока ваша компания не прошла верификацию (KYC).")
+        return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
 
     new_app = models.Application(user_id=user.id, funding_amount=amount, currency_code=currency,
                                  target_jurisdiction=country, purpose=purpose)
@@ -140,6 +141,17 @@ def create_application(amount: float = Form(...), currency: str = Form(...), cou
 def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...), lender_comm: float = Form(...),
                  user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role != "creditor": raise HTTPException(403)
+
+    # ПРОВЕРКА KYC ДЛЯ КРЕДИТОРА
+    approved_docs = db.query(models.Document).filter(
+        models.Document.user_id == user.id,
+        models.Document.status == "approved"
+    ).count()
+
+    # Если KYC не пройден, НЕ выбрасываем ошибку, а редиректим с флагом
+    if approved_docs == 0:
+        return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
+
     total_comm = lender_comm + 0.8
     new_offer = models.Offer(application_id=app_id, user_id=user.id, funding_amount=amount, annual_interest_rate=rate,
                              lender_commission=lender_comm, total_commission=total_comm)
@@ -199,6 +211,7 @@ async def upload_kyc(file: UploadFile = File(...), doc_type: str = Form(...),
 # --- KYC: Отправка на проверку ---
 @app.post("/kyc/submit")
 def submit_kyc(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Меняем статус всем документам на pending
     docs = db.query(models.Document).filter(models.Document.user_id == user.id).all()
     for doc in docs:
         doc.status = "pending"
