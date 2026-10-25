@@ -106,7 +106,12 @@
                         <td><strong>{{ app.funding_amount }} {{ app.currency_code }}</strong></td>
                         <td><span class="status-badge status-{{ app.status }}">{{ app.status }}</span></td>
                         <td>
-                            <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">Посмотреть офферы</a>
+                            <!-- ЛОГИКА КНОПОК В ЗАВИСИМОСТИ ОТ СТАТУСА -->
+                            {% if app.status == 'in_work' or app.status == 'agreed' %}
+                                <a href="/deal/{{ app.id }}" class="btn btn-sm btn-sber">Перейти в чат</a>
+                            {% else %}
+                                <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">Посмотреть офферы</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

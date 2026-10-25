@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Комната сделки | Сбер</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #EEF3FF; color: #333F48; height: 100vh; display: flex; flex-direction: column; margin: 0; }
+        .navbar-sber { background-color: #FFFFFF; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .deal-container { flex: 1; display: flex; padding: 20px; gap: 20px; max-width: 1300px; margin: 0 auto; width: 100%; overflow: hidden; }
+        
+        /* Чат */
+        .chat-section { flex: 2; background: #FFF; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { padding: 15px 20px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        .message { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+        .message-left { align-self: flex-start; background: #F3F4F6; border-bottom-left-radius: 4px; }
+        .message-right { align-self: flex-end; background: #E3FCEF; color: #1a7e2c; border-bottom-right-radius: 4px; }
+        .message-meta { font-size: 11px; color: #6B7280; margin-bottom: 4px; display: block; }
+        
+        /* Панель ввода */
+        .chat-input-wrapper { border-top: 1px solid #E5E7EB; background: #F9FAFB; padding: 10px 20px; }
+        .file-preview { display: none; background: #E5E7EB; padding: 5px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 8px; align-items: center; justify-content: space-between; }
+        .file-preview span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+        .file-preview button { background: none; border: none; color: #dc3545; font-weight: bold; cursor: pointer; padding: 0 5px; }
+        
+        .chat-input-area { display: flex; gap: 10px; align-items: center; }
+        .chat-input-area input[type="text"] { border-radius: 10px; border: 1px solid #D1D5DB; }
+        .attach-btn { cursor: pointer; font-size: 22px; color: #6B7280; padding: 5px; transition: 0.2s; display: flex; align-items: center; }
+        .attach-btn:hover { color: #21A038; }
+        .attach-btn input[type="file"] { display: none; }
+        
+        /* Правая панель (Скролл внутри) */
+        .info-section { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .card-sber { background: #FFF; border-radius: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; }
+        
+        .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; padding: 10px 20px; }
+        .btn-sber:hover { background-color: #1a7e2c; color: white; }
+        .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 8px 20px; background: #fff; font-size: 14px;}
+        .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
+        
+        /* Список документов со скроллом */
+        .doc-list { max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        .doc-list::-webkit-scrollbar { width: 6px; }
+        .doc-list::-webkit-scrollbar-track { background: #F9FAFB; border-radius: 4px; }
+        .doc-list::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+        .doc-list::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        .doc-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #F9FAFB; border-radius: 8px; margin-bottom: 8px; border: 1px solid #E5E7EB; }
+        .doc-info { flex: 1; overflow: hidden; margin-right: 10px; }
+        .doc-name { font-weight: 500; font-size: 13px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .doc-meta { font-size: 11px; color: #6B7280; margin: 0; }
+        
+        /* Стиль для операторского блока */
+        .operator-block { border-left: 4px solid #21A038; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-sber py-3">
+    <div class="container">
+        <a href="/dashboard" class="navbar-brand fw-bold" style="color: #21A038; text-decoration: none;">← Назад в кабинет</a>
+        <span class="text-muted">Сделка по заявке №{{ application.id }}</span>
+    </div>
+</nav>
+
+<div class="deal-container">
+    <!-- ЛЕВАЯ ЧАСТЬ: ЧАТ -->
+    <div class="chat-section">
+        <div class="chat-header">
+            <span>Чат по сделке</span>
+            <span class="badge" style="background-color: #E3FCEF; color: #21A038;">В работе</span>
+        </div>
+        
+        <div class="chat-messages">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender_id == user.id %}message-right{% else %}message-left{% endif %}">
+                    <span class="message-meta">
+                        {{ msg.sender.email if msg.sender else 'Система' }} • {{ msg.created_at.strftime('%d.%m %H:%M') }}
+                    </span>
+                    {{ msg.text }}
+                    {% if msg.file_path %}
+                        <br>
+                        <a href="/{{ msg.file_path }}" target="_blank" style="color: #21A038; font-weight: 500; display: inline-block; margin-top: 5px;">
+                            📄 Скачать файл
+                        </a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {% if not messages %}
+                <p class="text-muted text-center mt-5">Сообщений пока нет.</p>
+            {% endif %}
+        </div>
+
+        <div class="chat-input-wrapper">
+            <div id="filePreview" class="file-preview">
+                <span id="fileName">Файл не выбран</span>
+                <button type="button" onclick="clearFile()">✖</button>
+            </div>
+            <form method="post" action="/deal/{{ application.id }}/send" enctype="multipart/form-data" class="chat-input-area" id="chatForm">
+                <label class="attach-btn" title="Прикрепить файл">
+                    📎
+                    <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png" onchange="showFilePreview()">
+                </label>
+                <input type="text" name="text" id="textInput" class="form-control" placeholder="Напишите сообщение..." style="flex: 1;">
+                <button type="submit" class="btn btn-sber">Отправить</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ПРАВАЯ ЧАСТЬ: ДОКУМЕНТЫ И ОПЕРАТОР -->
+    <div class="info-section">
+        
+        <!-- БЛОК ДЛЯ ОПЕРАТОРА (Виден только если зашел админ/оператор) -->
+        {% if user.role in ['admin', 'operator'] %}
+        <div class="card-sber operator-block">
+            <h6 class="mb-3" style="font-weight: 600;">Действия оператора</h6>
+            <p class="text-muted" style="font-size: 13px; line-height: 1.4;">Проверьте документы и подтвердите сделку, если все условия выполнены.</p>
+            <a href="/operator/deal/{{ application.id }}" class="btn btn-sber w-100">Проверить и подтвердить</a>
+        </div>
+        {% endif %}
+
+        <!-- Блок 1: Основной договор -->
+        <div class="card-sber">
+            <h6 class="mb-3" style="font-weight: 600;">Основной договор займа</h6>
+            {% if main_contract %}
+                <div class="doc-item" style="background-color: #E3FCEF; border-color: #21A038;">
+                    <div class="doc-info">
+                        <p class="doc-name">{{ main_contract.file_path.split('/')[-1] }}</p>
+                        <p class="doc-meta">Загружен: {{ main_contract.sender.email }}</p>
+                    </div>
+                    <a href="/{{ main_contract.file_path }}" target="_blank" class="btn btn-sm btn-sber">Скачать</a>
+                </div>
+            {% else %}
+                <p class="text-muted" style="font-size: 13px; line-height: 1.4;">Загрузите подписанный PDF-договор, чтобы оператор мог зафиксировать сделку.</p>
+                <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data">
+                    <input type="file" name="file" class="form-control mb-3" accept=".pdf" required style="font-size: 13px;">
+                    <button type="submit" class="btn btn-outline-sber w-100">Загрузить договор (PDF)</button>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Блок 2: Прочие документы (Со скроллом) -->
+        <div class="card-sber">
+            <h6 class="mb-3" style="font-weight: 600;">Прочие документы</h6>
+            {% if other_documents %}
+                <div class="doc-list">
+                    {% for doc in other_documents %}
+                    <div class="doc-item">
+                        <div class="doc-info">
+                            <p class="doc-name">{{ doc.file_path.split('/')[-1] }}</p>
+                            <p class="doc-meta">{{ doc.sender.email if doc.sender else 'Система' }}</p>
+                        </div>
+                        <a href="/{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-sber">Скачать</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted" style="font-size: 13px;">Нет дополнительных документов.</p>
+            {% endif %}
+        </div>
+
+        <!-- Блок 3: Позвать оператора (видят только Заемщик и Кредитор) -->
+        {% if user.role in ['borrower', 'creditor'] %}
+        <div class="card-sber">
+            <h6 class="mb-2" style="font-weight: 600;">Нужна помощь?</h6>
+            <p class="text-muted" style="font-size: 13px; line-height: 1.4;">Оператор поможет решить вопросы по сделке.</p>
+            <form method="post" action="/deal/{{ application.id }}/call_operator">
+                <button type="submit" class="btn btn-sber w-100">Позвать оператора</button>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    function showFilePreview() {
+        const input = document.getElementById('fileInput');
+        const preview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+
+        if (input.files && input.files.length > 0) {
+            fileName.textContent = "📎 " + input.files[0].name;
+            preview.style.display = 'flex';
+        } else {
+            clearFile();
+        }
+    }
+
+    function clearFile() {
+        const input = document.getElementById('fileInput');
+        const preview = document.getElementById('filePreview');
+        input.value = ""; 
+        preview.style.display = 'none'; 
+    }
+</script>
+</body>
+</html>

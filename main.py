@@ -1,9 +1,11 @@
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
+from datetime import datetime
 import os
 import shutil
 
@@ -17,6 +19,7 @@ templates = Jinja2Templates(directory="templates")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "sber_hackathon_secret_key_12345")
@@ -102,13 +105,24 @@ def dashboard(request: Request, user: models.User = Depends(get_current_user), d
                                           context={"user": user, "apps": apps, "user_docs": user_docs})
 
     elif user.role == "creditor":
-        apps = db.query(models.Application).filter(models.Application.status == "published").all()
+        available_apps = db.query(models.Application).filter(models.Application.status == "published").all()
+        my_deals = db.query(models.Application).join(models.Offer).filter(
+            models.Offer.user_id == user.id,
+            models.Offer.status == "accepted",
+            models.Application.status.in_(["in_work", "agreed"])
+        ).all()
         user_docs = db.query(models.Document).filter(models.Document.user_id == user.id).all()
-        return templates.TemplateResponse(request=request, name="creditor.html",
-                                          context={"user": user, "apps": apps, "user_docs": user_docs})
+        return templates.TemplateResponse(
+            request=request, name="creditor.html",
+            context={"user": user, "available_apps": available_apps, "my_deals": my_deals, "user_docs": user_docs}
+        )
 
-    elif user.role in ["admin", "operator"]:
+    elif user.role == "admin":
         return RedirectResponse(url="/admin", status_code=303)
+
+    elif user.role == "operator":
+        return RedirectResponse(url="/operator/offers", status_code=303)
+
     return HTMLResponse("Роль не распознана")
 
 
@@ -118,14 +132,9 @@ def create_application(amount: float = Form(...), currency: str = Form(...), cou
                        purpose: str = Form(...), user: models.User = Depends(get_current_user),
                        db: Session = Depends(get_db)):
     if user.role != "borrower": raise HTTPException(403)
-
-    # ПРОВЕРКА KYC
     approved_docs = db.query(models.Document).filter(
-        models.Document.user_id == user.id,
-        models.Document.status == "approved"
+        models.Document.user_id == user.id, models.Document.status == "approved"
     ).count()
-
-    # Если KYC не пройден, НЕ выбрасываем ошибку, а редиректим с флагом
     if approved_docs == 0:
         return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
 
@@ -141,20 +150,18 @@ def create_application(amount: float = Form(...), currency: str = Form(...), cou
 def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...), lender_comm: float = Form(...),
                  user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role != "creditor": raise HTTPException(403)
-
-    # ПРОВЕРКА KYC ДЛЯ КРЕДИТОРА
     approved_docs = db.query(models.Document).filter(
-        models.Document.user_id == user.id,
-        models.Document.status == "approved"
+        models.Document.user_id == user.id, models.Document.status == "approved"
     ).count()
-
-    # Если KYC не пройден, НЕ выбрасываем ошибку, а редиректим с флагом
     if approved_docs == 0:
         return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
 
     total_comm = lender_comm + 0.8
-    new_offer = models.Offer(application_id=app_id, user_id=user.id, funding_amount=amount, annual_interest_rate=rate,
-                             lender_commission=lender_comm, total_commission=total_comm)
+    new_offer = models.Offer(
+        application_id=app_id, user_id=user.id, funding_amount=amount,
+        annual_interest_rate=rate, lender_commission=lender_comm,
+        total_commission=total_comm, status="pending"
+    )
     db.add(new_offer)
     db.commit()
     return RedirectResponse(url="/dashboard", status_code=303)
@@ -182,7 +189,11 @@ def view_offers(app_id: int, request: Request, user: models.User = Depends(get_c
     application = db.query(models.Application).filter(models.Application.id == app_id,
                                                       models.Application.user_id == user.id).first()
     if not application: raise HTTPException(404)
-    offers = db.query(models.Offer).filter(models.Offer.application_id == app_id).all()
+
+    offers = db.query(models.Offer).filter(
+        models.Offer.application_id == app_id,
+        models.Offer.status == "shown"
+    ).all()
     return templates.TemplateResponse(request=request, name="offers.html",
                                       context={"application": application, "offers": offers, "user": user})
 
@@ -211,7 +222,6 @@ async def upload_kyc(file: UploadFile = File(...), doc_type: str = Form(...),
 # --- KYC: Отправка на проверку ---
 @app.post("/kyc/submit")
 def submit_kyc(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Меняем статус всем документам на pending
     docs = db.query(models.Document).filter(models.Document.user_id == user.id).all()
     for doc in docs:
         doc.status = "pending"
@@ -222,7 +232,7 @@ def submit_kyc(user: models.User = Depends(get_current_user), db: Session = Depe
 # --- Кабинет Администратора ---
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+    if user.role != "admin": raise HTTPException(403)
 
     all_apps = db.query(models.Application).order_by(models.Application.created_at.desc()).all()
     all_offers = db.query(models.Offer).all()
@@ -251,7 +261,7 @@ def admin_dashboard(request: Request, user: models.User = Depends(get_current_us
 @app.post("/admin/application/{app_id}/status")
 def admin_change_app_status(app_id: int, new_status: str = Form(...), user: models.User = Depends(get_current_user),
                             db: Session = Depends(get_db)):
-    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+    if user.role != "admin": raise HTTPException(403)
     app = db.query(models.Application).filter(models.Application.id == app_id).first()
     if app:
         app.status = new_status
@@ -283,3 +293,191 @@ def approve_user_kyc(target_user_id: int, user: models.User = Depends(get_curren
         doc.status = "approved"
     db.commit()
     return RedirectResponse(url="/admin?kyc_approved=1", status_code=303)
+
+
+# --- ОПЕРАТОР: Офферы на проверке ---
+@app.get("/operator/offers", response_class=HTMLResponse)
+def operator_offers(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+
+    pending_offers = db.query(models.Offer).filter(models.Offer.status == "pending").all()
+    offers_data = []
+    for offer in pending_offers:
+        app = db.query(models.Application).filter(models.Application.id == offer.application_id).first()
+        if app:
+            is_valid = offer.funding_amount <= app.funding_amount and offer.annual_interest_rate > 0
+            offers_data.append({"offer": offer, "app": app, "is_valid": is_valid})
+
+    return templates.TemplateResponse(
+        request=request, name="operator_offers.html",
+        context={"user": user, "offers_data": offers_data}
+    )
+
+
+# --- ОПЕРАТОР: Мои сделки (в работе) ---
+@app.get("/operator/deals", response_class=HTMLResponse)
+def operator_deals(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+
+    deals = db.query(models.Application).filter(models.Application.status == "in_work").all()
+    return templates.TemplateResponse(
+        request=request, name="operator_deals.html",
+        context={"user": user, "deals": deals}
+    )
+
+
+# --- ОПЕРАТОР: Действия с оффером ---
+@app.post("/operator/offer/{offer_id}/show")
+def operator_show_offer(offer_id: int, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+    offer = db.query(models.Offer).filter(models.Offer.id == offer_id).first()
+    if offer:
+        offer.status = "shown"
+        offer.operator_decision_at = datetime.utcnow()
+        db.commit()
+    return RedirectResponse(url="/operator/offers", status_code=303)
+
+
+@app.post("/operator/offer/{offer_id}/hide")
+def operator_hide_offer(offer_id: int, reason: str = Form("Скрыт оператором"),
+                        user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+    offer = db.query(models.Offer).filter(models.Offer.id == offer_id).first()
+    if offer:
+        offer.status = "hidden"
+        offer.hide_reason = reason
+        offer.operator_decision_at = datetime.utcnow()
+        db.commit()
+    return RedirectResponse(url="/operator/offers", status_code=303)
+
+
+# --- ОПЕРАТОР: Экран проверки конкретной сделки ---
+@app.get("/operator/deal/{app_id}", response_class=HTMLResponse)
+def operator_deal(app_id: int, request: Request, user: models.User = Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+
+    app = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if not app: raise HTTPException(404)
+
+    offer = db.query(models.Offer).filter(models.Offer.application_id == app_id,
+                                          models.Offer.status == "accepted").first()
+
+    contract_uploaded = db.query(models.Message).filter(
+        models.Message.application_id == app_id,
+        models.Message.text.like("%основной договор%")
+    ).first() is not None
+
+    return templates.TemplateResponse(
+        request=request, name="operator_deal.html",
+        context={"user": user, "app": app, "offer": offer, "contract_uploaded": contract_uploaded}
+    )
+
+
+# --- ОПЕРАТОР: Подтвердить сделку ---
+@app.post("/operator/deal/{app_id}/confirm")
+def operator_confirm_deal(app_id: int, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ["admin", "operator"]: raise HTTPException(403)
+
+    app = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if app:
+        app.status = "agreed"
+        app.confirmed_by = user.id
+        app.confirmed_at = datetime.utcnow()
+        db.commit()
+    return RedirectResponse(url="/operator/deals", status_code=303)
+
+
+# --- Комната сделки (Чат) ---
+@app.get("/deal/{app_id}", response_class=HTMLResponse)
+def deal_room(app_id: int, request: Request, user: models.User = Depends(get_current_user),
+              db: Session = Depends(get_db)):
+    application = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if not application:
+        raise HTTPException(404, detail="Заявка не найдена")
+
+    is_borrower = (user.id == application.user_id)
+    is_creditor = db.query(models.Offer).filter(
+        models.Offer.application_id == app_id,
+        models.Offer.user_id == user.id,
+        models.Offer.status == "accepted"
+    ).first() is not None
+    is_staff = user.role in ["admin", "operator"]
+
+    if not (is_borrower or is_creditor or is_staff):
+        raise HTTPException(403, detail="У вас нет доступа к этой сделке")
+
+    messages = db.query(models.Message).filter(models.Message.application_id == app_id).order_by(
+        models.Message.created_at).all()
+
+    main_contract = None
+    other_documents = []
+
+    for msg in messages:
+        if msg.file_path:
+            if "договор" in msg.text.lower() and not main_contract:
+                main_contract = msg
+            else:
+                other_documents.append(msg)
+
+    return templates.TemplateResponse(
+        request=request, name="deal.html",
+        context={
+            "application": application,
+            "messages": messages,
+            "main_contract": main_contract,
+            "other_documents": other_documents,
+            "user": user
+        }
+    )
+
+
+# --- Отправка сообщения ---
+@app.post("/deal/{app_id}/send")
+async def send_message(
+        app_id: int, text: str = Form(None), file: UploadFile = File(None),
+        user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    file_location = None
+    if file and file.filename:
+        file_location = f"{UPLOAD_DIR}/deal_{app_id}_{file.filename}"
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+    if not text and not file_location:
+        return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
+
+    new_msg = models.Message(
+        application_id=app_id, sender_id=user.id,
+        text=text if text else "Прикреплен документ", file_path=file_location
+    )
+    db.add(new_msg)
+    db.commit()
+    return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
+
+
+# --- Загрузка ОСНОВНОГО договора ---
+@app.post("/deal/{app_id}/upload_contract")
+async def upload_contract(app_id: int, file: UploadFile = File(...), user: models.User = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    file_location = f"{UPLOAD_DIR}/contract_{app_id}_{file.filename}"
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    new_msg = models.Message(application_id=app_id, sender_id=user.id, text="Загружен основной договор займа",
+                             file_path=file_location)
+    db.add(new_msg)
+    db.commit()
+    return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
+
+
+# --- Кнопка "Позвать оператора" ---
+@app.post("/deal/{app_id}/call_operator")
+def call_operator(app_id: int, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sys_msg = models.Message(
+        application_id=app_id, sender_id=user.id,
+        text="🔔 Запрошено подключение оператора. Ожидайте ответа."
+    )
+    db.add(sys_msg)
+    db.commit()
+    return RedirectResponse(url=f"/deal/{app_id}", status_code=303)

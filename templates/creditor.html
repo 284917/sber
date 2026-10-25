@@ -17,6 +17,9 @@
         .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 5px 15px; text-decoration: none; font-size: 14px; transition: 0.2s;}
         .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
         .kyc-done-badge { background-color: #E3FCEF; color: #21A038; padding: 5px 15px; border-radius: 10px; font-size: 14px; font-weight: 500; border: 1px solid #21A038; cursor: default; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-in_work { background-color: #FFF3CD; color: #856404; }
+        .status-agreed { background-color: #E3FCEF; color: #21A038; }
     </style>
 </head>
 <body>
@@ -24,15 +27,12 @@
     <div class="container">
         <span class="navbar-brand fw-bold" style="color: #21A038;">СБЕР | Ликвидность</span>
         <div class="d-flex align-items-center gap-3">
-            
-            <!-- ЛОГИКА КНОПКИ KYC -->
             {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
             {% if approved_count > 0 %}
                 <span class="kyc-done-badge">Верификация пройдена</span>
             {% else %}
                 <a href="/kyc" class="btn-outline-sber">Верификация (KYC)</a>
             {% endif %}
-            
             <span class="text-muted">{{ user.email }}</span>
             <a href="/logout" class="btn-logout" style="font-size: 14px;">Выйти</a>
         </div>
@@ -40,35 +40,58 @@
 </nav>
 <div class="container">
 
-    <!-- БЛОК УВЕДОМЛЕНИЙ -->
     {% if request.query_params.get('error') == 'kyc' %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
-        <strong>Внимание!</strong> Вы не можете отправить оффер, пока ваша компания не прошла верификацию (KYC). Пожалуйста, загрузите документы.
+        <strong>Внимание!</strong> Вы не можете отправить оффер, пока ваша компания не прошла верификацию (KYC).
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
 
-    <h4 class="mb-4">Доступные заявки</h4>
-    {% for app in apps %}
-    <div class="card card-sber p-4 mb-3">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <h5 class="mb-1" style="color: #21A038;">{{ app.funding_amount }} {{ app.currency_code }}</h5>
-                <p class="text-muted mb-1">Страна: {{ app.target_jurisdiction }} | {{ app.purpose }}</p>
+    <!-- БЛОК 1: МОИ СДЕЛКИ (ЧАТЫ) -->
+    <h4 class="mb-4">Мои активные сделки</h4>
+    {% if my_deals %}
+        {% for app in my_deals %}
+        <div class="card card-sber p-4 mb-3" style="border-left: 4px solid #21A038;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="mb-1" style="color: #21A038;">{{ app.funding_amount }} {{ app.currency_code }}</h5>
+                    <p class="text-muted mb-1">Страна: {{ app.target_jurisdiction }} | {{ app.purpose }}</p>
+                </div>
+                <span class="status-badge status-{{ app.status }}">{{ app.status }}</span>
             </div>
+            <hr>
+            <a href="/deal/{{ app.id }}" class="btn btn-sber w-100">Перейти в чат сделки</a>
         </div>
-        <hr>
-        <form method="post" action="/create_offer/{{ app.id }}" class="row g-2 align-items-end">
-            <div class="col-md-3"><input type="number" name="amount" class="form-control" placeholder="Сумма выдачи" required></div>
-            <div class="col-md-3"><input type="number" step="0.1" name="rate" class="form-control" placeholder="Ставка %" required></div>
-            <div class="col-md-3"><input type="number" step="0.1" name="lender_comm" class="form-control" placeholder="Комиссия %" required></div>
-            <div class="col-md-3"><button type="submit" class="btn btn-sber w-100">Предложить</button></div>
-        </form>
-    </div>
-    {% endfor %}
-</div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted mb-5">У вас пока нет активных сделок.</p>
+    {% endif %}
 
-<!-- Скрипт для работы крестика на уведомлении -->
+    <!-- БЛОК 2: ДОСТУПНЫЕ ЗАЯВКИ -->
+    <h4 class="mb-4 mt-5">Доступные заявки</h4>
+    {% if available_apps %}
+        {% for app in available_apps %}
+        <div class="card card-sber p-4 mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="mb-1" style="color: #21A038;">{{ app.funding_amount }} {{ app.currency_code }}</h5>
+                    <p class="text-muted mb-1">Страна: {{ app.target_jurisdiction }} | {{ app.purpose }}</p>
+                </div>
+            </div>
+            <hr>
+            <form method="post" action="/create_offer/{{ app.id }}" class="row g-2 align-items-end">
+                <div class="col-md-3"><input type="number" name="amount" class="form-control" placeholder="Сумма выдачи" required></div>
+                <div class="col-md-3"><input type="number" step="0.1" name="rate" class="form-control" placeholder="Ставка %" required></div>
+                <div class="col-md-3"><input type="number" step="0.1" name="lender_comm" class="form-control" placeholder="Комиссия %" required></div>
+                <div class="col-md-3"><button type="submit" class="btn btn-sber w-100">Предложить</button></div>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">Нет новых заявок для рассмотрения.</p>
+    {% endif %}
+
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
