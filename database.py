@@ -6,8 +6,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = (os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
-                or "postgresql+psycopg2://liquidity_user:SberHack2026@localhost:5432/liquidity_db")
+def find_database_url():
+    url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+    if url:
+        return url
+    # Интеграция Neon на Vercel может добавить префикс: STORAGE_DATABASE_URL, MYDB_POSTGRES_URL и т.п.
+    for key in sorted(os.environ):
+        if key.endswith("_DATABASE_URL") or key.endswith("_POSTGRES_URL"):
+            return os.environ[key]
+    return None
+
+
+DATABASE_URL = find_database_url() or "postgresql+psycopg2://liquidity_user:SberHack2026@localhost:5432/liquidity_db"
 # Neon / Vercel Postgres отдают адрес со схемой postgres://, SQLAlchemy ждёт postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]

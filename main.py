@@ -11,7 +11,7 @@ import os
 import re
 import uuid
 
-from database import engine, Base, get_db
+from database import engine, Base, get_db, find_database_url
 import models
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +81,7 @@ async def require_db(request: Request, call_next):
 def health():
     return {
         "db": "ok" if not DB_INIT_ERROR else DB_INIT_ERROR,
-        "database_url_set": bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")),
+        "database_url_set": bool(find_database_url()),
         "secret_key_set": bool(os.getenv("SECRET_KEY")),
         "admin_env_set": bool(os.getenv("ADMIN_EMAIL") and os.getenv("ADMIN_PASSWORD")),
     }
