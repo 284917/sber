@@ -27,3 +27,15 @@
 *   **Аутентификация:** JWT (python-jose), bcrypt (passlib)
 *   **Frontend:** Jinja2 (Server-Side Rendering), Bootstrap 5, HTML/CSS
 *   **Инфраструктура:** Nginx (Reverse Proxy), Ubuntu 24.04
+
+## ☁️ Деплой на Vercel
+Проект запускается на Vercel как serverless-функция FastAPI (`api/index.py`, `vercel.json`).
+Каждый push в `main` выкатывается автоматически, для других веток Vercel даёт превью-ссылку.
+
+1. Vercel → **Add New → Project** → импортировать этот репозиторий с GitHub (Framework Preset: Other).
+2. В проекте: **Storage → Create Database → Neon (Postgres)** и подключить к проекту — Vercel сам добавит `DATABASE_URL`.
+3. **Settings → Environment Variables:** `SECRET_KEY` (длинная случайная строка), `ADMIN_EMAIL`, `ADMIN_PASSWORD` — первый админ создаётся при старте, если его ещё нет.
+4. **Deployments → Redeploy**, чтобы переменные подхватились.
+
+Таблицы создаются автоматически. Загруженные файлы хранятся в БД (таблица `stored_files`), потому что у Vercel нет постоянного диска.
+Ограничение Vercel: размер одного запроса (файла) — до 4,5 МБ.

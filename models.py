@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, LargeBinary
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -76,3 +76,9 @@ class Message(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     application = relationship("Application")
+
+class StoredFile(Base):
+    __tablename__ = "stored_files"
+    path = Column(String(255), primary_key=True)
+    content = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())

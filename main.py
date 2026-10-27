@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime
+from urllib.parse import quote
+import mimetypes
 import os
 import re
-import shutil
 import uuid
 
 from database import engine, Base, get_db
@@ -15,11 +16,14 @@ import models
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Платформа ликвидности Сбер")
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+app = FastAPI(title="Платформа ликвидности Сбер")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+# Новые файлы хранятся в БД (таблица stored_files), чтобы работать и на Vercel без диска.
+# Папка uploads нужна только для старых файлов, загруженных до этого изменения.
 UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Роли, которые можно выбрать при самостоятельной регистрации
 PUBLIC_ROLES = {"borrower", "creditor"}
@@ -31,6 +35,24 @@ SECRET_KEY = os.getenv("SECRET_KEY", "sber_hackathon_secret_key_12345")
 
 def hash_password(password: str):
     return pwd_context.hash(password)
+
+
+def ensure_admin():
+    """Создаёт первого админа из ADMIN_EMAIL / ADMIN_PASSWORD, если его ещё нет (нужно для пустой БД)."""
+    email, password = os.getenv("ADMIN_EMAIL"), os.getenv("ADMIN_PASSWORD")
+    if not email or not password:
+        return
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        if not db.query(models.User).filter(models.User.email == email).first():
+            db.add(models.User(email=email, password_hash=hash_password(password), role="admin"))
+            db.commit()
+    finally:
+        db.close()
+
+
+ensure_admin()
 
 
 def create_token(user_id: int, role: str):
@@ -51,13 +73,12 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# --- Файлы: безопасное имя и сохранение только внутри uploads ---
-def save_upload(file: UploadFile, prefix: str) -> str:
+# --- Файлы: безопасное имя, содержимое сохраняется в БД ---
+def save_upload(file: UploadFile, prefix: str, db: Session) -> str:
     original = os.path.basename((file.filename or "").replace("\\", "/"))
     safe_name = re.sub(r"[^\w.\-]", "_", original)[:100] or "file"
     file_location = f"{UPLOAD_DIR}/{prefix}_{uuid.uuid4().hex[:12]}_{safe_name}"
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    db.add(models.StoredFile(path=file_location, content=file.file.read()))
     return file_location
 
 
@@ -257,7 +278,7 @@ def kyc_page(request: Request, user: models.User = Depends(get_current_user), db
 async def upload_kyc(file: UploadFile = File(...), doc_type: str = Form(...),
                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not re.fullmatch(r"[a-z_]{1,50}", doc_type): raise HTTPException(400, detail="Неверный тип документа")
-    file_location = save_upload(file, f"{user.id}_{doc_type}")
+    file_location = save_upload(file, f"{user.id}_{doc_type}", db)
 
     new_doc = models.Document(user_id=user.id, doc_type=doc_type, file_path=file_location, status="uploaded")
     db.add(new_doc)
@@ -475,7 +496,7 @@ async def send_message(
     get_deal_for_user(app_id, user, db)
     file_location = None
     if file and file.filename:
-        file_location = save_upload(file, f"deal_{app_id}")
+        file_location = save_upload(file, f"deal_{app_id}", db)
 
     if not text and not file_location:
         return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
@@ -494,7 +515,7 @@ async def send_message(
 async def upload_contract(app_id: int, file: UploadFile = File(...), user: models.User = Depends(get_current_user),
                           db: Session = Depends(get_db)):
     get_deal_for_user(app_id, user, db)
-    file_location = save_upload(file, f"contract_{app_id}")
+    file_location = save_upload(file, f"contract_{app_id}", db)
 
     new_msg = models.Message(application_id=app_id, sender_id=user.id, text="Загружен основной договор займа",
                              file_path=file_location)
@@ -517,6 +538,12 @@ def download_file(filename: str, user: models.User = Depends(get_current_user), 
         get_deal_for_user(msg.application_id, user, db)
     else:
         raise HTTPException(404)
+
+    stored = db.query(models.StoredFile).filter(models.StoredFile.path == file_location).first()
+    if stored:
+        media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        return Response(content=stored.content, media_type=media_type,
+                        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(filename)}"})
 
     if not os.path.isfile(file_location): raise HTTPException(404)
     return FileResponse(file_location, filename=filename, content_disposition_type="inline")
