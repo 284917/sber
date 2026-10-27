@@ -46,7 +46,7 @@ def world():
     assert register(anon, email="bad@alfa.ru", role="borrower", company_name="Альфа",
                     registration_number="123").status_code == 400  # ИНН не из 10 цифр
     assert register(anon, email="alfa@alfa.ru", role="borrower", company_name="ООО «Альфа»",
-                    registration_number="7700000000").status_code == 303
+                    registration_number="7700000009").status_code == 303
     assert register(anon, email="beta@beta.cy", role="creditor", company_name="Beta Capital Ltd",
                     registration_number="HE123456", country_code="CY").status_code == 303
     assert register(anon, email="gamma@gamma.ae", role="creditor", company_name="Gamma Finance",

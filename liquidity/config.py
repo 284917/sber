@@ -19,6 +19,8 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 # Демо-режим для презентации: вход в любую роль в один клик и наполненная база
 DEMO_MODE = os.getenv("DEMO_MODE") == "1"
+# Публичный адрес сайта: нужен для абсолютных ссылок в превью соцсетей (og:image)
+SITE_URL = os.getenv("SITE_URL", "https://sber-delta.vercel.app").rstrip("/")
 
 # --- Роли ---
 PUBLIC_ROLES = {"borrower", "creditor"}  # можно выбрать при самостоятельной регистрации

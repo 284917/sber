@@ -6,6 +6,10 @@
 </head>
 <body>
 <a href="#main" class="skip">Перейти к содержимому</a>
+{% set fe = field_errors or {} %}
+{% macro field_error(name) -%}
+<div class="field-error" id="{{ name }}-error" {% if not fe.get(name) %}hidden{% endif %}>{{ fe.get(name, '') }}</div>
+{%- endmacro %}
 <div class="auth">
     {% include "_auth_side.html" %}
     <main class="auth-main" id="main">
@@ -13,7 +17,7 @@
             <h1>Регистрация компании</h1>
             <p class="lead">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
             {% if error %}<div class="note note-bad" role="alert">{{ error }}</div>{% endif %}
-            <form method="post" action="/register">{{ csrf_field(request) }}
+            <form method="post" action="/register" id="register-form" novalidate>{{ csrf_field(request) }}
                 <div class="seg">
                     <input type="radio" name="role" id="role-borrower" value="borrower" {% if form.role != 'creditor' %}checked{% endif %}>
                     <label for="role-borrower">Заёмщик (РФ)</label>
@@ -22,31 +26,40 @@
                 </div>
                 <div class="field">
                     <label class="f" for="company_name">Название компании</label>
-                    <input type="text" name="company_name" id="company_name" class="input" maxlength="255" value="{{ form.company_name or '' }}" placeholder="ООО «Альфа»" required>
+                    <input type="text" name="company_name" id="company_name" class="input" maxlength="255" value="{{ form.company_name or '' }}" placeholder="ООО «Альфа»" required
+                           aria-describedby="company_name-error" {% if fe.get('company_name') %}aria-invalid="true"{% endif %}>
+                    {{ field_error('company_name') }}
                 </div>
                 <div class="form-row field">
                     <div id="country-field">
                         <label class="f" for="country_code">Страна регистрации</label>
-                        <select name="country_code" id="country_code" class="input">
+                        <select name="country_code" id="country_code" class="input" aria-describedby="country_code-error" {% if fe.get('country_code') %}aria-invalid="true"{% endif %}>
                             <option value="">Выберите</option>
                             {% for code, name in creditor_countries.items() %}
                             <option value="{{ code }}" {% if form.country_code == code %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
                         </select>
+                        {{ field_error('country_code') }}
                     </div>
                     <div>
                         <label class="f" for="registration_number" id="regnum-label">ИНН</label>
-                        <input type="text" name="registration_number" id="registration_number" class="input" maxlength="50" value="{{ form.registration_number or '' }}" required>
+                        <input type="text" name="registration_number" id="registration_number" class="input" maxlength="50" value="{{ form.registration_number or '' }}" required
+                               autocomplete="off" aria-describedby="registration_number-error" {% if fe.get('registration_number') %}aria-invalid="true"{% endif %}>
+                        {{ field_error('registration_number') }}
                     </div>
                 </div>
                 <div class="field">
                     <label class="f" for="email">Email</label>
-                    <input type="email" name="email" id="email" class="input" value="{{ form.email or '' }}" autocomplete="username" required>
+                    <input type="email" name="email" id="email" class="input" value="{{ form.email or '' }}" autocomplete="username" required
+                           aria-describedby="email-error" {% if fe.get('email') %}aria-invalid="true"{% endif %}>
+                    {{ field_error('email') }}
                 </div>
                 <div class="field">
                     <label class="f" for="password">Пароль</label>
-                    <input type="password" name="password" id="password" class="input" minlength="8" autocomplete="new-password" required>
-                    <div class="hint">Не короче 8 символов</div>
+                    <input type="password" name="password" id="password" class="input" minlength="8" autocomplete="new-password" required
+                           aria-describedby="password-error password-hint" {% if fe.get('password') %}aria-invalid="true"{% endif %}>
+                    {{ field_error('password') }}
+                    <div class="hint" id="password-hint">Не короче 8 символов</div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Зарегистрироваться</button>
             </form>
@@ -55,18 +68,71 @@
     </main>
 </div>
 <script>
-    // Заёмщик — российское юрлицо (ИНН, страна РФ); кредитор — зарубежное (страна и регистрационный номер)
-    function syncRole() {
-        const creditor = document.getElementById('role-creditor').checked;
-        document.getElementById('country-field').style.display = creditor ? '' : 'none';
-        document.getElementById('country_code').required = creditor;
-        document.getElementById('regnum-label').textContent = creditor ? 'Регистрационный номер' : 'ИНН (10 цифр)';
-        const reg = document.getElementById('registration_number');
-        reg.placeholder = creditor ? 'HE 123456' : '7700000000';
-        if (creditor) { reg.removeAttribute('pattern'); } else { reg.setAttribute('pattern', '\\d{10}'); }
-    }
-    document.querySelectorAll('input[name=role]').forEach(r => r.addEventListener('change', syncRole));
-    syncRole();
+    (function () {
+        const form = document.getElementById('register-form');
+        const $ = (id) => document.getElementById(id);
+        const isCreditor = () => $('role-creditor').checked;
+
+        // Контрольная цифра ИНН юрлица: веса 2,4,10,3,5,9,4,6,8, сумма по модулю 11, затем 10
+        function innValid(inn) {
+            if (!/^\d{10}$/.test(inn)) return false;
+            const w = [2, 4, 10, 3, 5, 9, 4, 6, 8];
+            const sum = w.reduce((s, k, i) => s + k * Number(inn[i]), 0);
+            return sum % 11 % 10 === Number(inn[9]);
+        }
+
+        const rules = {
+            company_name: (v) => v.trim() ? '' : 'Укажите название компании',
+            registration_number: (v) => {
+                v = v.trim();
+                if (isCreditor()) return v ? '' : 'Укажите регистрационный номер компании';
+                if (!v) return 'Укажите ИНН';
+                if (!/^\d+$/.test(v)) return 'ИНН состоит только из цифр';
+                if (v.length !== 10) return 'ИНН юрлица состоит из 10 цифр, сейчас ' + v.length;
+                return innValid(v) ? '' : 'Контрольная цифра не совпадает. Проверьте, нет ли опечатки';
+            },
+            country_code: (v) => !isCreditor() || v ? '' : 'Выберите страну регистрации',
+            email: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) ? '' : 'Введите email в формате name@company.ru',
+            password: (v) => v.length >= 8 ? '' : 'Пароль должен быть не короче 8 символов, сейчас ' + v.length,
+        };
+
+        function check(name, show) {
+            const input = $(name), box = $(name + '-error');
+            const message = rules[name](input.value);
+            if (show || !message) {
+                box.textContent = message;
+                box.hidden = !message;
+                if (message) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+            }
+            return !message;
+        }
+
+        Object.keys(rules).forEach((name) => {
+            const input = $(name);
+            // ошибку показываем, когда пользователь ушёл с поля; исправление убирает её сразу при вводе
+            input.addEventListener('blur', () => { if (input.value) check(name, true); });
+            input.addEventListener('input', () => check(name, input.getAttribute('aria-invalid') === 'true'));
+            input.addEventListener('change', () => check(name, true));
+        });
+
+        form.addEventListener('submit', (e) => {
+            const bad = Object.keys(rules).filter((name) => !check(name, true));
+            if (bad.length) { e.preventDefault(); $(bad[0]).focus(); }
+        });
+
+        // Заёмщик — российское юрлицо (ИНН, страна РФ); кредитор — зарубежное (страна и регистрационный номер)
+        function syncRole(clearErrors) {
+            const creditor = isCreditor();
+            $('country-field').style.display = creditor ? '' : 'none';
+            $('regnum-label').textContent = creditor ? 'Регистрационный номер' : 'ИНН (10 цифр)';
+            $('registration_number').placeholder = creditor ? 'HE 123456' : '7707083893';
+            $('registration_number').inputMode = creditor ? 'text' : 'numeric';
+            if (clearErrors) ['registration_number', 'country_code'].forEach((n) => { $(n + '-error').hidden = true; $(n).removeAttribute('aria-invalid'); });
+        }
+        document.querySelectorAll('input[name=role]').forEach((r) => r.addEventListener('change', () => syncRole(true)));
+        syncRole(false);
+        {% if fe %}const firstBad = document.querySelector('[aria-invalid="true"]'); if (firstBad) firstBad.focus();{% endif %}
+    })();
 </script>
 </body>
 </html>

@@ -18,6 +18,7 @@
 {% if qp.get('offer_withdrawn') %}{{ ui.flash('ok', 'Предложение отозвано. По этой заявке можно отправить новое.') }}{% endif %}
 {% if qp.get('offer_sent') %}{{ ui.flash('ok', 'Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.') }}{% endif %}
 
+{% include "_inbox.html" %}
 {% if kyc == 'none' %}
 <div class="note note-info">Чтобы отправлять предложения, пройдите верификацию компании. <a href="/kyc"><b>Перейти к верификации</b></a></div>
 {% elif kyc == 'pending' %}

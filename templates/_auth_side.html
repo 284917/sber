@@ -10,5 +10,8 @@
             <li>{{ ui.icon('handshake') }}<span><b>Сделка под контролем.</b> Чат, договор и подтверждение оператором.</span></li>
         </ul>
     </div>
-    <a href="/" class="back" style="color: #9B9B9B; margin: 0;">{{ ui.icon('arrow-left', 'ic-sm') }} На главную</a>
+    <div class="actions" style="justify-content: space-between;">
+        <a href="/" class="back" style="color: #9B9B9B; margin: 0;">{{ ui.icon('arrow-left', 'ic-sm') }} На главную</a>
+        <button type="button" class="theme-btn" onclick="toggleTheme()" title="Светлая или тёмная тема" aria-label="Переключить тему">{{ ui.icon('moon', 'ic-moon') }}{{ ui.icon('sun', 'ic-sun') }}</button>
+    </div>
 </aside>

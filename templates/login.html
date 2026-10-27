@@ -19,7 +19,7 @@
             <form method="post" action="/login">{{ csrf_field(request) }}
                 <div class="field">
                     <label class="f" for="email">Email</label>
-                    <input type="email" name="email" id="email" class="input" autocomplete="username" required>
+                    <input type="email" name="email" id="email" class="input" value="{{ email or '' }}" autocomplete="username" required>
                 </div>
                 <div class="field">
                     <label class="f" for="password">Пароль</label>

@@ -28,6 +28,8 @@
     <aside class="sidebar" id="sidebar">
         <a href="/dashboard" class="brand">{{ base_ui.brand_mark() }}<span class="brand-name">Сбер<span>Платформа ликвидности</span></span></a>
         <nav class="nav" aria-label="Разделы">
+            {% set unread_n = user.unread_notifications|length %}
+            <a href="/notifications" class="{{ 'active' if active == 'notifications' }}" {% if active == 'notifications' %}aria-current="page"{% endif %}>{{ base_ui.icon('bell') }}<span>Уведомления</span>{% if unread_n %}<span class="count" aria-label="Новых: {{ unread_n }}">{{ unread_n }}</span>{% endif %}</a>
             {% for group, items in nav.get(role, []) %}
             <div class="nav-label">{{ group }}</div>
             {% for key, label, href, icon_name, count in items %}
@@ -43,6 +45,7 @@
                     {{ ROLE_NAMES.get(role, role) }}{% if role in ('borrower', 'creditor') %} · <a href="/kyc">{{ KYC_STATUSES[user.kyc_status] }}</a>{% endif %}
                 </div>
             </div>
+            <button type="button" class="theme-btn" onclick="toggleTheme()" title="Светлая или тёмная тема" aria-label="Переключить тему">{{ base_ui.icon('moon', 'ic-moon') }}{{ base_ui.icon('sun', 'ic-sun') }}</button>
             <a href="/logout" class="logout" title="Выйти" aria-label="Выйти">{{ base_ui.icon('sign-out') }}</a>
         </div>
     </aside>

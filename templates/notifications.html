@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'notifications' %}
+{% block title %}Уведомления{% endblock %}
+{% block content %}
+{% set unread_n = user.unread_notifications|length %}
+<div class="page-head">
+    <div>
+        <h1>Уведомления</h1>
+        <div class="sub">{{ 'Новых: ' ~ unread_n if unread_n else 'Новых уведомлений нет' }}</div>
+    </div>
+    {% if unread_n %}
+    <form method="post" action="/notifications/read-all">{{ csrf_field(request) }}
+        <button type="submit" class="btn btn-secondary">{{ ui.icon('check') }} Прочитать все</button>
+    </form>
+    {% endif %}
+</div>
+
+<section class="card card-tight">
+    {% if items %}
+    <ul class="inbox">
+        {% for n in items %}
+        <li class="{{ 'unread' if not n.read_at }}">
+            <a href="/notifications/{{ n.id }}">
+                <span class="inbox-icon inbox-{{ n.kind }}">{{ ui.icon({'ok': 'check', 'bad': 'warning-circle', 'warn': 'clock'}.get(n.kind, 'info')) }}</span>
+                <span class="inbox-text">{{ n.text }}<time>{{ n.created_at.strftime('%d.%m.%Y %H:%M') if n.created_at else '' }}</time></span>
+                {% if not n.read_at %}<span class="inbox-dot" aria-label="Не прочитано"></span>{% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    {{ ui.empty('info', 'Уведомлений пока нет', 'Здесь появятся новые предложения, решения по проверке и сообщения в сделках.') }}
+    {% endif %}
+</section>
+{% endblock %}

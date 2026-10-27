@@ -26,6 +26,7 @@
 {% if qp.get('kyc_rejected') %}{{ ui.flash('warn', 'Верификация отклонена, компания увидит причину.') }}{% endif %}
 {% if qp.get('moderated') %}{{ ui.flash('ok', 'Решение по заявке сохранено.') }}{% endif %}
 
+{% include "_inbox.html" %}
 <!-- Аналитика -->
 <div id="analytics" class="grid grid-4" style="margin-bottom: 16px;">
     <div class="card stat" style="margin: 0;"><div class="label">Заявок</div><div class="value">{{ a.total_apps }}</div><div class="hint">на модерации: {{ a.status_counts.get('moderation', 0) }} · опубликовано: {{ a.status_counts.get('published', 0) }}</div></div>

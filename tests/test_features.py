@@ -82,7 +82,7 @@ def make_company(email, role, name, country, regnum):
 
 
 def test_withdraw_confirm_and_pdf():
-    make_company("w-borrower@test.ru", "borrower", "ООО «Отзыв»", "RU", "7712345678")
+    make_company("w-borrower@test.ru", "borrower", "ООО «Отзыв»", "RU", "7712345671")
     make_company("w-creditor@test.cy", "creditor", "Withdraw Capital", "CY", "HE 1")
     make_company("w-creditor2@test.ae", "creditor", "Second Capital", "AE", "AE 2")
     borrower, creditor, creditor2 = login("w-borrower@test.ru"), login("w-creditor@test.cy"), login("w-creditor2@test.ae")

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from liquidity import models
 from liquidity.services import Invalid, NotFound
 from liquidity.services.files import save_upload
+from liquidity.services.notifications import notify, notify_staff
 
 
 def is_approved(db: Session, user_id: int) -> bool:
@@ -26,6 +27,7 @@ def upload_document(db: Session, user: models.User, doc_type: str, file: UploadF
 def submit_for_review(db: Session, user: models.User):
     for doc in db.query(models.Document).filter(models.Document.user_id == user.id).all():
         doc.status = "pending"
+    notify_staff(db, f"{user.display_name} отправил документы на проверку KYC", "/admin#kyc", roles=("admin",))
     db.commit()
 
 
@@ -45,6 +47,8 @@ def approve(db: Session, target_user_id: int):
                                                 models.Document.status == "pending"):
         doc.status = "approved"
     target.kyc_reject_reason = None
+    notify(db, target.id, "Верификация пройдена. " + ("Можно создавать заявки" if target.role == "borrower"
+                                                      else "Можно отправлять предложения"), "/dashboard", "ok")
     db.commit()
 
 
@@ -61,4 +65,5 @@ def reject(db: Session, target_user_id: int, reason: str):
         db.query(models.StoredFile).filter(models.StoredFile.path == doc.file_path).delete()
         db.delete(doc)
     target.kyc_reject_reason = reason
+    notify(db, target.id, f"Верификация отклонена: {reason}. Загрузите документы заново", "/kyc", "bad")
     db.commit()

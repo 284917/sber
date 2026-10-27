@@ -21,6 +21,12 @@ class User(Base):
     kyc_reject_reason = Column(String(500), nullable=True)
 
     documents = relationship("Document", viewonly=True)
+    notifications = relationship("Notification", viewonly=True,
+                                 order_by="(Notification.created_at.desc(), Notification.id.desc())")
+
+    @property
+    def unread_notifications(self):
+        return [n for n in self.notifications if n.read_at is None]
 
     @property
     def display_name(self):
@@ -135,3 +141,24 @@ class FxRate(Base):
     currency_code = Column(String(3), nullable=False)
     rate = Column(Numeric(18, 6), nullable=False)
     fetched_at = Column(DateTime, server_default=func.now())
+
+
+class LoginAttempt(Base):
+    """Счётчик неудачных входов по ключу «email:…» или «ip:…» — защита от перебора пароля."""
+    __tablename__ = "login_attempts"
+    key = Column(String(300), primary_key=True)
+    failures = Column(Integer, nullable=False, default=0)
+    window_start = Column(DateTime, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
+
+
+class Notification(Base):
+    """Уведомление в кабинете: новое предложение, решение по KYC, сообщение оператора и т.п."""
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    text = Column(String(500), nullable=False)
+    link = Column(String(255), nullable=True)
+    kind = Column(String(20), nullable=False, default="info")
+    created_at = Column(DateTime, server_default=func.now())
+    read_at = Column(DateTime, nullable=True)

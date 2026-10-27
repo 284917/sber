@@ -20,8 +20,8 @@ DEMO_PDF = (b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Typ
 
 COMPANIES = [
     # ключ, email, роль, название, страна, рег. номер, KYC
-    ("alfa", "alfa@demo.local", "borrower", "ООО «Альфа Технологии»", "RU", "7701234567", "approved"),
-    ("sever", "sever@demo.local", "borrower", "ООО «Северный терминал»", "RU", "7809876543", "approved"),
+    ("alfa", "alfa@demo.local", "borrower", "ООО «Альфа Технологии»", "RU", "7701234560", "approved"),
+    ("sever", "sever@demo.local", "borrower", "ООО «Северный терминал»", "RU", "7809876549", "approved"),
     ("vostok", "vostok@demo.local", "borrower", "ООО «Восток Агро»", "RU", "2536011223", "pending"),
     ("beta", "beta@demo.local", "creditor", "Beta Capital Ltd", "CY", "HE 412873", "approved"),
     ("gulf", "gulf@demo.local", "creditor", "Gulf Trade Finance FZE", "AE", "DMCC-77120", "approved"),

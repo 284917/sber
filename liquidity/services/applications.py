@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.services import Invalid, NotFound, kyc
 from liquidity.services.events import log_event
+from liquidity.services.notifications import notify, notify_staff
 
 WITHDRAWABLE = ("moderation", "published")
 
@@ -28,6 +29,8 @@ def create(db: Session, borrower: models.User, *, amount: float, currency: str, 
     db.add(application)
     db.flush()
     log_event(db, application.id, borrower, "Заявка создана и отправлена на модерацию")
+    notify_staff(db, f"Заявка №{application.id} от {borrower.display_name} ждёт модерации", "/admin#moderation",
+                 roles=("admin",))
     db.commit()
     return application
 
@@ -41,12 +44,15 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
         application.status = "published"
         application.moderation_comment = None
         log_event(db, app_id, admin, "Заявка прошла модерацию и опубликована для кредиторов")
+        notify(db, application.user_id, f"Заявка №{app_id} опубликована, кредиторы её видят",
+               f"/applications/{app_id}/offers", "ok")
     elif decision == "reject":
         if not comment:
             raise Invalid("reason")
         application.status = "rejected"
         application.moderation_comment = comment
         log_event(db, app_id, admin, f"Заявка отклонена модератором: {comment}")
+        notify(db, application.user_id, f"Заявка №{app_id} отклонена: {comment}", f"/applications/{app_id}/offers", "bad")
     else:
         raise Invalid("decision")
     db.commit()
@@ -58,9 +64,11 @@ def withdraw(db: Session, borrower: models.User, app_id: int) -> models.Applicat
     if application.status not in WITHDRAWABLE:
         raise Invalid("withdraw", "Заявку в работе или согласованную отозвать нельзя")
     application.status = "withdrawn"
-    db.query(models.Offer).filter(models.Offer.application_id == app_id,
-                                  models.Offer.status.in_(["pending", "shown"])).update(
-        {"status": "rejected"}, synchronize_session=False)
+    for offer in db.query(models.Offer).filter(models.Offer.application_id == app_id,
+                                               models.Offer.status.in_(["pending", "shown"])).all():
+        offer.status = "rejected"
+        notify(db, offer.user_id, f"Заёмщик отозвал заявку №{app_id}, ваше предложение закрыто",
+               "/dashboard#my-offers", "warn")
     log_event(db, app_id, borrower, "Заёмщик отозвал заявку, открытые предложения закрыты")
     db.commit()
     return application

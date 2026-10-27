@@ -6,10 +6,13 @@ from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.routers import borrower, creditor
 from liquidity.security import end_session, get_current_user, require_role, start_session
-from liquidity.services import Invalid, accounts, demo
+from liquidity.services import Invalid, accounts, demo, throttle
 from liquidity.web import redirect, render
 
 router = APIRouter(tags=["Вход и регистрация"])
+# Код ошибки регистрации -> поле формы, под которым её показать
+FIELD_BY_ERROR = {"company": "company_name", "inn": "registration_number", "regnum": "registration_number",
+                  "country": "country_code", "password": "password", "exists": "email"}
 
 
 @router.get("/", summary="Главная страница (лендинг)")
@@ -34,9 +37,19 @@ def terms(request: Request):
 
 @router.post("/login", summary="Вход по email и паролю")
 def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    ip = throttle.client_ip(request, config.ON_VERCEL)
+    left = throttle.locked_for(db, email, ip)
+    if left:
+        minutes = max(1, -(-int(left.total_seconds()) // 60))
+        return render(request, "login.html", status_code=429, email=email,
+                      error=f"Слишком много неудачных попыток. Вход временно заблокирован, повторите через {minutes} мин.")
     user = accounts.authenticate(db, email, password)
     if not user:
-        return render(request, "login.html", status_code=400, error="Неверный email или пароль")
+        remaining = throttle.register_failure(db, email, ip)
+        hint = f" Осталось попыток: {remaining}." if remaining else " Вход заблокирован на 15 минут."
+        return render(request, "login.html", status_code=400, email=email,
+                      error="Неверный email или пароль." + (hint if remaining is not None and remaining < 3 else ""))
+    throttle.register_success(db, email)
     response = redirect("/dashboard")
     start_session(response, user)
     return response
@@ -52,7 +65,8 @@ def logout():
 @router.get("/register", summary="Форма регистрации юрлица")
 def register_page(request: Request):
     role = "creditor" if request.query_params.get("role") == "creditor" else "borrower"
-    return render(request, "register.html", form={"role": role}, creditor_countries=config.CREDITOR_COUNTRIES)
+    return render(request, "register.html", form={"role": role}, field_errors={},
+                  creditor_countries=config.CREDITOR_COUNTRIES)
 
 
 @router.post("/register", summary="Регистрация заёмщика (РФ) или кредитора (зарубежье)")
@@ -65,7 +79,9 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
         accounts.register_company(db, email=email, password=password, role=role, company_name=company_name,
                                   registration_number=registration_number, country_code=country_code)
     except Invalid as e:
-        return render(request, "register.html", status_code=400, error=e.message, form=form,
+        field = FIELD_BY_ERROR.get(e.code)
+        return render(request, "register.html", status_code=400, error=None if field else e.message,
+                      field_errors={field: e.message} if field else {}, form=form,
                       creditor_countries=config.CREDITOR_COUNTRIES)
     return redirect("/login?registered=1")
 

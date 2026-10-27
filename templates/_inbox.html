@@ -1,0 +1,22 @@
+{# Новые события наверху кабинета: до трёх непрочитанных уведомлений #}
+{% import "_ui.html" as inbox_ui %}
+{% set fresh = user.unread_notifications %}
+{% if fresh %}
+<section class="card card-tight inbox-card" aria-label="Новые события">
+    <div class="card-head">
+        <h2 class="card-title">Новые события <span class="count-pill">{{ fresh|length }}</span></h2>
+        <a href="/notifications" class="small">Все уведомления</a>
+    </div>
+    <ul class="inbox">
+        {% for n in fresh[:3] %}
+        <li class="unread">
+            <a href="/notifications/{{ n.id }}">
+                <span class="inbox-icon inbox-{{ n.kind }}">{{ inbox_ui.icon({'ok': 'check', 'bad': 'warning-circle', 'warn': 'clock'}.get(n.kind, 'info')) }}</span>
+                <span class="inbox-text">{{ n.text }}<time>{{ n.created_at.strftime('%d.%m %H:%M') if n.created_at else '' }}</time></span>
+                {{ inbox_ui.icon('arrow-right', 'ic-sm') }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}

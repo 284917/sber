@@ -8,6 +8,17 @@ from liquidity.security import hash_password, verify_password
 from liquidity.services import Invalid
 
 
+INN_WEIGHTS = (2, 4, 10, 3, 5, 9, 4, 6, 8)
+
+
+def inn_is_valid(inn: str) -> bool:
+    """ИНН юрлица: 10 цифр, последняя — контрольная: сумма цифр с весами 2,4,10,3,5,9,4,6,8 по модулю 11, затем 10."""
+    if not re.fullmatch(r"\d{10}", inn or ""):
+        return False
+    digits = [int(c) for c in inn]
+    return sum(w * d for w, d in zip(INN_WEIGHTS, digits)) % 11 % 10 == digits[9]
+
+
 def register_company(db: Session, *, email: str, password: str, role: str, company_name: str,
                      registration_number: str, country_code: str) -> models.User:
     """Самостоятельная регистрация: только заёмщик (российское юрлицо) или кредитор (зарубежное)."""
@@ -21,6 +32,8 @@ def register_company(db: Session, *, email: str, password: str, role: str, compa
     if role == "borrower":
         if not re.fullmatch(r"\d{10}", registration_number):
             raise Invalid("inn", "ИНН юрлица должен состоять из 10 цифр")
+        if not inn_is_valid(registration_number):
+            raise Invalid("inn", "ИНН не прошёл проверку контрольной цифры. Проверьте, нет ли опечатки")
         country_code = "RU"
     else:
         if country_code not in config.CREDITOR_COUNTRIES:

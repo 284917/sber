@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.services import Invalid, NotFound, kyc
 from liquidity.services.events import log_event
+from liquidity.services.notifications import notify, notify_staff
 
 ACTIVE_STATUSES = ("pending", "shown", "accepted")
 
@@ -34,6 +35,7 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
     db.add(offer)
     # Имя кредитора в истории не раскрываем: до проверки оператором оффер видит только оператор
     log_event(db, app_id, creditor, "Получено новое предложение, ждёт проверки оператором")
+    notify_staff(db, f"Новое предложение {creditor.display_name} по заявке №{app_id} ждёт проверки", "/operator/offers")
     db.commit()
     return offer
 
@@ -88,10 +90,15 @@ def accept(db: Session, borrower: models.User, offer_id: int) -> models.Applicat
     offer, application = _own_shown_offer(db, borrower, offer_id)
     offer.status = "accepted"
     application.status = "in_work"
-    db.query(models.Offer).filter(
+    losers = db.query(models.Offer).filter(
         models.Offer.application_id == application.id, models.Offer.id != offer.id,
-        models.Offer.status.in_(["pending", "shown"]),
-    ).update({"status": "rejected"}, synchronize_session=False)
+        models.Offer.status.in_(["pending", "shown"])).all()
+    for other in losers:
+        other.status = "rejected"
+        notify(db, other.user_id, f"{borrower.display_name} выбрал другое предложение по заявке №{application.id}",
+               "/dashboard#my-offers", "warn")
+    notify(db, offer.user_id, f"{borrower.display_name} принял ваше предложение по заявке №{application.id}. "
+                              f"Сделка в работе", f"/deal/{application.id}", "ok")
     log_event(db, application.id, borrower, f"Принято предложение {offer.sender.display_name}, сделка в работе")
     db.commit()
     return application
@@ -101,6 +108,8 @@ def reject(db: Session, borrower: models.User, offer_id: int) -> models.Applicat
     offer, application = _own_shown_offer(db, borrower, offer_id)
     offer.status = "rejected"
     log_event(db, application.id, borrower, f"Отклонено предложение {offer.sender.display_name}")
+    notify(db, offer.user_id, f"{borrower.display_name} отклонил ваше предложение по заявке №{application.id}",
+           "/dashboard#my-offers", "warn")
     db.commit()
     return application
 
@@ -136,6 +145,10 @@ def show(db: Session, operator: models.User, offer_id: int):
     offer.status = "shown"
     offer.operator_decision_at = datetime.utcnow()
     log_event(db, offer.application_id, operator, f"Оператор показал заёмщику предложение {offer.sender.display_name}")
+    notify(db, offer.application.user_id, f"Новое предложение от {offer.sender.display_name} по заявке "
+                                          f"№{offer.application_id}", f"/applications/{offer.application_id}/offers", "ok")
+    notify(db, offer.user_id, f"Ваше предложение по заявке №{offer.application_id} проверено и показано заёмщику",
+           "/dashboard#my-offers", "ok")
     db.commit()
 
 
@@ -145,4 +158,6 @@ def hide(db: Session, operator: models.User, offer_id: int, reason: str):
     offer.hide_reason = (reason.strip() or "Скрыт оператором")[:255]
     offer.operator_decision_at = datetime.utcnow()
     log_event(db, offer.application_id, operator, f"Оператор скрыл предложение {offer.sender.display_name}")
+    notify(db, offer.user_id, f"Оператор скрыл ваше предложение по заявке №{offer.application_id}: {offer.hide_reason}",
+           "/dashboard#my-offers", "bad")
     db.commit()
