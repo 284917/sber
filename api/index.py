@@ -31,3 +31,20 @@ class VercelPathMiddleware:
 
 
 app.add_middleware(VercelPathMiddleware)
+
+
+# Временная диагностика маршрутизации на Vercel
+from fastapi import Request  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa: E402
+
+
+@app.exception_handler(StarletteHTTPException)
+async def debug_not_found(request: Request, exc: StarletteHTTPException):
+    body = {"detail": exc.detail}
+    if exc.status_code == 404:
+        body["seen_path"] = request.scope.get("path")
+        body["seen_root_path"] = request.scope.get("root_path")
+        body["seen_query"] = request.scope.get("query_string", b"").decode("latin-1")
+        body["commit"] = (os.getenv("VERCEL_GIT_COMMIT_SHA") or "")[:7]
+    return JSONResponse(body, status_code=exc.status_code)
