@@ -1,175 +1,118 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Кабинет заемщика | Сбер</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #EEF3FF; color: #333F48; }
-        .navbar-sber { background-color: #FFFFFF; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card-sber { border-radius: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; }
-        .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-        .status-moderation { background-color: #E5E7EB; color: #374151; }
-        .status-rejected { background-color: #FDE2E1; color: #B42318; }
-        .status-published { background-color: #E3FCEF; color: #21A038; }
-        .status-in_work { background-color: #FFF3CD; color: #856404; }
-        .status-agreed { background-color: #D1FAE5; color: #065F46; }
-        .form-label { font-size: 13px; color: #6B7280; margin-bottom: 2px; }
-        .table-sber th { border-top: none; color: #6B7280; font-weight: 500; }
-        .form-control { border-radius: 10px; }
-        .btn-logout { color: #6B7280; text-decoration: none; font-weight: 500; transition: 0.2s; }
-        .btn-logout:hover { color: #dc3545; }
-        .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 5px 15px; text-decoration: none; font-size: 14px; transition: 0.2s;}
-        .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
-        .kyc-done-badge { background-color: #E3FCEF; color: #21A038; padding: 5px 15px; border-radius: 10px; font-size: 14px; font-weight: 500; border: 1px solid #21A038; cursor: default; }
-    </style>
-</head>
-<body>
-<nav class="navbar navbar-sber py-3 mb-4">
-    <div class="container">
-        <span class="navbar-brand fw-bold" style="color: #21A038;">СБЕР | Ликвидность</span>
-        <div class="d-flex align-items-center gap-3">
-            {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
-            {% if approved_count > 0 %}
-                <span class="kyc-done-badge">Верификация пройдена</span>
-            {% else %}
-                <a href="/kyc" class="btn-outline-sber">Верификация (KYC)</a>
-            {% endif %}
-            <span class="text-muted">{{ user.display_name }}</span>
-            <a href="/logout" class="btn-logout" style="font-size: 14px;">Выйти</a>
-        </div>
-    </div>
-</nav>
-<div class="container">
-
-    {% if request.query_params.get('error') == 'kyc' %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
-        <strong>Внимание!</strong> Вы не можете создать заявку, пока ваша компания не прошла верификацию (KYC). Пожалуйста, загрузите документы.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-    {% if request.query_params.get('error') == 'form' %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
-        Проверьте заявку: сумма больше 0, валюта, страна и способ передачи выбраны из списка, срок от 1 до {{ max_term }} месяцев, назначение не длиннее 255 символов.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-    {% if request.query_params.get('created') %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px;">
-        Заявка отправлена на модерацию. Кредиторы увидят её после проверки администратором.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-
-    <div class="row">
-        <!-- Форма создания заявки -->
-        <div class="col-lg-4 mb-4">
-            <div class="card card-sber p-4">
-                <h5 class="mb-3">Новая заявка</h5>
-
-                {% set pending_count = user_docs|selectattr('status', 'equalto', 'pending')|list|length if user_docs else 0 %}
-                {% if approved_count > 0 %}
-                    <div class="alert alert-success py-2" style="font-size: 13px; border-radius: 10px;">Верификация пройдена. Можно создавать заявки.</div>
-                {% elif pending_count > 0 %}
-                    <div class="alert alert-warning py-2" style="font-size: 13px; border-radius: 10px;">Документы на проверке у администратора.</div>
-                {% elif user.kyc_reject_reason %}
-                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">Верификация отклонена: {{ user.kyc_reject_reason }}. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить заново</a></div>
-                {% else %}
-                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">Верификация не пройдена. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить документы</a></div>
-                {% endif %}
-
-                <form method="post" action="/create_application">
-                    <div class="row g-2">
-                        <div class="col-7">
-                            <label class="form-label" for="amount">Сумма</label>
-                            <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="form-control" placeholder="500000" required>
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label" for="currency">Валюта</label>
-                            <select name="currency" id="currency" class="form-select form-control" required>
-                                {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-7">
-                            <label class="form-label" for="country">Страна получения</label>
-                            <select name="country" id="country" class="form-select form-control" required>
-                                <option value="" disabled selected>Выберите</option>
-                                {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label" for="term_months">Срок, мес.</label>
-                            <input type="number" min="1" max="{{ max_term }}" step="1" name="term_months" id="term_months" class="form-control" placeholder="6" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="transfer_method">Способ передачи средств</label>
-                            <select name="transfer_method" id="transfer_method" class="form-select form-control" required>
-                                <option value="" disabled selected>Выберите</option>
-                                {% for code, name in TRANSFER_METHODS.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-12 mb-2">
-                            <label class="form-label" for="purpose">Назначение средств</label>
-                            <input type="text" name="purpose" id="purpose" class="form-control" placeholder="Закупка оборудования" maxlength="255" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-sber w-100 mt-2">Отправить на модерацию</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Все заявки во всех статусах: история и архив заёмщика -->
-        <div class="col-lg-8">
-            <div class="card card-sber p-4">
-                <h5 class="mb-3">Мои заявки</h5>
-                <div class="table-responsive">
-                <table class="table table-sber align-middle">
-                    <thead>
-                        <tr>
-                            <th>№</th>
-                            <th>Сумма</th>
-                            <th>Страна · срок</th>
-                            <th>Статус</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for app in apps %}
-                    <tr>
-                        <td class="text-muted">{{ app.id }}</td>
-                        <td><strong>{{ app.funding_amount|money }} {{ app.currency_code }}</strong></td>
-                        <td>{{ COUNTRY_NAMES.get(app.target_jurisdiction, app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}</td>
-                        <td>
-                            <span class="status-badge status-{{ app.status }}">{{ APPLICATION_STATUSES.get(app.status, app.status) }}</span>
-                            {% if app.status == 'rejected' and app.moderation_comment %}
-                            <div class="text-danger mt-1" style="font-size: 12px;">{{ app.moderation_comment }}</div>
-                            {% endif %}
-                        </td>
-                        <td class="text-end text-nowrap">
-                            {% if app.status in ('in_work', 'agreed') %}
-                                <a href="/deal/{{ app.id }}" class="btn btn-sm btn-sber">Сделка</a>
-                            {% endif %}
-                            <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">
-                                {% if app.status == 'published' %}Предложения{% if shown_counts.get(app.id) %} ({{ shown_counts[app.id] }}){% endif %}{% else %}Подробнее{% endif %}
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-                </div>
-                {% if not apps %}
-                <p class="text-muted mt-3">У вас пока нет заявок.</p>
-                {% endif %}
-            </div>
-        </div>
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'apps' %}
+{% block title %}Мои заявки{% endblock %}
+{% block content %}
+{% set qp = request.query_params %}
+{% set kyc = user.kyc_status %}
+<div class="page-head">
+    <div>
+        <h1>Мои заявки</h1>
+        <div class="sub">{{ user.display_name }}{% if user.registration_number %} · ИНН {{ user.registration_number }}{% endif %}</div>
     </div>
 </div>
 
-<script src="/static/bootstrap/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% if qp.get('error') == 'kyc' %}{{ ui.flash('bad', 'Создавать заявки можно после верификации компании (KYC).') }}{% endif %}
+{% if qp.get('error') == 'form' %}{{ ui.flash('bad', 'Проверьте заявку: сумма больше 0, валюта, страна и способ передачи из списка, срок от 1 до ' ~ max_term ~ ' месяцев, назначение не длиннее 255 символов.') }}{% endif %}
+{% if qp.get('created') %}{{ ui.flash('ok', 'Заявка отправлена на модерацию. Кредиторы увидят её после проверки администратором.') }}{% endif %}
+
+{% if kyc == 'none' %}
+<div class="note note-info">Чтобы создавать заявки, пройдите верификацию: загрузите документы компании. <a href="/kyc"><b>Перейти к верификации</b></a></div>
+{% elif kyc == 'pending' %}
+<div class="note note-warn">Документы компании на проверке у администратора. Создавать заявки можно будет после одобрения.</div>
+{% elif kyc == 'rejected' %}
+<div class="note note-bad">Верификация отклонена: {{ user.kyc_reject_reason }}. <a href="/kyc"><b>Загрузить документы заново</b></a></div>
+{% endif %}
+
+{% set active_apps = apps|selectattr('status', 'in', ['moderation', 'published', 'in_work'])|list %}
+{% set waiting = namespace(n=0) %}{% for a in apps %}{% if a.status == 'published' %}{% set waiting.n = waiting.n + shown_counts.get(a.id, 0) %}{% endif %}{% endfor %}
+<div class="grid grid-3" style="margin-bottom: 16px;">
+    <div class="card stat" style="margin: 0;"><div class="label">Активные заявки</div><div class="value">{{ active_apps|length }}</div><div class="hint">на модерации, опубликованы или в работе</div></div>
+    <div class="card stat" style="margin: 0;"><div class="label">Предложения ждут решения</div><div class="value">{{ waiting.n }}</div><div class="hint">проверены оператором</div></div>
+    <div class="card stat" style="margin: 0;"><div class="label">Согласованные сделки</div><div class="value">{{ apps|selectattr('status', 'equalto', 'agreed')|list|length }}</div><div class="hint">в архиве</div></div>
+</div>
+
+<div class="grid grid-side-left">
+    <section class="card">
+        <h2 class="card-title">Новая заявка</h2>
+        <form method="post" action="/create_application">
+            <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">
+            <div class="form-row field">
+                <div>
+                    <label class="f" for="amount">Сумма</label>
+                    <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="input" placeholder="500 000" required>
+                </div>
+                <div>
+                    <label class="f" for="currency">Валюта</label>
+                    <select name="currency" id="currency" class="input" required>
+                        {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row field">
+                <div>
+                    <label class="f" for="country">Страна получения</label>
+                    <select name="country" id="country" class="input" required>
+                        <option value="" disabled selected>Выберите</option>
+                        {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="f" for="term_months">Срок, месяцев</label>
+                    <input type="number" min="1" max="{{ max_term }}" step="1" name="term_months" id="term_months" class="input" placeholder="6" required>
+                </div>
+            </div>
+            <div class="field">
+                <label class="f" for="transfer_method">Способ передачи средств</label>
+                <select name="transfer_method" id="transfer_method" class="input" required>
+                    <option value="" disabled selected>Выберите</option>
+                    {% for code, name in TRANSFER_METHODS.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label class="f" for="purpose">Назначение средств</label>
+                <input type="text" name="purpose" id="purpose" class="input" placeholder="Закупка оборудования у поставщика" maxlength="255" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Отправить на модерацию</button>
+            </fieldset>
+            {% if kyc != 'approved' %}<p class="hint" style="margin: 8px 0 0;">Доступно после верификации компании.</p>{% endif %}
+        </form>
+    </section>
+
+    <section class="card card-tight">
+        <div style="padding: 16px 20px 4px;"><h2 class="card-title">Все заявки</h2></div>
+        {% if apps %}
+        <div class="table-wrap">
+        <table class="t">
+            <thead><tr><th>№</th><th class="num">Сумма</th><th>Страна · срок</th><th>Статус</th><th></th></tr></thead>
+            <tbody>
+            {% for app in apps %}
+            <tr class="row-link">
+                <td class="muted">{{ app.id }}</td>
+                <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
+                <td>{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}
+                    <div class="small muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ app.purpose }}</div></td>
+                <td>
+                    {{ ui.app_status(app.status) }}
+                    {% if app.status == 'rejected' and app.moderation_comment %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ app.moderation_comment }}</div>{% endif %}
+                </td>
+                <td class="r">
+                    {% if app.status in ('in_work', 'agreed') %}
+                        <a href="/deal/{{ app.id }}" class="btn btn-primary btn-sm">Сделка</a>
+                    {% elif app.status == 'published' and shown_counts.get(app.id) %}
+                        <a href="/applications/{{ app.id }}/offers" class="btn btn-primary btn-sm">Сравнить · {{ shown_counts[app.id] }}</a>
+                    {% else %}
+                        <a href="/applications/{{ app.id }}/offers" class="btn btn-secondary btn-sm">Открыть</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="empty">Заявок пока нет. Заполните форму слева — после модерации заявку увидят кредиторы.</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

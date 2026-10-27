@@ -2,50 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Вход | Платформа ликвидности Сбер</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #EEF3FF; color: #333F48; }
-        .sber-card { background: #FFFFFF; border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); padding: 40px; }
-        .btn-sber { background-color: #21A038; color: white; font-weight: 500; border-radius: 12px; padding: 12px; border: none; }
-        .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .form-control { border-radius: 12px; padding: 12px; border: 1px solid #D1D5DB; background-color: #F9FAFB; }
-        .form-control:focus { border-color: #21A038; box-shadow: 0 0 0 0.2rem rgba(33, 160, 56, 0.25); }
-        .logo-placeholder { font-size: 32px; font-weight: 700; color: #21A038; text-align: center; margin-bottom: 20px; letter-spacing: 2px; }
-    </style>
+    <link href="/static/css/app.css" rel="stylesheet">
 </head>
 <body>
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="col-md-5">
-        <div class="sber-card">
-            <div class="logo-placeholder">СБЕР</div>
-            <h4 class="text-center mb-4" style="font-weight: 500;">Платформа ликвидности</h4>
-            
-            {% if error %}
-                <div class="alert alert-danger" style="border-radius: 12px;">{{ error }}</div>
-            {% endif %}
+<div class="auth">
+    {% include "_auth_side.html" %}
+    <main class="auth-main">
+        <div class="auth-form">
+            <h1>Вход</h1>
+            <p class="muted" style="margin: 0 0 24px;">Для заёмщиков, кредиторов и сотрудников платформы</p>
+            {% if error %}<div class="note note-bad">{{ error }}</div>{% endif %}
             {% if request.query_params.get('registered') %}
-                <div class="alert alert-success" style="border-radius: 12px;">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
+                <div class="note note-ok">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
             {% endif %}
-            
             <form method="post" action="/login">
-                <div class="mb-3">
-                    <input type="email" name="email" class="form-control" placeholder="Email" required>
+                <div class="field">
+                    <label class="f" for="email">Email</label>
+                    <input type="email" name="email" id="email" class="input" autocomplete="username" required>
                 </div>
-                <div class="mb-4">
-                    <input type="password" name="password" class="form-control" placeholder="Пароль" required>
+                <div class="field">
+                    <label class="f" for="password">Пароль</label>
+                    <input type="password" name="password" id="password" class="input" autocomplete="current-password" required>
                 </div>
-                <button type="submit" class="btn btn-sber w-100">Войти</button>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Войти</button>
             </form>
-            
-            <!-- ВОТ ТУТ ССЫЛКА НА РЕГИСТРАЦИЮ -->
-            <div class="text-center mt-3">
-                <a href="/register" style="color: #21A038; text-decoration: none;">Нет аккаунта? Зарегистрироваться</a>
-            </div>
-            
+            <p class="muted" style="margin-top: 20px;">Нет аккаунта? <a href="/register">Зарегистрировать компанию</a></p>
         </div>
-    </div>
+    </main>
 </div>
 </body>
 </html>

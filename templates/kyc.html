@@ -1,128 +1,63 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Верификация компании | Сбер</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #EEF3FF; color: #333F48; }
-        .navbar-sber { background-color: #FFFFFF; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        /* Сделали карточку чуть шире, чтобы всё влезало */
-        .card-sber { border-radius: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 30px; max-width: 1000px; margin: 0 auto; }
-        .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; padding: 8px 15px; white-space: nowrap; }
-        .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .btn-sber:disabled { background-color: #A7F3D0; color: #047857; cursor: not-allowed; }
-        .btn-outline-sber { color: #21A038; border: 1px solid #21A038; border-radius: 10px; font-weight: 500; padding: 6px 15px; white-space: nowrap; }
-        .btn-outline-sber:hover { background-color: #E3FCEF; color: #21A038; }
-        
-        .doc-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #E5E7EB; gap: 20px; }
-        .doc-row:last-child { border-bottom: none; }
-        
-        .doc-info { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-        .doc-title { font-weight: 500; font-size: 15px; }
-        
-        .doc-status { font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 12px; display: inline-block; align-self: flex-start; }
-        .status-uploaded { background-color: #E3FCEF; color: #21A038; }
-        .status-missing { background-color: #FEF3C7; color: #92400E; }
-        
-        /* Форма загрузки справа */
-        .upload-form { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        /* Скрываем стандартный текст "Файл не выбран" и делаем кнопку аккуратнее */
-        .custom-file-input { width: 220px; font-size: 13px; }
-        .custom-file-input::file-selector-button { 
-            background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 6px 10px; margin-right: 10px; cursor: pointer; color: #374151; font-weight: 500; transition: 0.2s;
-        }
-        .custom-file-input::file-selector-button:hover { background-color: #E5E7EB; }
-    </style>
-</head>
-<body>
-<nav class="navbar navbar-sber py-3 mb-4">
-    <div class="container">
-        <a href="/dashboard" class="navbar-brand fw-bold" style="color: #21A038; text-decoration: none;">← Назад в кабинет</a>
-        <span class="text-muted">{{ user.display_name }} · {{ ROLE_NAMES.get(user.role, user.role) }}</span>
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'kyc' %}
+{% block title %}Верификация компании{% endblock %}
+{% block content %}
+{% set kyc = user.kyc_status %}
+{% set uploaded_types = user_docs|map(attribute='doc_type')|unique|list %}
+{% set done = required_docs|selectattr(0, 'in', uploaded_types)|list|length %}
+<div class="page-head">
+    <div>
+        <h1>Верификация компании</h1>
+        <div class="sub">KYC/AML: документы в PDF, проверку проводит администратор платформы вручную.</div>
     </div>
-</nav>
-
-<div class="container">
-    <div class="card card-sber">
-        <h4 class="mb-2">Верификация компании</h4>
-        <p class="text-muted mb-4">Загрузите документы в формате PDF. Проверку проводит администратор платформы вручную.</p>
-
-        {% if request.query_params.get('success') %}
-        <div class="alert alert-success" style="border-radius: 10px;">Документы успешно загружены! Ожидайте проверки администратором.</div>
-        {% endif %}
-        {% if user.kyc_reject_reason and not (user_docs|selectattr("status", "equalto", "pending")|list) and not (user_docs|selectattr("status", "equalto", "approved")|list) %}
-        <div class="alert alert-danger" style="border-radius: 10px;">Администратор отклонил верификацию: {{ user.kyc_reject_reason }}. Загрузите документы заново.</div>
-        {% endif %}
-
-        <div class="mb-4">
-            <h6 class="mb-3" style="font-weight: 600;">Список необходимых документов:</h6>
-            
-            {% if user.role == 'borrower' %}
-                {% set required_docs = [
-                    ('charter', 'Устав компании'),
-                    ('egrul', 'Выписка из ЕГРЮЛ'),
-                    ('passport', 'Паспорт директора'),
-                    ('beneficiaries', 'Сведения о бенефициарах (UBO)'),
-                    ('director_auth', 'Документ о полномочиях директора')
-                ] %}
-            {% else %}
-                {% set required_docs = [
-                    ('cert_inc', 'Свидетельство о регистрации (Certificate of Incorporation)'),
-                    ('memorandum', 'Устав (Memorandum and Articles)'),
-                    ('directors_reg', 'Реестр директоров и участников'),
-                    ('ubo', 'Сведения о бенефициарах (UBO)'),
-                    ('tax_residency', 'Сертификат налогового резидентства'),
-                    ('source_funds', 'Подтверждение источника средств (отчётность/справка)')
-                ] %}
-            {% endif %}
-
-            {% for doc_type, doc_name in required_docs %}
-                {% set is_uploaded = user_docs | selectattr("doc_type", "equalto", doc_type) | list | length > 0 %}
-                <div class="doc-row">
-                    <div class="doc-info">
-                        <span class="doc-title">{{ doc_name }}</span>
-                        {% if is_uploaded %}
-                        <span class="doc-status status-uploaded">Загружен</span>
-                        {% else %}
-                        <span class="doc-status status-missing">Не загружен</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="upload-form">
-                        {% if not is_uploaded %}
-                        <form method="post" action="/kyc/upload" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
-                            <input type="hidden" name="doc_type" value="{{ doc_type }}">
-                            <input type="file" name="file" class="form-control custom-file-input" accept=".pdf" required>
-                            <button type="submit" class="btn btn-outline-sber">Загрузить</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-
-        <hr>
-
-        {% set required_count = required_docs | length %}
-        {% set total_uploaded = user_docs | map(attribute='doc_type') | unique | list | length %}
-        
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <span class="text-muted" style="font-size: 14px;">Загружено {{ total_uploaded }} из {{ required_count }} документов</span>
-            
-            {% if total_uploaded >= required_count %}
-            <form method="post" action="/kyc/submit">
-                <button type="submit" class="btn btn-sber" style="padding: 12px 25px;">Отправить на проверку</button>
-            </form>
-            {% else %}
-            <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-sber" style="padding: 12px 25px;" disabled>Отправить на проверку</button>
-                <span class="text-muted" style="font-size: 13px; max-width: 200px;">Становится активной после загрузки всех документов</span>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+    <span class="pill pill-{{ {'approved': 'ok', 'pending': 'warn', 'rejected': 'bad'}.get(kyc, 'none') }}">{{ KYC_STATUSES[kyc] }}</span>
 </div>
-</body>
-</html>
+
+{% if request.query_params.get('success') %}{{ ui.flash('ok', 'Документы отправлены на проверку. Обычно администратор принимает решение в течение рабочего дня.') }}{% endif %}
+{% if kyc == 'rejected' %}{{ ui.flash('bad', 'Администратор отклонил верификацию: ' ~ user.kyc_reject_reason ~ '. Загрузите документы заново.') }}{% endif %}
+{% if kyc == 'approved' %}{{ ui.flash('ok', 'Компания верифицирована. ' ~ ('Можно создавать заявки.' if user.role == 'borrower' else 'Можно отправлять предложения.')) }}{% endif %}
+
+<div class="grid grid-side">
+    <section class="card">
+        <h2 class="card-title">Пакет документов <span class="muted">{{ done }} из {{ required_docs|length }}</span></h2>
+        <div class="bar-track" style="margin-bottom: 8px;"><div class="bar best" style="width: {{ (100 * done / (required_docs|length or 1))|round|int }}%;"></div></div>
+        {% for doc_type, doc_name in required_docs %}
+        {% set doc = user_docs|selectattr('doc_type', 'equalto', doc_type)|list|last %}
+        <div class="doc-row">
+            <div>
+                <div style="font-weight: 500;">{{ doc_name }}</div>
+                {% if doc %}<a href="/{{ doc.file_path }}" target="_blank" class="small">{{ doc.file_path.split('/')[-1] }}</a>{% endif %}
+            </div>
+            {% if doc %}
+                <span class="pill pill-{{ {'approved': 'ok', 'pending': 'warn'}.get(doc.status, 'none') }}">{{ {'approved': 'Одобрен', 'pending': 'На проверке'}.get(doc.status, 'Загружен') }}</span>
+            {% else %}
+            <form method="post" action="/kyc/upload" enctype="multipart/form-data" class="actions">
+                <input type="hidden" name="doc_type" value="{{ doc_type }}">
+                <input type="file" name="file" class="input input-sm" accept=".pdf" required style="width: 240px;">
+                <button type="submit" class="btn btn-secondary btn-sm">Загрузить</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+
+    <aside class="card">
+        <h2 class="card-title">Отправка на проверку</h2>
+        {% if kyc == 'approved' %}
+            <p class="muted" style="margin: 0;">Проверка пройдена, отправлять ничего не нужно.</p>
+        {% elif kyc == 'pending' %}
+            <p class="muted" style="margin: 0;">Пакет на проверке у администратора.</p>
+        {% elif done >= required_docs|length %}
+            <p class="muted">Все документы загружены. Администратор проверит пакет целиком и одобрит или вернёт с комментарием.</p>
+            <form method="post" action="/kyc/submit"><button type="submit" class="btn btn-primary btn-block">Отправить на проверку</button></form>
+        {% else %}
+            <p class="muted">Загрузите все документы из списка — кнопка станет активной.</p>
+            <button class="btn btn-primary btn-block" disabled>Отправить на проверку</button>
+        {% endif %}
+        <div class="kv" style="margin-top: 16px;"><span>Компания</span><span>{{ user.display_name }}</span></div>
+        <div class="kv"><span>{{ 'ИНН' if user.role == 'borrower' else 'Рег. номер' }}</span><span>{{ user.registration_number or '—' }}</span></div>
+        <div class="kv"><span>Страна</span><span>{{ ui.country(user.country_code) }}</span></div>
+    </aside>
+</div>
+{% endblock %}

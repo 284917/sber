@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Платформа ликвидности{% endblock %} · Сбер</title>
+    <link href="/static/css/app.css" rel="stylesheet">
+</head>
+<body>
+{% set role = user.role %}
+{% set nav = {
+    'borrower': [('Заявки', [('apps', 'Мои заявки', '/dashboard', None), ('kyc', 'Верификация', '/kyc', None)])],
+    'creditor': [('Работа', [('market', 'Заявки на финансирование', '/dashboard', None), ('my-offers', 'Мои предложения', '/dashboard#my-offers', None)]),
+                 ('Компания', [('kyc', 'Верификация', '/kyc', None)])],
+    'operator': [('Оператор', [('op-offers', 'Предложения на проверке', '/operator/offers', None), ('op-deals', 'Сделки в работе', '/operator/deals', None)])],
+    'admin': [('Администрирование', [('kyc', 'Очередь KYC', '/admin#kyc', nav_counts.kyc if nav_counts is defined else None),
+                                    ('moderation', 'Модерация заявок', '/admin#moderation', nav_counts.moderation if nav_counts is defined else None),
+                                    ('analytics', 'Аналитика', '/admin#analytics', None), ('archive', 'Архив сделок', '/admin#archive', None),
+                                    ('history', 'Все заявки', '/admin#history', None), ('staff', 'Сотрудники', '/admin#staff', None)]),
+              ('Операции', [('op-offers', 'Предложения на проверке', '/operator/offers', None), ('op-deals', 'Сделки в работе', '/operator/deals', None)])],
+} %}
+<div class="shell">
+    <aside class="sidebar">
+        <a href="/dashboard" class="brand">
+            <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span>
+            <span class="brand-name">Сбер<span>Платформа ликвидности</span></span>
+        </a>
+        <nav class="nav">
+            {% for group, items in nav.get(role, []) %}
+            <div class="nav-label">{{ group }}</div>
+            {% for key, label, href, count in items %}
+            <a href="{{ href }}" class="{{ 'active' if active == key }}">{{ label }}{% if count %}<span class="count">{{ count }}</span>{% endif %}</a>
+            {% endfor %}
+            {% endfor %}
+        </nav>
+        <div class="sidebar-foot">
+            <div>
+                <div class="who" title="{{ user.display_name }}">{{ user.display_name }}</div>
+                <div class="who-role">
+                    {{ ROLE_NAMES.get(role, role) }}
+                    {% if role in ('borrower', 'creditor') %} · <a href="/kyc" class="{{ 'muted' if user.kyc_status == 'approved' }}">{{ KYC_STATUSES[user.kyc_status] }}</a>{% endif %}
+                </div>
+            </div>
+            <a href="/logout" class="logout">Выйти</a>
+        </div>
+    </aside>
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

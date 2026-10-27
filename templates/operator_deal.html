@@ -1,87 +1,61 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Проверка сделки №{{ app.id }} | Сбер</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #EEF3FF; color: #333F48; margin: 0; padding: 40px 20px; }
-        .confirm-card { background: #FFF; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 32px; }
-        .info-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #E5E7EB; font-size: 15px; }
-        .btn-sber { background-color: #21A038; color: white; border-radius: 12px; border: none; font-weight: 500; padding: 14px 20px; transition: 0.2s; }
-        .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .btn-sber:disabled { background-color: #A7F3D0; color: #047857; cursor: not-allowed; }
-        .badge-ok { background-color: #E3FCEF; color: #21A038; padding: 6px 12px; border-radius: 20px; font-weight: 500; font-size: 13px; white-space: nowrap; }
-        .badge-error { background-color: #FEE2E2; color: #dc3545; padding: 6px 12px; border-radius: 20px; font-weight: 500; font-size: 13px; white-space: nowrap; }
-        .warning-text { color: #dc3545; font-size: 13px; text-align: center; margin-top: 10px; font-weight: 500; }
-        .back-link { color: #21A038; text-decoration: none; font-weight: 500; display: inline-block; margin-bottom: 16px; }
-        .event { padding: 8px 0; border-bottom: 1px solid #EEF1F4; font-size: 14px; }
-        .event time { color: #6B7280; font-size: 12px; display: block; }
-    </style>
-</head>
-<body>
-<div class="container" style="max-width: 1100px;">
-    <a href="{{ '/admin#history' if user.role == 'admin' else '/operator/deals' }}" class="back-link">← Назад</a>
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="confirm-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="m-0" style="font-weight: 700;">Сделка №{{ app.id }}</h4>
-                    <span class="{{ 'badge-ok' if app.status == 'agreed' else 'badge-error' if app.status != 'in_work' else 'badge-ok' }}">{{ APPLICATION_STATUSES.get(app.status, app.status) }}</span>
-                </div>
-                {% if request.query_params.get('error') == 'checks' %}
-                <div class="alert alert-danger" style="border-radius: 12px;">Нельзя подтвердить: не все проверки пройдены.</div>
-                {% endif %}
-
-                <div class="info-row"><span class="text-muted">Заёмщик</span><b class="text-end">{{ app.borrower.display_name if app.borrower else '—' }}</b></div>
-                <div class="info-row"><span class="text-muted">Кредитор</span><b class="text-end">{{ offer.sender.display_name if offer and offer.sender else '—' }}</b></div>
-                <div class="info-row"><span class="text-muted">Сумма</span><b>{{ (offer.funding_amount if offer else app.funding_amount)|money }} {{ app.currency_code }}</b></div>
-                <div class="info-row"><span class="text-muted">Ставка · комиссия итого</span><b>{% if offer %}{{ offer.annual_interest_rate|percent }} · {{ offer.total_commission|percent }}{% else %}—{% endif %}</b></div>
-                <div class="info-row"><span class="text-muted">Срок</span><b>{{ app.term_months ~ ' мес.' if app.term_months else '—' }}</b></div>
-                <div class="info-row"><span class="text-muted">Страна · способ передачи</span><b>{{ COUNTRY_NAMES.get(app.target_jurisdiction, app.target_jurisdiction) }} · {{ TRANSFER_METHODS.get(app.transfer_method, '—') }}</b></div>
-                {% if offer and offer.extra_terms %}
-                <div class="info-row"><span class="text-muted">Доп. условия</span><span class="text-end" style="font-size: 14px;">{{ offer.extra_terms }}</span></div>
-                {% endif %}
-
-                <h6 class="mt-4 mb-1" style="font-weight: 600;">Проверки перед подтверждением</h6>
-                {% for key, label in [('borrower_kyc', 'KYC заёмщика'), ('creditor_kyc', 'KYC кредитора'), ('contract', 'Договор займа (PDF) загружен')] %}
-                <div class="info-row">
-                    <span>{{ label }}</span>
-                    {% if checks[key] %}<span class="badge-ok">Да</span>{% else %}<span class="badge-error">Нет</span>{% endif %}
-                </div>
-                {% endfor %}
-
-                <div class="d-flex flex-column gap-3 mt-4">
-                    {% if app.status == 'agreed' %}
-                        <div class="alert alert-success m-0" style="border-radius: 12px;">Сделка согласована {{ app.confirmed_at.strftime('%d.%m.%Y %H:%M') if app.confirmed_at else '' }}.</div>
-                    {% elif can_confirm %}
-                        <form method="post" action="/operator/deal/{{ app.id }}/confirm">
-                            <button type="submit" class="btn btn-sber w-100">Подтвердить сделку</button>
-                        </form>
-                    {% else %}
-                        <button class="btn btn-sber w-100" disabled>Подтвердить сделку</button>
-                        <p class="warning-text m-0">Станет активной, когда все проверки пройдены</p>
-                    {% endif %}
-                    <a href="/deal/{{ app.id }}" class="btn btn-outline-secondary w-100" style="border-radius: 12px; padding: 12px;">Открыть чат сделки</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="confirm-card">
-                <h6 class="mb-2" style="font-weight: 600;">История заявки</h6>
-                {% for event in events %}
-                <div class="event">
-                    <time>{{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '' }}{% if event.actor %} · {{ event.actor.display_name }}{% endif %}</time>
-                    {{ event.text }}
-                </div>
-                {% else %}
-                <p class="text-muted m-0" style="font-size: 14px;">Событий нет.</p>
-                {% endfor %}
-            </div>
-        </div>
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'history' if user.role == 'admin' else 'op-deals' %}
+{% block title %}Проверка сделки №{{ app.id }}{% endblock %}
+{% block content %}
+{% set cur = app.currency_code %}
+<a href="{{ '/admin#history' if user.role == 'admin' else '/operator/deals' }}" class="back">← Назад</a>
+<div class="page-head">
+    <div>
+        <h1>Сделка №{{ app.id }}</h1>
+        <div class="sub">{{ app.borrower.display_name if app.borrower else '—' }} и {{ offer.sender.display_name if offer and offer.sender else '—' }}</div>
+    </div>
+    <div class="actions">
+        {{ ui.app_status(app.status) }}
+        <a href="/deal/{{ app.id }}" class="btn btn-secondary">Открыть чат сделки</a>
     </div>
 </div>
-</body>
-</html>
+
+<section class="card">{{ ui.stepper(stages) }}</section>
+
+{% if request.query_params.get('error') == 'checks' %}{{ ui.flash('bad', 'Нельзя подтвердить: не все проверки пройдены.') }}{% endif %}
+
+<div class="grid grid-side">
+    <div>
+        <section class="card">
+            <h2 class="card-title">Условия</h2>
+            <div class="kv"><span>Заёмщик</span><span>{{ app.borrower.display_name if app.borrower else '—' }}{% if app.borrower and app.borrower.registration_number %} <span class="muted">· ИНН {{ app.borrower.registration_number }}</span>{% endif %}</span></div>
+            <div class="kv"><span>Кредитор</span><span>{{ offer.sender.display_name if offer and offer.sender else '—' }}{% if offer and offer.sender and offer.sender.country_code %} <span class="muted">· {{ ui.country(offer.sender.country_code) }}</span>{% endif %}</span></div>
+            <div class="kv"><span>Сумма</span><span class="num">{{ (offer.funding_amount if offer else app.funding_amount)|money }} {{ cur }}</span></div>
+            <div class="kv"><span>Ставка · комиссия итого</span><span>{% if offer %}{{ offer.annual_interest_rate|percent }} · {{ offer.total_commission|percent }}{% else %}—{% endif %}</span></div>
+            <div class="kv"><span>Срок</span><span>{{ app.term_months ~ ' мес.' if app.term_months else '—' }}</span></div>
+            <div class="kv"><span>Страна · способ передачи</span><span>{{ ui.country(app.target_jurisdiction) }} · {{ TRANSFER_METHODS.get(app.transfer_method, '—') }}</span></div>
+            {% if offer and offer.extra_terms %}<div class="kv"><span>Доп. условия</span><span>{{ offer.extra_terms }}</span></div>{% endif %}
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Проверки перед подтверждением</h2>
+            {% for key, label in [('borrower_kyc', 'KYC заёмщика одобрен'), ('creditor_kyc', 'KYC кредитора одобрен'), ('contract', 'Договор займа (PDF) загружен')] %}
+            <div class="kv">
+                <span style="color: var(--ink);">{{ label }}</span>
+                {% if checks[key] %}<span class="pill pill-ok">Да</span>{% else %}<span class="pill pill-bad">Нет</span>{% endif %}
+            </div>
+            {% endfor %}
+            <div style="margin-top: 16px;">
+            {% if app.status == 'agreed' %}
+                {{ ui.flash('ok', 'Сделка согласована ' ~ (app.confirmed_at.strftime('%d.%m.%Y %H:%M') if app.confirmed_at else '') ~ ' и перенесена в архив.') }}
+            {% elif can_confirm %}
+                <form method="post" action="/operator/deal/{{ app.id }}/confirm"><button type="submit" class="btn btn-primary btn-block">Подтвердить сделку</button></form>
+            {% else %}
+                <button class="btn btn-primary btn-block" disabled>Подтвердить сделку</button>
+                <p class="hint" style="text-align: center;">Станет активной, когда все проверки пройдены</p>
+            {% endif %}
+            </div>
+        </section>
+    </div>
+    <aside class="card">
+        <h2 class="card-title">История заявки</h2>
+        {{ ui.timeline(events, show_actor=True) }}
+    </aside>
+</div>
+{% endblock %}

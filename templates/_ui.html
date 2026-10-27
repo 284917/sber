@@ -1,0 +1,44 @@
+{# Общие элементы интерфейса #}
+
+{% macro app_status(status) -%}
+<span class="pill pill-{{ status }}">{{ APPLICATION_STATUSES.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro offer_status(status) -%}
+<span class="pill pill-{{ status }}">{{ OFFER_STATUSES.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro country(code) -%}
+{{ COUNTRY_NAMES.get(code, code or '—') }}
+{%- endmacro %}
+
+{% macro stepper(stages) -%}
+<ol class="stepper">
+    {% for s in stages %}
+    <li class="step {{ s.state }}">
+        <div class="dot">{% if s.state == 'done' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>{% elif s.state == 'failed' %}!{% else %}{{ loop.index }}{% endif %}</div>
+        <div class="s-label">{{ s.label }}</div>
+        <div class="s-note">{{ s.note }}</div>
+    </li>
+    {% endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro timeline(events, show_actor=False) -%}
+{% if events %}
+<ul class="timeline">
+    {% for event in events %}
+    <li>
+        <time>{{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '' }}{% if show_actor and event.actor %} · {{ event.actor.display_name }}{% endif %}</time>
+        {{ event.text }}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="muted" style="margin: 0;">Событий пока нет.</p>
+{% endif %}
+{%- endmacro %}
+
+{% macro flash(kind, text) -%}
+<div class="note note-{{ kind }}">{{ text }}</div>
+{%- endmacro %}

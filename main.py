@@ -61,6 +61,78 @@ APPLICATION_STATUSES = {"moderation": "На модерации", "rejected": "О
 OFFER_STATUSES = {"pending": "На проверке у оператора", "shown": "Получено заёмщиком", "hidden": "Скрыто оператором",
                   "accepted": "Принято", "rejected": "Отклонено"}
 ROLE_NAMES = {"borrower": "Заёмщик", "creditor": "Кредитор", "admin": "Администратор", "operator": "Оператор"}
+KYC_STATUSES = {"approved": "Верифицирована", "pending": "На проверке", "rejected": "Отказ в верификации",
+                "none": "Не верифицирована"}
+PLATFORM_COMMISSION = 0.8
+KYC_DOCS = {
+    "borrower": [("charter", "Устав компании"), ("egrul", "Выписка из ЕГРЮЛ"), ("passport", "Паспорт директора"),
+                 ("beneficiaries", "Сведения о бенефициарах (UBO)"),
+                 ("director_auth", "Документ о полномочиях директора")],
+    "creditor": [("cert_inc", "Свидетельство о регистрации (Certificate of Incorporation)"),
+                 ("memorandum", "Устав (Memorandum and Articles)"),
+                 ("directors_reg", "Реестр директоров и участников"), ("ubo", "Сведения о бенефициарах (UBO)"),
+                 ("tax_residency", "Сертификат налогового резидентства"),
+                 ("source_funds", "Подтверждение источника средств (отчётность или справка)")],
+}
+
+
+def offer_cost(offer, application):
+    """Полная стоимость предложения для заёмщика.
+
+    Проценты начисляются на сумму к выдаче за срок заявки, комиссия за организацию (кредитора + платформы)
+    берётся один раз. «Полная стоимость, % годовых» = ставка + комиссия, разнесённая на срок:
+    так предложения с разной ставкой и комиссией сравниваются одной цифрой.
+    """
+    amount = float(offer.funding_amount)
+    rate = float(offer.annual_interest_rate)
+    commission_pct = float(offer.total_commission)
+    term = application.term_months
+    commission = amount * commission_pct / 100
+    interest = amount * rate / 100 * term / 12 if term else None
+    return {
+        "amount": amount,
+        "coverage": round(100 * amount / float(application.funding_amount)) if application.funding_amount else 100,
+        "interest": interest,
+        "commission": commission,
+        "overpayment": interest + commission if interest is not None else None,
+        "effective_rate": rate + commission_pct * 12 / term if term else None,
+    }
+
+
+STAGES = [("Модерация", "Проверка заявки администратором"), ("Публикация", "Заявку видят кредиторы"),
+          ("Предложения", "Выбор лучшего предложения"), ("Сделка", "Обсуждение условий в чате"),
+          ("Договор", "Подписанный договор загружен"), ("Согласовано", "Подтверждено оператором")]
+
+
+def application_stages(app, db: Session, shown_offers: int = 0):
+    """Шкала этапов заявки: для каждого этапа state = done / current / failed / todo."""
+    if app.status == "rejected":
+        current, failed = 0, True
+    elif app.status == "moderation":
+        current, failed = 0, False
+    elif app.status == "published":
+        current, failed = 2, False
+    elif app.status == "in_work":
+        current, failed = (5 if contract_uploaded(app.id, db) else 3), False
+    else:  # agreed
+        current, failed = len(STAGES), False
+
+    stages = []
+    for i, (label, note) in enumerate(STAGES):
+        if i < current:
+            state = "done"
+        elif i == current:
+            state = "failed" if failed else "current"
+        else:
+            state = "todo"
+        stages.append({"label": label, "note": note, "state": state})
+    if app.status == "published":
+        stages[2]["note"] = f"Получено предложений: {shown_offers}" if shown_offers else "Ждём предложений кредиторов"
+    if app.status == "rejected":
+        stages[0]["note"] = "Отклонена: " + (app.moderation_comment or "без комментария")
+    if app.status == "in_work" and current == 5:
+        stages[5]["note"] = "Ждёт подтверждения оператором"
+    return stages
 
 
 def format_money(value):
@@ -83,7 +155,8 @@ templates.env.filters["money"] = format_money
 templates.env.filters["percent"] = format_percent
 templates.env.globals.update(
     APPLICATION_STATUSES=APPLICATION_STATUSES, OFFER_STATUSES=OFFER_STATUSES, COUNTRY_NAMES=COUNTRY_NAMES,
-    TRANSFER_METHODS=TRANSFER_METHODS, ROLE_NAMES=ROLE_NAMES,
+    TRANSFER_METHODS=TRANSFER_METHODS, ROLE_NAMES=ROLE_NAMES, KYC_STATUSES=KYC_STATUSES,
+    PLATFORM_COMMISSION=PLATFORM_COMMISSION,
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -421,7 +494,7 @@ def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...)
     if already:
         return RedirectResponse(url="/dashboard?error=duplicate", status_code=303)
 
-    total_comm = lender_comm + 0.8
+    total_comm = lender_comm + PLATFORM_COMMISSION
     new_offer = models.Offer(
         application_id=app_id, user_id=user.id, funding_amount=amount,
         annual_interest_rate=rate, lender_commission=lender_comm,
@@ -487,16 +560,32 @@ def view_offers(app_id: int, request: Request, user: models.User = Depends(get_c
         models.Offer.application_id == app_id,
         models.Offer.status.in_(["shown", "accepted", "rejected"]),
         models.Offer.operator_decision_at.isnot(None)
-    ).order_by(models.Offer.annual_interest_rate).all()
+    ).all()
+    # Сравнение: считаем полную стоимость и сортируем от самого дешёвого для заёмщика
+    rows = [{"offer": o, "cost": offer_cost(o, application)} for o in offers]
+    rows.sort(key=lambda r: (r["cost"]["effective_rate"] is None, r["cost"]["effective_rate"] or 0))
+    open_rows = [r for r in rows if r["offer"].status == "shown" and r["cost"]["effective_rate"] is not None]
+    best_id = open_rows[0]["offer"].id if len(open_rows) > 1 else None
+    # Экономия считается на одну и ту же сумму (сумму заявки): у предложений может быть разная сумма к выдаче,
+    # и разница абсолютных переплат тогда вводила бы в заблуждение
+    savings = None
+    if len(open_rows) > 1:
+        rate_gap = open_rows[1]["cost"]["effective_rate"] - open_rows[0]["cost"]["effective_rate"]
+        savings = float(application.funding_amount) * rate_gap / 100 * application.term_months / 12
+    max_overpayment = max((r["cost"]["overpayment"] or 0 for r in rows), default=0) or 1
+    shown = sum(1 for o in offers if o.status == "shown")
     return templates.TemplateResponse(request=request, name="offers.html", context={
-        "application": application, "offers": offers, "user": user, "events": get_events(db, app_id)})
+        "application": application, "rows": rows, "best_id": best_id, "savings": savings,
+        "max_overpayment": max_overpayment, "user": user, "events": get_events(db, app_id),
+        "stages": application_stages(application, db, shown)})
 
 
 # --- KYC: Страница верификации ---
 @app.get("/kyc", response_class=HTMLResponse)
 def kyc_page(request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_docs = db.query(models.Document).filter(models.Document.user_id == user.id).all()
-    return templates.TemplateResponse(request=request, name="kyc.html", context={"user": user, "user_docs": user_docs})
+    return templates.TemplateResponse(request=request, name="kyc.html", context={
+        "user": user, "user_docs": user_docs, "required_docs": KYC_DOCS.get(user.role, [])})
 
 
 # --- KYC: Загрузка файлов ---
@@ -561,10 +650,11 @@ def admin_dashboard(request: Request, user: models.User = Depends(get_current_us
                 "confirmed_by": db.get(models.User, a.confirmed_by) if a.confirmed_by else None}
                for a in all_apps if a.status == "agreed"]
 
+    moderation_apps = [a for a in all_apps if a.status == "moderation"]
     return templates.TemplateResponse(request=request, name="admin.html", context={
         "user": user, "apps": all_apps, "kyc_queue": list(kyc_queue.items()),
-        "moderation_apps": [a for a in all_apps if a.status == "moderation"],
-        "archive": archive, "analytics": build_analytics(all_apps, all_offers)})
+        "moderation_apps": moderation_apps, "archive": archive, "analytics": build_analytics(all_apps, all_offers),
+        "nav_counts": {"kyc": len(kyc_queue), "moderation": len(moderation_apps)}})
 
 
 # --- Модерация заявок ---
@@ -739,7 +829,7 @@ def operator_deal(app_id: int, request: Request, user: models.User = Depends(get
                                           models.Offer.status == "accepted").first()
     checks = deal_checks(app, offer, db)
     return templates.TemplateResponse(request=request, name="operator_deal.html", context={
-        "user": user, "app": app, "offer": offer, "checks": checks,
+        "user": user, "app": app, "offer": offer, "checks": checks, "stages": application_stages(app, db),
         "can_confirm": app.status == "in_work" and all(checks.values()), "events": get_events(db, app_id)})
 
 
@@ -790,7 +880,10 @@ def deal_room(app_id: int, request: Request, user: models.User = Depends(get_cur
             "messages": messages,
             "main_contract": main_contract,
             "other_documents": other_documents,
-            "user": user
+            "user": user,
+            "offer": db.query(models.Offer).filter(models.Offer.application_id == app_id,
+                                                   models.Offer.status == "accepted").first(),
+            "stages": application_stages(application, db),
         }
     )
 

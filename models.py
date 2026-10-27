@@ -19,9 +19,21 @@ class User(Base):
     # Причина отказа в KYC, видна компании до повторной отправки документов
     kyc_reject_reason = Column(String(500), nullable=True)
 
+    documents = relationship("Document", viewonly=True)
+
     @property
     def display_name(self):
         return self.company_name or self.email
+
+    @property
+    def kyc_status(self):
+        """approved / pending / rejected / none — по пакету документов компании."""
+        statuses = {d.status for d in self.documents}
+        if "approved" in statuses:
+            return "approved"
+        if "pending" in statuses:
+            return "pending"
+        return "rejected" if self.kyc_reject_reason else "none"
 
 
 class Application(Base):

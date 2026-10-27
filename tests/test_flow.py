@@ -150,6 +150,10 @@ def test_full_deal_flow(world):
     operator.post(f"/operator/offer/{gamma_offer.id}/show")
     page = alfa.get(f"/applications/{application.id}/offers").text
     assert "Beta Capital Ltd" in page and "Gamma Finance" in page and "Льготный период" in page
+    # Сравнение: Beta дешевле по полной стоимости (11,6% против 12,1%), экономия на сумму заявки за 6 мес.
+    assert "Лучшее предложение" in page and "11,6%" in page and "12,1%" in page
+    assert page.index("Beta Capital Ltd") < page.index("Gamma Finance")
+    assert "1 250" in page
 
     # Отклонение одного предложения и принятие другого
     assert alfa.post(f"/reject_offer/{gamma_offer.id}").status_code == 303
@@ -210,3 +214,29 @@ def _all_apps_and_offers():
     for o in offers:
         _ = o.sender  # подгрузить до закрытия сессии
     return apps, offers
+
+
+def test_offer_cost_and_stages():
+    from types import SimpleNamespace as NS
+    app = NS(funding_amount=500000, term_months=6)
+    beta = main.offer_cost(NS(funding_amount=500000, annual_interest_rate=8, total_commission=1.8), app)
+    gamma = main.offer_cost(NS(funding_amount=450000, annual_interest_rate=7.5, total_commission=2.3), app)
+    # проценты за 6 месяцев + комиссия один раз
+    assert beta["interest"] == pytest.approx(20000) and beta["commission"] == pytest.approx(9000)
+    assert beta["overpayment"] == pytest.approx(29000)
+    # полная стоимость: ставка + комиссия, разнесённая на срок
+    assert beta["effective_rate"] == pytest.approx(11.6) and gamma["effective_rate"] == pytest.approx(12.1)
+    assert gamma["coverage"] == 90
+    assert main.offer_cost(NS(funding_amount=1, annual_interest_rate=5, total_commission=1),
+                           NS(funding_amount=1, term_months=None))["effective_rate"] is None
+    assert main.format_money(612500.5) == "612\u00a0500,50" and main.format_percent(1.80) == "1,8%"
+
+    db = SessionLocal()
+    try:
+        states = lambda app: [s["state"] for s in main.application_stages(app, db)]
+        assert states(NS(id=0, status="moderation", moderation_comment=None)) == ["current"] + ["todo"] * 5
+        assert states(NS(id=0, status="rejected", moderation_comment="x"))[0] == "failed"
+        assert states(NS(id=0, status="published", moderation_comment=None))[:3] == ["done", "done", "current"]
+        assert states(NS(id=0, status="agreed", moderation_comment=None)) == ["done"] * 6
+    finally:
+        db.close()
