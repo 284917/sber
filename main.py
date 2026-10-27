@@ -14,8 +14,6 @@ import uuid
 from database import engine, Base, get_db
 import models
 
-Base.metadata.create_all(bind=engine)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(title="Платформа ликвидности Сбер")
@@ -52,7 +50,41 @@ def ensure_admin():
         db.close()
 
 
-ensure_admin()
+# Если БД недоступна, приложение не падает целиком: ошибка видна на /health и на страницах (503)
+DB_INIT_ERROR = None
+
+
+def init_db():
+    global DB_INIT_ERROR
+    try:
+        Base.metadata.create_all(bind=engine)
+        ensure_admin()
+        DB_INIT_ERROR = None
+    except Exception as e:
+        DB_INIT_ERROR = f"{type(e).__name__}: {str(e).splitlines()[0][:300] if str(e) else ''}"
+
+
+init_db()
+
+
+@app.middleware("http")
+async def require_db(request: Request, call_next):
+    if DB_INIT_ERROR and request.url.path != "/health":
+        init_db()
+        if DB_INIT_ERROR:
+            return HTMLResponse(f"<h3>База данных недоступна</h3><p>{DB_INIT_ERROR}</p>"
+                                f"<p>Проверьте DATABASE_URL. Подробности: /health</p>", status_code=503)
+    return await call_next(request)
+
+
+@app.get("/health")
+def health():
+    return {
+        "db": "ok" if not DB_INIT_ERROR else DB_INIT_ERROR,
+        "database_url_set": bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")),
+        "secret_key_set": bool(os.getenv("SECRET_KEY")),
+        "admin_env_set": bool(os.getenv("ADMIN_EMAIL") and os.getenv("ADMIN_PASSWORD")),
+    }
 
 
 def create_token(user_id: int, role: str):
