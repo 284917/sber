@@ -42,6 +42,10 @@ UPLOAD_DIR = "uploads"
 PUBLIC_ROLES = {"borrower", "creditor"}
 STAFF_ROLES = {"admin", "operator"}
 
+# Справочники для заявки (как на макете в Miro); в БД валюта — 3 символа, страна — 2
+CURRENCIES = ["EUR", "USD", "CNY"]
+COUNTRIES = {"DE": "Германия", "TR": "Турция", "CN": "Китай"}
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "sber_hackathon_secret_key_12345")
 
@@ -207,7 +211,8 @@ def dashboard(request: Request, user: models.User = Depends(get_current_user), d
         apps = db.query(models.Application).filter(models.Application.user_id == user.id).all()
         user_docs = db.query(models.Document).filter(models.Document.user_id == user.id).all()
         return templates.TemplateResponse(request=request, name="borrower.html",
-                                          context={"user": user, "apps": apps, "user_docs": user_docs})
+                                          context={"user": user, "apps": apps, "user_docs": user_docs,
+                                                   "currencies": CURRENCIES, "countries": COUNTRIES})
 
     elif user.role == "creditor":
         available_apps = db.query(models.Application).filter(models.Application.status == "published").all()
@@ -243,7 +248,11 @@ def create_application(amount: float = Form(...), currency: str = Form(...), cou
     if approved_docs == 0:
         return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
 
-    new_app = models.Application(user_id=user.id, funding_amount=amount, currency_code=currency,
+    purpose = purpose.strip()
+    if amount <= 0 or currency not in CURRENCIES or country not in COUNTRIES or not purpose or len(purpose) > 255:
+        return RedirectResponse(url="/dashboard?error=form", status_code=303)
+
+    new_app =models.Application(user_id=user.id, funding_amount=amount, currency_code=currency,
                                  target_jurisdiction=country, purpose=purpose)
     db.add(new_app)
     db.commit()
@@ -260,6 +269,12 @@ def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...)
     ).count()
     if approved_docs == 0:
         return RedirectResponse(url="/dashboard?error=kyc", status_code=303)
+
+    # Проверки из макета: заявка открыта, сумма не больше запрошенной, ставка больше 0
+    application = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if not application or application.status != "published": raise HTTPException(404)
+    if not (0 < amount <= float(application.funding_amount)) or not (0 < rate < 100) or not (0 <= lender_comm < 100):
+        return RedirectResponse(url="/dashboard?error=offer", status_code=303)
 
     total_comm = lender_comm + 0.8
     new_offer = models.Offer(

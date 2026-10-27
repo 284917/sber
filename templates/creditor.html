@@ -46,6 +46,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
+    {% if request.query_params.get('error') == 'offer' %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
+        Проверьте оффер: сумма больше 0 и не больше запрошенной в заявке, ставка от 0 до 100%, комиссия от 0 до 100%.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
 
     <!-- БЛОК 1: МОИ СДЕЛКИ (ЧАТЫ) -->
     <h4 class="mb-4">Мои активные сделки</h4>
