@@ -3,13 +3,15 @@
 Модерацию и снятие заявок может делать любой сотрудник (оператор или администратор),
 создавать и отключать сотрудников — только главный администратор.
 """
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, accounts, analytics, applications, kyc
+from liquidity.services import Invalid, accounts, analytics, applications, export, kyc, sla
 from liquidity.web import redirect, render
 
 router = APIRouter(prefix="/admin", tags=["Администратор"])
@@ -37,6 +39,14 @@ def admin_page(request: Request, tab: str = "overview", user: models.User = Depe
                   staff_members=accounts.staff_list(db) if tab == "staff" else [],
                   doc_names={k: v for docs in config.KYC_DOCS.values() for k, v in docs},
                   nav_counts={"kyc": len(kyc_queue), "moderation": len(data["moderation_apps"])})
+
+
+@router.get("/export.xlsx", summary="Выгрузка аналитики, сделок, заявок и предложений в Excel")
+def export_xlsx(user: models.User = Depends(admin_only), db: Session = Depends(get_db)):
+    content = export.build_workbook(analytics.overview(db), db.query(models.Offer).all())
+    filename = f"liquidity-{datetime.utcnow():%Y-%m-%d}.xlsx"
+    return Response(content=content, headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @router.post("/application/{app_id}/moderate", summary="Модерация заявки: approve или reject с причиной")

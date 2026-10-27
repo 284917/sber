@@ -19,6 +19,9 @@ def _plain(text: str) -> str:
 
 
 class DealPDF(FPDF):
+    footer_note = ("Сводка сформирована {now:%d.%m.%Y %H:%M} UTC. Не заменяет договор займа, "
+                   "условия которого стороны загрузили в комнату сделки.")
+
     def header(self):
         self.set_fill_color(*BRAND)
         self.rect(15, 12, 8, 8, style="F", round_corners=True, corner_radius=2)
@@ -43,8 +46,7 @@ class DealPDF(FPDF):
         self.set_y(-14)
         self.set_font("Manrope", "", 7)
         self.set_text_color(*MUTED)
-        self.cell(0, 4, f"Сводка сформирована {datetime.utcnow():%d.%m.%Y %H:%M} UTC. Не заменяет договор займа, "
-                        f"условия которого стороны загрузили в комнату сделки.", align="L")
+        self.cell(0, 4, self.footer_note.format(now=datetime.utcnow()), align="L")
         self.cell(0, 4, f"{self.page_no()}/{{nb}}", align="R")
 
     def section(self, title: str, keep: float = 30):
@@ -69,21 +71,46 @@ class DealPDF(FPDF):
             self.multi_cell(0, 6, _plain(value), new_x="LMARGIN", new_y="NEXT")
 
 
+def new_pdf(cls, title: str):
+    pdf = cls(format="A4")
+    pdf.add_font("Manrope", "", os.path.join(FONT_DIR, "manrope-400.ttf"))
+    pdf.add_font("Manrope", "B", os.path.join(FONT_DIR, "manrope-700.ttf"))
+    pdf.set_margins(15, 12, 15)
+    pdf.set_auto_page_break(True, margin=18)
+    pdf.alias_nb_pages()
+    pdf.set_title(title)
+    pdf.set_author("Платформа ликвидности")
+    pdf.add_page()
+    return pdf
+
+
+def schedule_table(pdf, schedule, cur):
+    pdf.set_font("Manrope", "", 8)
+    pdf.set_text_color(*MUTED)
+    pdf.multi_cell(0, 4, "Комиссия при выдаче, проценты ежемесячно на всю сумму, основной долг в последний месяц.",
+                   new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf.set_text_color(*INK)
+    heading = FontFace(emphasis="BOLD", color=MUTED, fill_color=(250, 250, 251))
+    with pdf.table(col_widths=(22, 34, 34, 34, 36), text_align=("LEFT", "RIGHT", "RIGHT", "RIGHT", "RIGHT"),
+                   headings_style=heading, line_height=5.5, borders_layout="HORIZONTAL_LINES") as table:
+        table.row(["Платёж", f"Проценты, {cur}", f"Основной долг, {cur}", f"Комиссия, {cur}", f"Итого, {cur}"])
+        for r in schedule["rows"]:
+            table.row([r["label"], format_money(r["interest"]), format_money(r["principal"]),
+                       format_money(r["commission"]), format_money(r["payment"])])
+        t = schedule["totals"]
+        table.row(["Всего", format_money(t["interest"]), format_money(t["principal"]),
+                   format_money(t["commission"]), format_money(t["payment"])],
+                  style=FontFace(emphasis="BOLD"))
+
+
 def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
     cur = application.currency_code
     cost = offer_cost(offer, application)
     schedule = payment_schedule(offer, application)
     borrower, creditor = application.borrower, offer.sender
 
-    pdf = DealPDF(format="A4")
-    pdf.add_font("Manrope", "", os.path.join(FONT_DIR, "manrope-400.ttf"))
-    pdf.add_font("Manrope", "B", os.path.join(FONT_DIR, "manrope-700.ttf"))
-    pdf.set_margins(15, 12, 15)
-    pdf.set_auto_page_break(True, margin=18)
-    pdf.alias_nb_pages()
-    pdf.set_title(f"Сводка сделки №{application.id}")
-    pdf.set_author("Платформа ликвидности")
-    pdf.add_page()
+    pdf = new_pdf(DealPDF, f"Сводка сделки №{application.id}")
 
     pdf.set_font("Manrope", "B", 20)
     pdf.set_text_color(*INK)
@@ -130,23 +157,7 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
 
     if schedule:
         pdf.section("График платежей")
-        pdf.set_font("Manrope", "", 8)
-        pdf.set_text_color(*MUTED)
-        pdf.multi_cell(0, 4, "Комиссия при выдаче, проценты ежемесячно на всю сумму, основной долг в последний месяц.",
-                       new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(2)
-        pdf.set_text_color(*INK)
-        heading = FontFace(emphasis="BOLD", color=MUTED, fill_color=(250, 250, 251))
-        with pdf.table(col_widths=(22, 34, 34, 34, 36), text_align=("LEFT", "RIGHT", "RIGHT", "RIGHT", "RIGHT"),
-                       headings_style=heading, line_height=5.5, borders_layout="HORIZONTAL_LINES") as table:
-            table.row(["Платёж", f"Проценты, {cur}", f"Основной долг, {cur}", f"Комиссия, {cur}", f"Итого, {cur}"])
-            for r in schedule["rows"]:
-                table.row([r["label"], format_money(r["interest"]), format_money(r["principal"]),
-                           format_money(r["commission"]), format_money(r["payment"])])
-            t = schedule["totals"]
-            table.row(["Всего", format_money(t["interest"]), format_money(t["principal"]),
-                       format_money(t["commission"]), format_money(t["payment"])],
-                      style=FontFace(emphasis="BOLD"))
+        schedule_table(pdf, schedule, cur)
 
     pdf.section("Подтверждение", keep=36)
     pdf.kv([("Подтвердил оператор", confirmed_by.email if confirmed_by else "—"), ("Дата", confirmed)])
@@ -160,4 +171,117 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
             pdf.set_text_color(*INK)
             pdf.multi_cell(0, 5, event.text, new_x="LMARGIN", new_y="NEXT")
 
+    return bytes(pdf.output())
+
+
+class ContractPDF(DealPDF):
+    footer_note = ("Проект сформирован {now:%d.%m.%Y %H:%M} UTC по условиям сделки на платформе. "
+                   "Перед подписанием проверьте текст с юристами сторон.")
+
+    def clause(self, number: str, title: str, paragraphs):
+        self.section(f"{number}. {title}", keep=24)
+        self.set_font("Manrope", "", 9)
+        self.set_text_color(*INK)
+        for i, text in enumerate(paragraphs, 1):
+            self.multi_cell(0, 5, _plain(f"{number}.{i}. {text}"), new_x="LMARGIN", new_y="NEXT")
+            self.ln(1)
+
+
+def contract_draft_pdf(application, offer, fx) -> bytes:
+    """Проект договора займа: стороны, сумма, ставка, комиссия, срок и график подставлены из сделки."""
+    cur = application.currency_code
+    cost = offer_cost(offer, application)
+    schedule = payment_schedule(offer, application)
+    borrower, creditor = application.borrower, offer.sender
+    term = application.term_months
+    amount = f"{format_money(offer.funding_amount)} {cur}"
+
+    pdf = new_pdf(ContractPDF, f"Проект договора займа по сделке №{application.id}")
+    pdf.set_font("Manrope", "B", 18)
+    pdf.set_text_color(*INK)
+    pdf.cell(0, 9, "Договор займа", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Manrope", "", 10)
+    pdf.set_text_color(*BRAND)
+    pdf.cell(0, 6, f"Проект по сделке №{application.id} · дата и место подписания: ____________",
+             new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf.set_font("Manrope", "", 9)
+    pdf.set_text_color(*INK)
+    pdf.multi_cell(0, 5, _plain(
+        f"{creditor.display_name} ({config.COUNTRY_NAMES.get(creditor.country_code, '—')}, регистрационный номер "
+        f"{creditor.registration_number or '—'}), далее «Займодавец», и {borrower.display_name} (Россия, ИНН "
+        f"{borrower.registration_number or '—'}), далее «Заёмщик», совместно «Стороны», заключили настоящий "
+        f"договор о нижеследующем."), new_x="LMARGIN", new_y="NEXT")
+
+    pdf.clause("1", "Предмет договора", [
+        f"Займодавец передаёт Заёмщику денежные средства в размере {amount} (далее «Сумма займа»), "
+        f"а Заёмщик обязуется вернуть Сумму займа и уплатить проценты в порядке и сроки, установленные договором.",
+        f"Целевое назначение займа: {application.purpose}.",
+    ])
+    pdf.clause("2", "Предоставление займа", [
+        f"Сумма займа перечисляется в валюте {cur} на счёт Заёмщика или указанного им получателя в стране: "
+        f"{config.COUNTRY_NAMES.get(application.target_jurisdiction, '—')}.",
+        f"Способ передачи средств: {config.TRANSFER_METHODS.get(application.transfer_method, '—')}.",
+        "Займ считается предоставленным с даты зачисления средств на счёт получателя.",
+    ])
+    pdf.clause("3", "Проценты и комиссии", [
+        f"За пользование займом Заёмщик уплачивает проценты по ставке {format_percent(offer.annual_interest_rate)} "
+        f"годовых, начисляемые на Сумму займа и уплачиваемые ежемесячно.",
+        f"Комиссия за организацию составляет {format_percent(offer.total_commission)} от Суммы займа "
+        f"({format_money(cost['commission'])} {cur}), в том числе комиссия Займодавца "
+        f"{format_percent(offer.lender_commission)} и комиссия платформы {format_percent(config.PLATFORM_COMMISSION)}. "
+        f"Комиссия удерживается при выдаче.",
+        (f"Полная стоимость займа: {format_percent(round(cost['effective_rate'], 2))} годовых, переплата за весь срок "
+         f"{format_money(cost['overpayment'])} {cur}." if cost["effective_rate"] is not None else
+         "Полная стоимость займа рассчитывается после согласования срока."),
+    ])
+    pdf.clause("4", "Срок и возврат", [
+        f"Срок займа: {term} мес. с даты предоставления." if term else "Срок займа: ____ мес. с даты предоставления.",
+        "Сумма займа возвращается одним платежом в последний месяц срока вместе с процентами за этот месяц "
+        "согласно графику платежей (Приложение 1).",
+        "Досрочный возврат возможен с письменного уведомления Займодавца не позднее чем за 10 рабочих дней.",
+    ])
+    number = 5
+    if offer.extra_terms:
+        pdf.clause(str(number), "Дополнительные условия", [offer.extra_terms])
+        number += 1
+    pdf.clause(str(number), "Ответственность и споры", [
+        "За просрочку платежа Заёмщик уплачивает неустойку в размере ____% от просроченной суммы за каждый день просрочки.",
+        "Применимое право: ____________. Споры рассматриваются в ____________.",
+    ])
+    pdf.clause(str(number + 1), "Заключительные положения", [
+        "Договор вступает в силу с даты подписания и действует до полного исполнения обязательств.",
+        "Договор составлен в двух экземплярах, по одному для каждой из Сторон. "
+        "Подписанный экземпляр загружается в комнату сделки на платформе.",
+    ])
+
+    pdf.section("Подписи сторон", keep=50)
+    y = pdf.get_y() + 2
+    for x, role, company in ((15, "Займодавец", creditor.display_name), (110, "Заёмщик", borrower.display_name)):
+        pdf.set_text_color(*INK)
+        pdf.set_xy(x, y)
+        pdf.set_font("Manrope", "B", 9)
+        pdf.cell(85, 5, role)
+        pdf.set_xy(x, y + 6)
+        pdf.set_font("Manrope", "", 9)
+        pdf.multi_cell(85, 5, _plain(company))
+        pdf.set_xy(x, y + 26)
+        pdf.cell(85, 5, "__________________ / __________________")
+        pdf.set_xy(x, y + 32)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(85, 5, "подпись / ФИО, должность")
+    pdf.set_xy(15, y + 40)
+
+    if schedule:
+        pdf.ln(8)
+        pdf.section("Приложение 1. График платежей", keep=70)
+        schedule_table(pdf, schedule, cur)
+        rub = to_rub(cost["overpayment"], cur, fx) if cost["overpayment"] is not None else None
+        if rub is not None:
+            pdf.ln(2)
+            pdf.set_font("Manrope", "", 8)
+            pdf.set_text_color(*MUTED)
+            pdf.multi_cell(0, 4, _plain(f"Справочно: переплата около {format_money(round(rub))} ₽ по курсу ЦБ РФ "
+                                        f"{format_money(fx['rates'][cur])} ₽ за 1 {cur} на {fx['date']:%d.%m.%Y}."),
+                           new_x="LMARGIN", new_y="NEXT")
     return bytes(pdf.output())

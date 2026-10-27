@@ -51,6 +51,16 @@
 <div class="note note-{{ kind }}" role="{{ 'alert' if kind == 'bad' else 'status' }}">{{ icon({'ok': 'check', 'bad': 'warning-circle', 'warn': 'clock'}.get(kind, 'info')) }}<div>{{ text }}</div></div>
 {%- endmacro %}
 
+{% macro sla_badge(since, kind) -%}
+{% set st = sla_status(since, kind) %}
+{% if st %}<span class="sla {{ 'sla-overdue' if st.overdue else 'sla-soon' if st.soon }}" title="Срок ответа: {{ SLA_HOURS[kind] }} ч">{{ icon('clock', 'ic-sm') }} {{ st.label }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro rating_badge(stats) -%}
+{% if stats and stats.rating %}<span class="rating" title="Рейтинг платформы из 5">★ {{ stats.rating.score|string|replace('.', ',') }}</span>
+{% elif stats %}<span class="rating rating-new">Новый кредитор</span>{% endif %}
+{%- endmacro %}
+
 {% macro empty(icon_name, title, text='') -%}
 <div class="empty">{{ icon(icon_name) }}<b>{{ title }}</b>{% if text %}<span>{{ text }}</span>{% endif %}</div>
 {%- endmacro %}

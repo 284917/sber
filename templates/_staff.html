@@ -10,7 +10,7 @@
     {% for app in apps %}
     <tr>
         <td class="muted">{{ app.id }}</td>
-        <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if app.borrower and app.borrower.registration_number %}<div class="small muted">ИНН {{ app.borrower.registration_number }}</div>{% endif %}</td>
+        <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if app.borrower and app.borrower.registration_number %}<div class="small muted">ИНН {{ app.borrower.registration_number }}</div>{% endif %}<div>{{ sui.sla_badge(app.created_at, 'moderation') }}</div></td>
         <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
         <td>{{ sui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}<div class="small muted">{{ TRANSFER_METHODS.get(app.transfer_method, '—')|terms }}</div></td>
         <td class="cell-wrap">{{ app.purpose }}</td>

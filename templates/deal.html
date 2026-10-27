@@ -67,6 +67,11 @@
 
         <section class="card">
             <h2 class="card-title">Договор займа</h2>
+            {% if offer %}
+            <a href="/deal/{{ application.id }}/contract-draft.pdf" target="_blank" class="draft-link">
+                {{ ui.icon('file-text') }}<span><b>Проект договора</b><span class="small muted">Стороны, сумма, ставка, комиссия и график уже подставлены</span></span>{{ ui.icon('arrow-right', 'ic-sm') }}
+            </a>
+            {% endif %}
             {% if main_contract %}
                 {% set can_delete = application.status == 'in_work' and (user.role in ('admin', 'operator') or main_contract.sender_id == user.id) %}
                 <div class="doc-row" style="padding-top: 0;">

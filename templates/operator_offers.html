@@ -6,7 +6,7 @@
 <div class="page-head">
     <div>
         <h1>Предложения на проверке</h1>
-        <div class="sub">Оператор не меняет условия: только показывает предложение заёмщику или скрывает его с причиной.</div>
+        <div class="sub">Оператор не меняет условия: только показывает предложение заёмщику или скрывает его с причиной. Срок проверки — {{ SLA_HOURS.offer }} ч.</div>
     </div>
 </div>
 
@@ -23,8 +23,9 @@
         {% set o, a = item.offer, item.app %}
         <tr>
             <td>
-                <b>{{ o.sender.display_name if o.sender else 'Кредитор' }}</b>
+                <b><a href="/creditors/{{ o.user_id }}" class="creditor-link">{{ o.sender.display_name if o.sender else 'Кредитор' }}</a></b>
                 <div class="small muted">{{ ui.country(o.sender.country_code) if o.sender else '' }}</div>
+                <div>{{ ui.sla_badge(o.created_at, 'offer') }}</div>
                 {% if o.extra_terms %}<div class="small" style="max-width: 260px; margin-top: 4px;">{{ o.extra_terms }}</div>{% endif %}
             </td>
             <td>№{{ a.id }} · {{ a.borrower.display_name if a.borrower else '' }}<div class="small muted num">{{ a.funding_amount|money }} {{ a.currency_code }}{% if a.term_months %} · {{ a.term_months }} мес.{% endif %}</div></td>

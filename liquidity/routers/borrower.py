@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, applications, fx, offers
+from liquidity.services import Invalid, applications, creditors, fx, offers
 from liquidity.services.costs import compare_offers, payment_schedule
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
@@ -45,6 +45,7 @@ def application_page(app_id: int, request: Request, user: models.User = Depends(
     rub = lambda amount: fx.to_rub(amount, application.currency_code, rates)  # noqa: E731
     return render(request, "offers.html", user=user, application=application, rows=rows, best_id=best_id,
                   savings=savings, events=get_events(db, app_id), fx=rates, rub=rub,
+                  creditor_stats=creditors.stats(db, [r["offer"].user_id for r in rows]),
                   stages=applications.stages(db, application, shown))
 
 

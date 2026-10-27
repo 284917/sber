@@ -72,3 +72,16 @@ def overview(db: Session):
             "funnel": funnel(apps, offers, published_ids), "weeks": weeks,
             "weeks_max": max((w["count"] for w in weeks), default=0),
             "moderation_apps": [a for a in apps if a.status == "moderation"]}
+
+
+def market_rates(db: Session):
+    """Средние условия предложений, которые увидели заёмщики, по валютам: подсказка для калькулятора."""
+    result = {}
+    rows = db.query(models.Offer).filter(models.Offer.status.in_(["shown", "accepted", "rejected"])).all()
+    for offer in rows:
+        if offer.application:
+            result.setdefault(offer.application.currency_code, []).append(offer)
+    return {cur: {"count": len(items),
+                  "rate": round(sum(float(o.annual_interest_rate) for o in items) / len(items), 2),
+                  "lender_commission": round(sum(float(o.lender_commission) for o in items) / len(items), 2)}
+            for cur, items in result.items()}

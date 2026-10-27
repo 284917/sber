@@ -12,11 +12,14 @@
         <h1>{{ titles[tab] }}</h1>
         <div class="sub">Администрирование{% if user.is_superadmin %} · главный администратор{% endif %}</div>
     </div>
+    <div class="actions">
+    <a href="/admin/export.xlsx" class="btn btn-secondary">{{ ui.icon('file-text') }} Выгрузить в Excel</a>
     {% if DEMO_MODE and tab == 'overview' %}
     <form method="post" action="/demo/reset" data-confirm="Пересоздать демо-данные?" data-confirm-kind="danger" data-confirm-ok="Пересоздать" data-confirm-text="Данные компаний @demo.local будут удалены и созданы заново. Данные остальных компаний не изменятся.">{{ csrf_field(request) }}
         <button type="submit" class="btn btn-secondary">Сбросить демо-данные</button>
     </form>
     {% endif %}
+    </div>
 </div>
 
 <nav class="tabs" aria-label="Разделы администрирования">
@@ -117,7 +120,7 @@
         <tbody>
         {% for company, docs in kyc_queue %}
         <tr>
-            <td><b class="cell-wrap">{{ company.display_name }}</b><div class="small muted cell-wrap">{{ company.email }}</div></td>
+            <td><b class="cell-wrap">{{ company.display_name }}</b><div class="small muted cell-wrap">{{ company.email }}</div>{% set sent = docs|map(attribute='created_at')|select|list %}<div>{{ ui.sla_badge(sent|max if sent else none, 'kyc') }}</div></td>
             <td>{{ ROLE_NAMES.get(company.role, company.role) }}<div class="small muted">{{ ui.country(company.country_code) }}</div></td>
             <td class="num">{{ company.registration_number or '—' }}</td>
             <td>

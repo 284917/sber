@@ -6,7 +6,7 @@ from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.routers import borrower, creditor
 from liquidity.security import end_session, get_current_user, require_role, start_session
-from liquidity.services import Invalid, accounts, demo, throttle
+from liquidity.services import Invalid, accounts, analytics, demo, fx, throttle
 from liquidity.web import redirect, render
 
 router = APIRouter(tags=["Вход и регистрация"])
@@ -16,8 +16,18 @@ FIELD_BY_ERROR = {"company": "company_name", "inn": "registration_number", "regn
 
 
 @router.get("/", summary="Главная страница (лендинг)")
-def landing(request: Request):
-    return render(request, "landing.html")
+def landing(request: Request, db: Session = Depends(get_db)):
+    rates = fx.current_rates(db)
+    calc = {"rates": {k: float(v) for k, v in rates["rates"].items()} if rates else {},
+            "rates_date": rates["date"].strftime("%d.%m.%Y") if rates else None,
+            "market": analytics.market_rates(db), "platform_commission": config.PLATFORM_COMMISSION,
+            "currencies": config.CURRENCIES, "max_term": config.MAX_TERM_MONTHS}
+    return render(request, "landing.html", calc=calc)
+
+
+@router.get("/security", summary="Безопасность и документы")
+def security_page(request: Request):
+    return render(request, "security.html", kyc_docs=config.KYC_DOCS, sla=config.SLA_HOURS)
 
 
 @router.get("/login", summary="Страница входа")

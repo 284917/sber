@@ -72,8 +72,10 @@
                 {% set is_best = o.id == best_id %}
                 <tr class="{{ 'best-row' if is_best }}">
                     <td>
-                        <b>{{ o.sender.display_name if o.sender else 'Кредитор' }}</b> {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
-                        <div class="small muted">{{ ui.country(o.sender.country_code) if o.sender else '' }}</div>
+                        {% set cs = creditor_stats.get(o.user_id) %}
+                        <b>{% if o.sender %}<a href="/creditors/{{ o.user_id }}" class="creditor-link" title="Профиль и рейтинг кредитора">{{ o.sender.display_name }}</a>{% else %}Кредитор{% endif %}</b> {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
+                        <div class="small muted">{{ ui.country(o.sender.country_code) if o.sender else '' }}{% if cs %} · сделок: {{ cs.deals_done }}{% endif %}</div>
+                        <div style="margin-top: 4px;">{{ ui.rating_badge(cs) }}</div>
                         {% if o.status != 'shown' %}<div style="margin-top: 4px;">{{ ui.offer_status(o.status) }}</div>{% endif %}
                     </td>
                     <td class="num"><b>{{ c.amount|money }}</b><div class="small muted">{{ c.coverage }}% запрошенного</div></td>

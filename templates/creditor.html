@@ -81,10 +81,46 @@
     </div>
 </form>
 
+{% set has_filter = filters.values()|select|list %}
+{% if qp.get('search_saved') %}{{ ui.flash('ok', 'Фильтр сохранён. Когда появится подходящая заявка, придёт уведомление.') }}{% endif %}
+{% if qp.get('search_deleted') %}{{ ui.flash('ok', 'Фильтр удалён.') }}{% endif %}
+{% set search_errors = {'empty': 'Задайте хотя бы одно условие фильтра, чтобы его сохранить.', 'range': 'Проверьте диапазон суммы: «от» не больше «до».',
+                        'limit': 'Можно сохранить не больше ' ~ max_saved ~ ' фильтров. Удалите ненужный.', 'duplicate': 'Такой фильтр уже сохранён.'} %}
+{% if qp.get('search_error') %}{{ ui.flash('bad', search_errors.get(qp.get('search_error'), 'Не удалось сохранить фильтр.')) }}{% endif %}
+
+<section class="card" id="saved" style="padding: 16px 24px;">
+    <div class="actions" style="justify-content: space-between; align-items: center;">
+        <div>
+            <h2 class="card-title" style="margin: 0;">{{ ui.icon('bell', 'ic-sm') }} Уведомления о новых заявках</h2>
+            <p class="small muted" style="margin: 4px 0 0;">Сохраните фильтр — сообщим, когда опубликуют подходящую заявку.</p>
+        </div>
+        {% if has_filter and filter_saved %}<span class="small muted">{{ ui.icon('check', 'ic-sm') }} Этот фильтр уже сохранён</span>
+        {% elif has_filter and saved|length < max_saved %}
+        <form method="post" action="/saved-searches">{{ csrf_field(request) }}
+            {% for key, value in filters.items() if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+            <button type="submit" class="btn btn-primary btn-sm">{{ ui.icon('bell', 'ic-sm') }} Сообщать по этому фильтру</button>
+        </form>
+        {% elif has_filter %}<span class="small muted">Сохранено максимум фильтров: {{ max_saved }}</span>
+        {% else %}<span class="small muted">Выберите условия в фильтре выше</span>{% endif %}
+    </div>
+    {% if saved %}
+    <ul class="saved-list" style="margin-top: 16px;">
+        {% for s, label, query in saved %}
+        <li>
+            <a href="/dashboard?{{ query }}">{{ label }}</a>
+            <form method="post" action="/saved-searches/{{ s.id }}/delete">{{ csrf_field(request) }}
+                <button type="submit" class="btn btn-ghost btn-sm" aria-label="Удалить фильтр {{ label }}">{{ ui.icon('x', 'ic-sm') }}</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+
 <p class="muted" style="margin: 0 0 12px;">Найдено заявок: {{ available_apps|length }}</p>
 
 {% for app in available_apps %}
-<section class="card">
+<section class="card" id="app-{{ app.id }}">
     <div class="actions" style="justify-content: space-between; align-items: flex-start;">
         <div>
             <div class="big-num" style="font-size: 24px; line-height: 32px;">{{ app.funding_amount|money }} {{ app.currency_code }}</div>

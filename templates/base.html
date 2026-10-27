@@ -9,9 +9,9 @@
 <a href="#main" class="skip">Перейти к содержимому</a>
 {% set role = user.role %}
 {% set nav = {
-    'borrower': [('Заявки', [('apps', 'Мои заявки', '/dashboard', 'files', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None)])],
+    'borrower': [('Заявки', [('apps', 'Мои заявки', '/dashboard', 'files', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None), ('security', 'Безопасность и документы', '/security', 'lock-key', None)])],
     'creditor': [('Работа', [('market', 'Заявки на финансирование', '/dashboard', 'magnifying-glass', None), ('my-offers', 'Мои предложения', '/dashboard#my-offers', 'hand-coins', None)]),
-                 ('Компания', [('kyc', 'Верификация', '/kyc', 'shield-check', None)])],
+                 ('Компания', [('profile', 'Профиль и рейтинг', '/creditors/' ~ user.id, 'trend-up', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None)])],
     'operator': [('Оператор', [('op-moderation', 'Модерация заявок', '/operator/moderation', 'list-checks', None),
                                ('op-offers', 'Предложения на проверке', '/operator/offers', 'clipboard-text', None),
                                ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None)])],

@@ -164,3 +164,16 @@ class Notification(Base):
     kind = Column(String(20), nullable=False, default="info")
     created_at = Column(DateTime, server_default=func.now())
     read_at = Column(DateTime, nullable=True)
+
+
+class SavedSearch(Base):
+    """Сохранённый фильтр кредитора: о новых опубликованных заявках под него приходит уведомление."""
+    __tablename__ = "saved_searches"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    country = Column(String(2), nullable=True)
+    currency = Column(String(3), nullable=True)
+    amount_min = Column(Numeric(15, 2), nullable=True)
+    amount_max = Column(Numeric(15, 2), nullable=True)
+    term_max = Column(Integer, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())

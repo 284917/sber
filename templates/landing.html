@@ -150,6 +150,56 @@
         </div>
     </section>
 
+    <!-- Калькулятор полной стоимости: тот же расчёт, что и в сравнении предложений -->
+    <section class="section section-tint" id="calc">
+        <div class="wrap">
+            <span class="eyebrow reveal">Калькулятор</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">Сколько будет стоить финансирование</h2>
+            <p class="lead-lg reveal" style="margin-top: 16px;">Введите сумму, валюту и срок. Покажем полную стоимость, переплату и её размер в рублях по курсу ЦБ РФ.</p>
+            <form class="calc reveal" id="calc-form" onsubmit="return false" novalidate>
+                <div class="calc-inputs">
+                    <div class="field">
+                        <label class="f" for="c-amount">Сумма</label>
+                        <div class="calc-amount">
+                            <input type="text" inputmode="decimal" id="c-amount" class="input input-lg" value="1 000 000" autocomplete="off">
+                            <div class="cur-seg" role="radiogroup" aria-label="Валюта">
+                                {% for cur in calc.currencies %}<label><input type="radio" name="currency" value="{{ cur }}" {% if loop.first %}checked{% endif %}><span>{{ cur }}</span></label>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="calc-label"><label class="f" for="c-term">Срок</label><output id="c-term-out" for="c-term">12 мес.</output></div>
+                        <input type="range" id="c-term" min="1" max="60" step="1" value="12" class="range">
+                        <div class="range-scale small muted"><span>1 мес.</span><span>5 лет</span></div>
+                    </div>
+                    <div class="form-row calc-pair">
+                        <div class="field">
+                            <label class="f" for="c-rate">Ставка, % годовых</label>
+                            <input type="text" inputmode="decimal" id="c-rate" class="input" value="9" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <label class="f" for="c-comm">Комиссия кредитора, %</label>
+                            <input type="text" inputmode="decimal" id="c-comm" class="input" value="1" autocomplete="off">
+                        </div>
+                    </div>
+                    <p class="small muted" id="c-market" aria-live="polite"></p>
+                </div>
+                <div class="calc-result" aria-live="polite">
+                    <div class="small muted">Полная стоимость</div>
+                    <div class="calc-big"><span id="r-effective">—</span><span class="calc-unit">% годовых</span></div>
+                    <dl class="calc-rows">
+                        <div><dt>Проценты за срок</dt><dd id="r-interest">—</dd></div>
+                        <div><dt>Комиссия за организацию <span class="muted" id="r-comm-pct"></span></dt><dd id="r-commission">—</dd></div>
+                        <div><dt>Проценты в месяц</dt><dd id="r-monthly">—</dd></div>
+                        <div class="calc-total"><dt>Переплата</dt><dd><b id="r-overpay">—</b><span class="rub" id="r-rub"></span></dd></div>
+                    </dl>
+                    <a href="/register" class="btn btn-primary btn-block">Подать заявку {{ ui.icon('arrow-right') }}</a>
+                    <p class="small muted" style="margin-top: 12px;">Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 0,8% платформы. Проценты ежемесячно, основной долг в конце срока.</p>
+                </div>
+            </form>
+        </div>
+    </section>
+
     <!-- Преимущества -->
     <section class="section section-dark">
         <div class="wrap">
@@ -247,6 +297,49 @@
 
 {{ site.footer() }}
 {{ site.scripts() }}
+<script>
+    // Калькулятор: формула совпадает с offer_cost на сервере
+    (function () {
+        const data = {{ calc|tojson }};
+        const $ = (id) => document.getElementById(id);
+        const num = (v) => parseFloat(String(v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
+        const money = (v, d = 2) => v.toLocaleString('ru-RU', {minimumFractionDigits: d, maximumFractionDigits: d});
+        let rateTouched = false;
+        const currency = () => document.querySelector('#calc-form [name=currency]:checked').value;
+        function market() {
+            const m = data.market[currency()];
+            if (m && !rateTouched) { $('c-rate').value = String(m.rate).replace('.', ','); $('c-comm').value = String(m.lender_commission).replace('.', ','); }
+            $('c-market').textContent = m ? `Средние условия предложений в ${currency()} на платформе: ${String(m.rate).replace('.', ',')}% и комиссия ${String(m.lender_commission).replace('.', ',')}% (по ${m.count} предл.).`
+                                          : 'Ставку и комиссию предложат кредиторы; для оценки подставлены типичные значения.';
+        }
+        function calc() {
+            const amount = num($('c-amount').value), term = +$('c-term').value;
+            const rate = num($('c-rate').value), comm = num($('c-comm').value);
+            const cur = currency();
+            $('c-term-out').textContent = term < 12 || term % 12 ? term + ' мес.' : term / 12 + (term === 12 ? ' год' : term < 60 ? ' года' : ' лет');
+            const ok = amount > 0 && rate >= 0 && rate <= 100 && comm >= 0 && comm <= 100;
+            [['c-amount', amount > 0], ['c-rate', rate >= 0 && rate <= 100], ['c-comm', comm >= 0 && comm <= 100]]
+                .forEach(([id, good]) => $(id).setAttribute('aria-invalid', !good));
+            if (!ok) { ['r-effective', 'r-interest', 'r-commission', 'r-monthly', 'r-overpay'].forEach(id => $(id).textContent = '—'); $('r-rub').textContent = ''; return; }
+            const totalComm = comm + data.platform_commission;
+            const interest = amount * rate / 100 * term / 12, commission = amount * totalComm / 100;
+            const overpay = interest + commission;
+            $('r-effective').textContent = money(rate + totalComm * 12 / term);
+            $('r-interest').textContent = money(interest) + ' ' + cur;
+            $('r-commission').textContent = money(commission) + ' ' + cur;
+            $('r-comm-pct').textContent = '(' + money(totalComm) + '%)';
+            $('r-monthly').textContent = money(amount * rate / 100 / 12) + ' ' + cur;
+            $('r-overpay').textContent = money(overpay) + ' ' + cur;
+            const r = data.rates[cur];
+            $('r-rub').textContent = r ? `≈ ${money(Math.round(overpay * r), 0)} ₽ по курсу ЦБ РФ на ${data.rates_date}: 1 ${cur} = ${money(r, 4)} ₽` : '';
+        }
+        $('c-amount').addEventListener('blur', () => { const v = num($('c-amount').value); if (v > 0) $('c-amount').value = money(v, v % 1 ? 2 : 0); });
+        ['c-rate', 'c-comm'].forEach(id => $(id).addEventListener('input', () => { rateTouched = true; }));
+        document.querySelectorAll('#calc-form [name=currency]').forEach(r => r.addEventListener('change', () => { market(); calc(); }));
+        $('calc-form').addEventListener('input', calc);
+        market(); calc();
+    })();
+</script>
 <script>
     // Переключатель «Для заёмщиков / Для кредиторов»: меняет содержимое без перезагрузки и запоминает выбор в адресе
     (function () {

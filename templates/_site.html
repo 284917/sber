@@ -7,8 +7,9 @@
     <a href="/" class="brand">{{ ui.brand_mark() }}<span class="brand-name">Платформа ликвидности</span></a>
     <nav class="site-links">
         <a href="/#how">Как это работает</a>
+        <a href="/#calc">Калькулятор</a>
         <a href="/#roles">Кредиторам</a>
-        <a href="/#faq">Вопросы</a>
+        <a href="/security">Безопасность</a>
     </nav>
     {% if logged_in %}
     <a href="/dashboard" class="btn btn-primary btn-sm">Перейти в кабинет</a>
@@ -21,8 +22,10 @@
 </header>
 <div class="site-menu" id="site-menu">
     <a href="/#how">Как это работает</a>
+    <a href="/#calc">Калькулятор</a>
     <a href="/#roles">Кредиторам</a>
     <a href="/#faq">Вопросы</a>
+    <a href="/security">Безопасность</a>
     {% if logged_in %}
     <a href="/dashboard" class="btn btn-primary btn-lg">Перейти в кабинет</a>
     {% else %}
@@ -37,6 +40,7 @@
     <div class="wrap">
         <a href="/" class="brand" style="padding: 0;">{{ ui.brand_mark() }}<span class="brand-name">Платформа ликвидности<span>MVP для SBER HACK, 2026</span></span></a>
         <nav aria-label="Документы">
+            <a href="/security">Безопасность и документы</a>
             <a href="/privacy">Политика конфиденциальности</a>
             <a href="/terms">Условия использования</a>
             <a href="/login">Вход</a>

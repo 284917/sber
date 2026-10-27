@@ -46,6 +46,8 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
         log_event(db, app_id, admin, "Заявка прошла модерацию и опубликована для кредиторов")
         notify(db, application.user_id, f"Заявка №{app_id} опубликована, кредиторы её видят",
                f"/applications/{app_id}/offers", "ok")
+        from liquidity.services.saved_searches import notify_matching  # здесь, чтобы не было циклического импорта
+        notify_matching(db, application)
     elif decision == "reject":
         if not comment:
             raise Invalid("reason")

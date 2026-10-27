@@ -1,0 +1,138 @@
+{% import "_ui.html" as ui %}
+{% import "_site.html" as site %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% include "_head.html" %}
+    <title>Безопасность и документы · Платформа ликвидности</title>
+    <meta name="description" content="Как платформа проверяет компании, кто видит ваши данные и какие документы нужны для KYC.">
+</head>
+<body class="site">
+<a href="#main" class="skip">Перейти к содержимому</a>
+{{ site.nav(request) }}
+<main id="main">{% filter terms %}
+    <section class="section" style="padding-top: 128px;">
+        <div class="wrap">
+            <span class="eyebrow">Безопасность и документы</span>
+            <h1 class="h-section h-page" style="margin-top: 16px;">Каждый участник проверен, каждый шаг виден</h1>
+            <p class="lead-lg" style="margin-top: 16px;">Как мы проверяем компании и сделки, кто видит ваши данные и что подготовить до регистрации.</p>
+
+            <div class="trust-grid">
+                <article class="trust-card">
+                    {{ ui.icon('identification-card') }}
+                    <h3>Проверка компании</h3>
+                    <p>KYC проходят все заёмщики и кредиторы. Администратор проверяет пакет документов целиком и при отказе называет причину.</p>
+                </article>
+                <article class="trust-card">
+                    {{ ui.icon('list-checks') }}
+                    <h3>Модерация заявок</h3>
+                    <p>Каждую заявку до публикации проверяет сотрудник. Кредиторы видят только одобренные заявки верифицированных компаний.</p>
+                </article>
+                <article class="trust-card">
+                    {{ ui.icon('shield-check') }}
+                    <h3>Проверка предложений</h3>
+                    <p>Оператор сверяет условия кредитора с заявкой до того, как их увидит заёмщик. Условия он не меняет.</p>
+                </article>
+                <article class="trust-card">
+                    {{ ui.icon('seal-check') }}
+                    <h3>Подтверждение сделки</h3>
+                    <p>Сделка получает статус «Согласовано», только когда загружен подписанный договор и обе стороны проверены.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-tint" id="documents">
+        <div class="wrap">
+            <span class="eyebrow">Документы для KYC</span>
+            <h2 class="h-section" style="margin-top: 16px;">Что подготовить до регистрации</h2>
+            <p class="lead-lg" style="margin-top: 16px;">Все документы загружаются в PDF, до 4 МБ каждый. Пока пакет не отправлен на проверку, любой файл можно заменить.</p>
+            <div class="roles" style="margin-top: 32px;">
+                {% for role, title, tag in [('borrower', 'Заёмщику (российская компания)', 'Россия'), ('creditor', 'Кредитору (зарубежная компания)', 'Зарубежье')] %}
+                <article class="role-card">
+                    <span class="tag">{{ tag }}</span>
+                    <h3>{{ title }}</h3>
+                    <ul>
+                        {% for doc_type, name in kyc_docs[role] %}<li>{{ ui.icon('file-text') }} {{ name }}</li>{% endfor %}
+                    </ul>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="access">
+        <div class="wrap">
+            <span class="eyebrow">Доступ к данным</span>
+            <h2 class="h-section" style="margin-top: 16px;">Кто что видит</h2>
+            <div class="card card-tight" style="margin-top: 32px;">
+                <div class="table-wrap">
+                <table class="t t-top access-table">
+                    <thead><tr><th>Данные</th><th>Ваша компания</th><th>Другая сторона сделки</th><th>Остальные участники</th><th>Сотрудники платформы</th></tr></thead>
+                    <tbody>
+                    {% for label, own, party, others, staff in [
+                        ('Документы KYC', True, False, False, True),
+                        ('Заявка: сумма, валюта, срок, назначение', True, True, 'Только верифицированные кредиторы, после модерации', True),
+                        ('Название заёмщика', True, True, 'Верифицированные кредиторы', True),
+                        ('Предложение кредитора', True, 'Заёмщик — после проверки оператором', False, True),
+                        ('Чат сделки и файлы', True, 'Только принятый кредитор', False, True),
+                        ('Договор', True, 'Только принятый кредитор', False, True),
+                    ] %}
+                    <tr>
+                        <td><b>{{ label }}</b></td>
+                        {% for v in [own, party, others, staff] %}
+                        <td>{% if v is sameas true %}<span class="yes">{{ ui.icon('check', 'ic-sm') }} Да</span>{% elif v is sameas false %}<span class="no">Нет</span>{% else %}<span class="small">{{ v }}</span>{% endif %}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-tint" id="sla">
+        <div class="wrap">
+            <span class="eyebrow">Сроки</span>
+            <h2 class="h-section" style="margin-top: 16px;">Сколько ждать ответа платформы</h2>
+            <div class="sla-grid">
+                <div class="sla-item"><b>{{ sla.kyc }} ч</b><span>проверка документов KYC</span></div>
+                <div class="sla-item"><b>{{ sla.moderation }} ч</b><span>модерация заявки</span></div>
+                <div class="sla-item"><b>{{ sla.offer }} ч</b><span>проверка предложения кредитора</span></div>
+            </div>
+            <p class="small muted" style="margin-top: 16px;">Сроки считаются с момента отправки. Если срок вышел, задача подсвечивается у сотрудника как просроченная.</p>
+        </div>
+    </section>
+
+    <section class="section" id="tech">
+        <div class="wrap prose">
+            <span class="eyebrow">Защита данных</span>
+            <h2 class="h-section" style="margin-top: 16px; font-size: 30px; line-height: 36px;">Как устроена защита</h2>
+            <ul class="check-list">
+                <li>{{ ui.icon('lock-key') }}<span><b>Пароли</b> хранятся только в виде хеша bcrypt. Сотрудники платформы их не видят.</span></li>
+                <li>{{ ui.icon('lock-simple') }}<span><b>Сессия</b> хранится в защищённой cookie, недоступной скриптам страницы, и истекает автоматически.</span></li>
+                <li>{{ ui.icon('shield-check') }}<span><b>Формы</b> защищены от подделки запросов с чужих сайтов (CSRF-токен в каждой форме).</span></li>
+                <li>{{ ui.icon('warning-circle') }}<span><b>Вход</b> блокируется на 15 минут после пяти неверных паролей подряд.</span></li>
+                <li>{{ ui.icon('files') }}<span><b>Файлы</b> отдаются только тем, у кого есть доступ к сделке или к пакету KYC. Прямых публичных ссылок нет.</span></li>
+                <li>{{ ui.icon('clock') }}<span><b>История</b> каждого действия по заявке сохраняется: кто и когда опубликовал, показал, принял или подтвердил.</span></li>
+            </ul>
+            <p class="small muted" style="margin-top: 24px;">Платформа является MVP для хакатона SBER HACK и не является финансовой организацией. Подробнее в <a href="/privacy">политике конфиденциальности</a> и <a href="/terms">условиях использования</a>.</p>
+        </div>
+    </section>
+
+    <section class="section section-tint">
+        <div class="wrap final-cta">
+            <h2 class="h-section" style="text-align: center;">Документы готовы?</h2>
+            <p class="lead-lg" style="text-align: center;">Регистрация занимает пару минут, проверка — до {{ sla.kyc }} часов.</p>
+            <div class="actions" style="justify-content: center;">
+                <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
+                <a href="/register?role=creditor" class="btn btn-secondary btn-lg">Я кредитор</a>
+            </div>
+        </div>
+    </section>
+{% endfilter %}</main>
+{{ site.footer() }}
+{{ site.scripts() }}
+</body>
+</html>

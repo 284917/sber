@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'profile' if user.id == creditor.id else '' %}
+{% set s = stats %}
+{% block title %}{{ creditor.display_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <a href="/dashboard" class="back" onclick="if (document.referrer.startsWith(location.origin)) { history.back(); return false; }">← Назад</a>
+        <h1>{{ creditor.display_name }}</h1>
+        <div class="sub">Кредитор · {{ ui.country(creditor.country_code) }}{% if creditor.created_at %} · на платформе с {{ creditor.created_at.strftime('%m.%Y') }}{% endif %}
+            {% if creditor.kyc_status == 'approved' %} · <span class="yes-inline">{{ ui.icon('seal-check', 'ic-sm') }} KYC пройден</span>{% endif %}</div>
+    </div>
+</div>
+
+{% if user.id == creditor.id %}
+<div class="note note-info">Так ваш профиль видят заёмщики, которым оператор показал ваше предложение. Рейтинг растёт с каждой завершённой сделкой и быстрыми ответами на новые заявки.</div>
+{% endif %}
+
+<div class="stat-grid">
+    <div class="card stat"><div class="label">Завершённых сделок</div><div class="value">{{ s.deals_done }}</div><div class="hint">ещё в работе: {{ s.deals_in_work }}</div></div>
+    <div class="card stat"><div class="label">Средняя ставка</div><div class="value">{{ s.avg_rate|round(2)|percent if s.avg_rate is not none else '—' }}</div><div class="hint">комиссия в среднем {{ s.avg_commission|round(2)|percent if s.avg_commission is not none else '—' }}</div></div>
+    <div class="card stat"><div class="label">Скорость ответа</div><div class="value">{{ response_text(s.response_hours) }}</div><div class="hint">от публикации заявки до предложения</div></div>
+    <div class="card stat"><div class="label">Принято заёмщиками</div><div class="value">{{ s.acceptance ~ '%' if s.acceptance is not none else '—' }}</div><div class="hint">из предложений, по которым есть решение</div></div>
+</div>
+
+<div class="grid grid-side">
+    <section class="card">
+        <h2 class="card-title">Последние сделки</h2>
+        {% if recent_deals %}
+        <div class="table-wrap">
+        <table class="t">
+            <thead><tr><th>Валюта · сумма</th><th>Страна · срок</th><th class="num">Ставка</th><th>Статус</th></tr></thead>
+            <tbody>
+            {% for o in recent_deals %}
+            <tr>
+                <td><b>{{ o.funding_amount|money }}</b> {{ o.application.currency_code }}</td>
+                <td>{{ ui.country(o.application.target_jurisdiction) }} · {{ o.application.term_months }} мес.</td>
+                <td class="num">{{ o.annual_interest_rate|percent }}</td>
+                <td>{{ ui.app_status(o.application.status) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="hint">Названия заёмщиков не раскрываются.</p>
+        {% else %}{{ ui.empty('handshake', 'Сделок пока нет', 'Здесь появятся сделки, в которых заёмщик выбрал предложение этого кредитора.') }}{% endif %}
+        {% if s.currencies %}<p class="small muted" style="margin-top: 16px;">Работает с валютами: {{ s.currencies|join(', ') }} · всего предложений: {{ s.offers }}</p>{% endif %}
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Рейтинг платформы</h2>
+        {% if s.rating %}
+        <div class="score-big">{{ s.rating.score|string|replace('.', ',') }} <span class="muted" style="font-size: 18px; font-weight: 600;">из 5</span></div>
+        <div class="score-bar" aria-hidden="true"><i style="width: {{ (s.rating.score / 5 * 100)|round }}%"></i></div>
+        <div class="score-parts">
+            {% for key, label, max in [('deals', 'Завершённые сделки', 2), ('acceptance', 'Доля принятых предложений', 1.5), ('speed', 'Скорость ответа', 1.5)] %}
+            <div>
+                <div class="row"><span>{{ label }}</span><b>{{ s.rating.parts[key]|round(1)|string|replace('.', ',') }} / {{ max|string|replace('.', ',') }}</b></div>
+                <div class="score-bar"><i style="width: {{ (s.rating.parts[key] / max * 100)|round }}%"></i></div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="hint" style="margin-top: 16px;">Сделки: 0,5 балла за каждую, до 2. Ответ быстрее 24 часов даёт 1,5 балла, до 3 дней или без данных — 1, дольше — 0,5. Минимальная оценка 1.</p>
+        {% else %}
+        <span class="rating rating-new">Новый кредитор</span>
+        <p class="muted" style="margin-top: 12px;">Рейтинг появится после первой завершённой сделки или трёх решений заёмщиков по предложениям этого кредитора.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
