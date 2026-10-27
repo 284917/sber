@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime
 import os
+import re
 import shutil
+import uuid
 
 from database import engine, Base, get_db
 import models
@@ -19,7 +20,10 @@ templates = Jinja2Templates(directory="templates")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# Роли, которые можно выбрать при самостоятельной регистрации
+PUBLIC_ROLES = {"borrower", "creditor"}
+STAFF_ROLES = {"admin", "operator"}
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY", "sber_hackathon_secret_key_12345")
@@ -47,6 +51,35 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+# --- Файлы: безопасное имя и сохранение только внутри uploads ---
+def save_upload(file: UploadFile, prefix: str) -> str:
+    original = os.path.basename((file.filename or "").replace("\\", "/"))
+    safe_name = re.sub(r"[^\w.\-]", "_", original)[:100] or "file"
+    file_location = f"{UPLOAD_DIR}/{prefix}_{uuid.uuid4().hex[:12]}_{safe_name}"
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return file_location
+
+
+# --- Сделка: доступ только у заёмщика, принятого кредитора и сотрудников ---
+def get_deal_for_user(app_id: int, user: models.User, db: Session) -> models.Application:
+    application = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if not application:
+        raise HTTPException(404, detail="Заявка не найдена")
+
+    is_borrower = (user.id == application.user_id)
+    is_creditor = db.query(models.Offer).filter(
+        models.Offer.application_id == app_id,
+        models.Offer.user_id == user.id,
+        models.Offer.status == "accepted"
+    ).first() is not None
+    is_staff = user.role in STAFF_ROLES
+
+    if not (is_borrower or is_creditor or is_staff):
+        raise HTTPException(403, detail="У вас нет доступа к этой сделке")
+    return application
+
+
 # --- Главная страница (Логин) ---
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -62,6 +95,10 @@ def register_page(request: Request):
 @app.post("/register")
 def register_user(request: Request, email: str = Form(...), password: str = Form(...), role: str = Form(...),
                   db: Session = Depends(get_db)):
+    if role not in PUBLIC_ROLES:
+        return templates.TemplateResponse(request=request, name="register.html",
+                                          context={"error": "Недопустимая роль"}, status_code=400)
+
     existing_user = db.query(models.User).filter(models.User.email == email).first()
     if existing_user:
         return templates.TemplateResponse(request=request, name="register.html",
@@ -174,9 +211,19 @@ def accept_offer(offer_id: int, user: models.User = Depends(get_current_user), d
     offer = db.query(models.Offer).filter(models.Offer.id == offer_id).first()
     if not offer: raise HTTPException(404)
 
-    offer.status = "accepted"
     app = db.query(models.Application).filter(models.Application.id == offer.application_id).first()
+    # Принять можно только показанный оператором оффер по своей ещё открытой заявке
+    if not app or app.user_id != user.id: raise HTTPException(404)
+    if offer.status != "shown" or app.status != "published":
+        raise HTTPException(400, detail="Оффер нельзя принять")
+
+    offer.status = "accepted"
     app.status = "in_work"
+    db.query(models.Offer).filter(
+        models.Offer.application_id == app.id,
+        models.Offer.id != offer.id,
+        models.Offer.status.in_(["pending", "shown"])
+    ).update({"status": "rejected"}, synchronize_session=False)
     db.commit()
     return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -209,9 +256,8 @@ def kyc_page(request: Request, user: models.User = Depends(get_current_user), db
 @app.post("/kyc/upload")
 async def upload_kyc(file: UploadFile = File(...), doc_type: str = Form(...),
                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    file_location = f"{UPLOAD_DIR}/{user.id}_{doc_type}_{file.filename}"
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    if not re.fullmatch(r"[a-z_]{1,50}", doc_type): raise HTTPException(400, detail="Неверный тип документа")
+    file_location = save_upload(file, f"{user.id}_{doc_type}")
 
     new_doc = models.Document(user_id=user.id, doc_type=doc_type, file_path=file_location, status="uploaded")
     db.add(new_doc)
@@ -274,6 +320,7 @@ def admin_change_app_status(app_id: int, new_status: str = Form(...), user: mode
 def admin_create_user(email: str = Form(...), password: str = Form(...), role: str = Form(...),
                       user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role != "admin": raise HTTPException(403)
+    if role not in STAFF_ROLES: raise HTTPException(400, detail="Недопустимая роль")
     existing = db.query(models.User).filter(models.User.email == email).first()
     if existing: return RedirectResponse(url="/admin?error=exists", status_code=303)
 
@@ -392,20 +439,7 @@ def operator_confirm_deal(app_id: int, user: models.User = Depends(get_current_u
 @app.get("/deal/{app_id}", response_class=HTMLResponse)
 def deal_room(app_id: int, request: Request, user: models.User = Depends(get_current_user),
               db: Session = Depends(get_db)):
-    application = db.query(models.Application).filter(models.Application.id == app_id).first()
-    if not application:
-        raise HTTPException(404, detail="Заявка не найдена")
-
-    is_borrower = (user.id == application.user_id)
-    is_creditor = db.query(models.Offer).filter(
-        models.Offer.application_id == app_id,
-        models.Offer.user_id == user.id,
-        models.Offer.status == "accepted"
-    ).first() is not None
-    is_staff = user.role in ["admin", "operator"]
-
-    if not (is_borrower or is_creditor or is_staff):
-        raise HTTPException(403, detail="У вас нет доступа к этой сделке")
+    application = get_deal_for_user(app_id, user, db)
 
     messages = db.query(models.Message).filter(models.Message.application_id == app_id).order_by(
         models.Message.created_at).all()
@@ -438,11 +472,10 @@ async def send_message(
         app_id: int, text: str = Form(None), file: UploadFile = File(None),
         user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
+    get_deal_for_user(app_id, user, db)
     file_location = None
     if file and file.filename:
-        file_location = f"{UPLOAD_DIR}/deal_{app_id}_{file.filename}"
-        with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        file_location = save_upload(file, f"deal_{app_id}")
 
     if not text and not file_location:
         return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
@@ -460,9 +493,8 @@ async def send_message(
 @app.post("/deal/{app_id}/upload_contract")
 async def upload_contract(app_id: int, file: UploadFile = File(...), user: models.User = Depends(get_current_user),
                           db: Session = Depends(get_db)):
-    file_location = f"{UPLOAD_DIR}/contract_{app_id}_{file.filename}"
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    get_deal_for_user(app_id, user, db)
+    file_location = save_upload(file, f"contract_{app_id}")
 
     new_msg = models.Message(application_id=app_id, sender_id=user.id, text="Загружен основной договор займа",
                              file_path=file_location)
@@ -471,9 +503,29 @@ async def upload_contract(app_id: int, file: UploadFile = File(...), user: model
     return RedirectResponse(url=f"/deal/{app_id}", status_code=303)
 
 
+# --- Скачивание файлов: только владелец документа, участники сделки и сотрудники ---
+@app.get("/uploads/{filename}")
+def download_file(filename: str, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if filename != os.path.basename(filename): raise HTTPException(404)
+    file_location = f"{UPLOAD_DIR}/{filename}"
+
+    doc = db.query(models.Document).filter(models.Document.file_path == file_location).first()
+    msg = db.query(models.Message).filter(models.Message.file_path == file_location).first()
+    if doc:
+        if doc.user_id != user.id and user.role not in STAFF_ROLES: raise HTTPException(403)
+    elif msg:
+        get_deal_for_user(msg.application_id, user, db)
+    else:
+        raise HTTPException(404)
+
+    if not os.path.isfile(file_location): raise HTTPException(404)
+    return FileResponse(file_location, filename=filename, content_disposition_type="inline")
+
+
 # --- Кнопка "Позвать оператора" ---
 @app.post("/deal/{app_id}/call_operator")
 def call_operator(app_id: int, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    get_deal_for_user(app_id, user, db)
     sys_msg = models.Message(
         application_id=app_id, sender_id=user.id,
         text="🔔 Запрошено подключение оператора. Ожидайте ответа."
