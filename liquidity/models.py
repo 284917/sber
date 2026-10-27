@@ -1,5 +1,5 @@
 """ORM-модели: компании (users), заявки, предложения, документы KYC, чат, история и файлы."""
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, LargeBinary
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Date, Boolean, LargeBinary, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from liquidity.database import Base
@@ -124,3 +124,14 @@ class StoredFile(Base):
     path = Column(String(255), primary_key=True)
     content = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class FxRate(Base):
+    """Официальный курс ЦБ РФ (рублей за 1 единицу валюты) — кэш, чтобы не ходить к ЦБ на каждый запрос."""
+    __tablename__ = "fx_rates"
+    __table_args__ = (UniqueConstraint("rate_date", "currency_code"),)
+    id = Column(Integer, primary_key=True)
+    rate_date = Column(Date, nullable=False)
+    currency_code = Column(String(3), nullable=False)
+    rate = Column(Numeric(18, 6), nullable=False)
+    fetched_at = Column(DateTime, server_default=func.now())

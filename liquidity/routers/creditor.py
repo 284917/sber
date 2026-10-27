@@ -32,3 +32,9 @@ def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...)
     except Invalid as e:
         return redirect(f"/dashboard?error={e.code}")
     return redirect("/dashboard?offer_sent=1")
+
+
+@router.post("/offers/{offer_id}/withdraw", summary="Отозвать своё предложение (пока нет решения заёмщика)")
+def withdraw_offer(offer_id: int, user: models.User = Depends(require_role("creditor")), db: Session = Depends(get_db)):
+    offers.withdraw(db, user, offer_id)
+    return redirect("/dashboard?offer_withdrawn=1#my-offers")

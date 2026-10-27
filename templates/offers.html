@@ -4,15 +4,22 @@
 {% block title %}Заявка №{{ application.id }}{% endblock %}
 {% block content %}
 {% set cur = application.currency_code %}
-<a href="/dashboard" class="back">← Все заявки</a>
+<a href="/dashboard" class="back">{{ ui.icon('arrow-left', 'ic-sm') }} Все заявки</a>
 <div class="page-head">
     <div>
         <h1>Заявка №{{ application.id }} · <span class="num">{{ application.funding_amount|money }}</span> {{ cur }}</h1>
-        <div class="sub">{{ ui.country(application.target_jurisdiction) }} · {{ application.term_months ~ ' мес.' if application.term_months else 'срок не указан' }} · {{ TRANSFER_METHODS.get(application.transfer_method, 'способ передачи не указан') }}</div>
+        <div class="sub">{{ ui.country(application.target_jurisdiction) }} · {{ application.term_months ~ ' мес.' if application.term_months else 'срок не указан' }} · {{ TRANSFER_METHODS.get(application.transfer_method, 'способ передачи не указан') }}{% if rub(application.funding_amount) %} · {{ rub(application.funding_amount)|rub }}{% endif %}</div>
     </div>
     <div class="actions">
         {{ ui.app_status(application.status) }}
-        {% if application.status in ('in_work', 'agreed') %}<a href="/deal/{{ application.id }}" class="btn btn-primary">Перейти к сделке</a>{% endif %}
+        {% if application.status in ('moderation', 'published') %}
+        {% set open_count = rows|selectattr('offer.status', 'equalto', 'shown')|list|length %}
+        <form method="post" action="/applications/{{ application.id }}/withdraw" data-confirm="Отозвать заявку №{{ application.id }}?" data-confirm-kind="danger" data-confirm-ok="Отозвать заявку"
+              data-confirm-text="Кредиторы перестанут её видеть{% if open_count %}, а {{ open_count }} {{ 'открытое предложение будет закрыто' if open_count == 1 else 'открытых предложения будут закрыты' }}{% endif %}. Вернуть заявку нельзя, но можно подать новую.">{{ csrf_field(request) }}
+            <button type="submit" class="btn btn-secondary">Отозвать заявку</button>
+        </form>
+        {% endif %}
+        {% if application.status in ('in_work', 'agreed') %}<a href="/deal/{{ application.id }}" class="btn btn-primary">Перейти к сделке {{ ui.icon('arrow-right') }}</a>{% endif %}
     </div>
 </div>
 
@@ -20,6 +27,8 @@
 
 {% if application.status == 'rejected' and application.moderation_comment %}
     {{ ui.flash('bad', 'Заявка отклонена модератором: ' ~ application.moderation_comment) }}
+{% elif application.status == 'withdrawn' %}
+    {{ ui.flash('info', 'Заявка отозвана. Кредиторы её не видят, открытые предложения закрыты.') }}
 {% elif application.status == 'moderation' %}
     {{ ui.flash('info', 'Заявка на модерации. Кредиторы увидят её после проверки администратором.') }}
 {% endif %}
@@ -37,7 +46,7 @@
             <div class="callout" style="margin: 0 24px 16px;">
                 <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 600;">{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}</div></div>
                 <div><div class="small muted">Полная стоимость</div><div class="big">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
-                <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div></div>
+                <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub">{{ rub(savings)|rub }}</span>{% endif %}</div>
             </div>
             {% endif %}
 
@@ -71,25 +80,49 @@
                     <td class="num">
                         {% if c.overpayment is not none %}
                         <b>{{ c.overpayment|money }}</b> {{ cur }}
+                        {% if rub(c.overpayment) %}<span class="rub">{{ rub(c.overpayment)|rub }}</span>{% endif %}
                         {% else %}—{% endif %}
                     </td>
                     <td class="num"><span class="big-num">{{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }}</span><div class="small muted">годовых</div></td>
                 </tr>
-                {% if o.extra_terms or (o.status == 'shown' and application.status == 'published') %}
+                {% set name = o.sender.display_name if o.sender else 'кредитора' %}
+                {% set others = (rows|selectattr('offer.status', 'equalto', 'shown')|list|length) - 1 %}
                 <tr class="{{ 'best-row' if is_best }}">
                     <td colspan="6" style="padding-top: 0;">
-                        <div class="actions" style="justify-content: space-between;">
-                            <span class="small">{% if o.extra_terms %}<span class="muted">Дополнительные условия:</span> {{ o.extra_terms }}{% endif %}</span>
+                        <div class="actions" style="justify-content: space-between; align-items: flex-start;">
+                            <div style="display: grid; gap: 8px; min-width: 0;">
+                                {% if o.extra_terms %}<span class="small"><span class="muted">Дополнительные условия:</span> {{ o.extra_terms }}</span>{% endif %}
+                                {% if row.schedule %}
+                                <details class="schedule">
+                                    <summary>{{ ui.icon('arrow-right', 'ic-sm') }} График платежей</summary>
+                                    <div class="schedule-table">
+                                        <table class="t">
+                                            <thead><tr><th>Платёж</th><th class="num">Проценты</th><th class="num">Основной долг</th><th class="num">Комиссия</th><th class="num">Итого, {{ cur }}</th></tr></thead>
+                                            <tbody>
+                                            {% for p in row.schedule.rows %}
+                                            <tr><td>{{ p.label }}</td><td class="num">{{ p.interest|money }}</td><td class="num">{{ p.principal|money }}</td><td class="num">{{ p.commission|money }}</td><td class="num"><b>{{ p.payment|money }}</b></td></tr>
+                                            {% endfor %}
+                                            {% set t = row.schedule.totals %}
+                                            <tr class="total"><td>Всего</td><td class="num">{{ t.interest|money }}</td><td class="num">{{ t.principal|money }}</td><td class="num">{{ t.commission|money }}</td><td class="num">{{ t.payment|money }}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="hint">Комиссия при выдаче, проценты ежемесячно на всю сумму, основной долг одним платежом в конце срока. По этой модели считается и полная стоимость.</p>
+                                </details>
+                                {% endif %}
+                            </div>
                             {% if o.status == 'shown' and application.status == 'published' %}
+                            {% set others_text = '' if others < 1 else ('Остальное предложение будет отклонено, ' if others == 1 else 'Остальные ' ~ others ~ ' предложения будут отклонены, ') %}
                             <div class="actions">
-                                <form method="post" action="/reject_offer/{{ o.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
-                                <form method="post" action="/accept_offer/{{ o.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Принять предложение</button></form>
+                                <form method="post" action="/reject_offer/{{ o.id }}" data-confirm="Отклонить предложение {{ name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
+                                      data-confirm-text="Кредитор увидит, что предложение отклонено. Вернуть его нельзя.">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
+                                <form method="post" action="/accept_offer/{{ o.id }}" data-confirm="Принять предложение {{ name }}?" data-confirm-ok="Принять предложение"
+                                      data-confirm-text="{{ others_text }}заявка перейдёт в работу. Сумма {{ c.amount|money }} {{ cur }}, полная стоимость {{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }} годовых.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Принять предложение</button></form>
                             </div>
                             {% endif %}
                         </div>
                     </td>
                 </tr>
-                {% endif %}
                 {% endfor %}
                 </tbody>
             </table>
@@ -105,14 +138,14 @@
             {% endif %}
         </section>
         {% if rows %}
-        <p class="muted small">Переплата = проценты за срок заявки + комиссия за организацию (кредитора и платформы {{ PLATFORM_COMMISSION|percent }}). Полная стоимость = ставка + комиссия × 12 / срок в месяцах.</p>
+        <p class="muted small">Переплата = проценты за срок заявки + комиссия за организацию (кредитора и платформы {{ PLATFORM_COMMISSION|percent }}). Полная стоимость = ставка + комиссия × 12 / срок в месяцах.{% if fx and cur in fx.rates %} Рубли — по курсу ЦБ РФ на {{ fx.date.strftime('%d.%m.%Y') }}: {{ fx.rates[cur]|money }} ₽ за 1 {{ cur }}.{% endif %}</p>
         {% endif %}
     </div>
 
     <div class="grid grid-2">
         <section class="card">
             <h2 class="card-title">Параметры заявки</h2>
-            <div class="kv"><span>Сумма</span><span class="num">{{ application.funding_amount|money }} {{ cur }}</span></div>
+            <div class="kv"><span>Сумма</span><span class="num">{{ application.funding_amount|money }} {{ cur }}{% if rub(application.funding_amount) %}<span class="rub">{{ rub(application.funding_amount)|rub }}</span>{% endif %}</span></div>
             <div class="kv"><span>Страна получения</span><span>{{ ui.country(application.target_jurisdiction) }}</span></div>
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>
             <div class="kv"><span>Способ передачи</span><span>{{ TRANSFER_METHODS.get(application.transfer_method, '—') }}</span></div>

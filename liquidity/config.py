@@ -39,9 +39,9 @@ PLATFORM_COMMISSION = 0.8  # % от суммы, добавляется к ком
 
 # --- Статусы ---
 APPLICATION_STATUSES = {"moderation": "На модерации", "rejected": "Отклонена", "published": "Опубликована",
-                        "in_work": "В работе", "agreed": "Согласовано"}
+                        "in_work": "В работе", "agreed": "Согласовано", "withdrawn": "Отозвана"}
 OFFER_STATUSES = {"pending": "На проверке у оператора", "shown": "Получено заёмщиком", "hidden": "Скрыто оператором",
-                  "accepted": "Принято", "rejected": "Отклонено"}
+                  "accepted": "Принято", "rejected": "Отклонено", "withdrawn": "Отозвано кредитором"}
 KYC_STATUSES = {"approved": "Верифицирована", "pending": "На проверке", "rejected": "Отказ в верификации",
                 "none": "Не верифицирована"}
 

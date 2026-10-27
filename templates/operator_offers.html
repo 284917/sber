@@ -39,7 +39,7 @@
                     <form method="post" action="/operator/offer/{{ o.id }}/show">{{ csrf_field(request) }}
                         <button type="submit" class="btn btn-primary btn-sm" {% if not item.is_valid %}disabled{% endif %}>Показать</button>
                     </form>
-                    <form method="post" action="/operator/offer/{{ o.id }}/hide" class="actions" style="flex-wrap: nowrap;">{{ csrf_field(request) }}
+                    <form method="post" action="/operator/offer/{{ o.id }}/hide" data-confirm="Скрыть предложение {{ o.sender.display_name if o.sender else '' }}?" data-confirm-kind="danger" data-confirm-ok="Скрыть" data-confirm-text="Заёмщик его не увидит, кредитор увидит причину. Отменить нельзя." class="actions" style="flex-wrap: nowrap;">{{ csrf_field(request) }}
                         <input type="text" name="reason" class="input input-sm" placeholder="Причина скрытия" maxlength="255" style="width: 150px;" {% if not item.is_valid %}value="{{ item.problems|join(', ') }}"{% endif %}>
                         <button type="submit" class="btn btn-danger btn-sm">Скрыть</button>
                     </form>

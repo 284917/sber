@@ -15,7 +15,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from datetime import date  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
 from liquidity.app import app  # noqa: E402
+from liquidity.services import fx  # noqa: E402
+
+# Тесты не ходят в сеть: курсы ЦБ фиксированные
+TEST_RATES = (date(2026, 10, 27), {"EUR": Decimal("90"), "USD": Decimal("80"), "CNY": Decimal("12")})
+fx.fetch_from_cbr = lambda: TEST_RATES
 
 PDF = ("doc.pdf", b"%PDF-1.4 test", "application/pdf")
 

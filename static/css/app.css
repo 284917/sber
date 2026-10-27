@@ -158,7 +158,7 @@ table.t { width: 100%; border-collapse: collapse; }
 .pill-warn, .pill-in_work, .pill-pending, .pill-accepted { background: var(--warn-soft); color: var(--warn); }
 .pill-bad, .pill-rejected, .pill-hidden { background: var(--danger-soft); color: var(--danger); }
 .pill-info, .pill-moderation { background: var(--info-soft); color: var(--info); }
-.pill-none { background: var(--neutral-soft); color: var(--ink-2); }
+.pill-none, .pill-withdrawn { background: var(--neutral-soft); color: var(--ink-2); }
 .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: var(--neutral-soft); color: var(--ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
 .tag-best { background: var(--brand); color: #fff; }
 
@@ -397,3 +397,44 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
   .reveal, .site-menu a, .sidebar .nav a, .sidebar .nav-label { transform: none !important; }
   .btn:active { transform: none; }
 }
+
+/* ---------- Окно подтверждения ---------- */
+.confirm { border: 0; padding: 0; border-radius: 24px; width: min(480px, calc(100% - 32px)); background: var(--surface); color: var(--ink); box-shadow: 0 24px 64px rgba(11,11,12,.24); }
+.confirm::backdrop { background: rgba(11,11,12,.48); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.confirm[open] { animation: confirm-in 500ms var(--ease); }
+.confirm[open]::backdrop { animation: fade-in 300ms var(--ease); }
+.confirm-body { padding: 24px; display: grid; gap: 12px; }
+.confirm-icon { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.confirm-icon.danger { background: var(--danger-soft); color: var(--danger); }
+.confirm-icon .ic { width: 24px; height: 24px; }
+.confirm h2 { font-size: 20px; line-height: 28px; margin-top: 4px; }
+.confirm p { color: var(--muted); font-size: 16px; line-height: 24px; }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px 24px; }
+@keyframes confirm-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- График платежей ---------- */
+.schedule summary { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--brand-ink); list-style: none; }
+.schedule summary::-webkit-details-marker { display: none; }
+.schedule summary .ic { transition: transform 500ms var(--ease); }
+.schedule[open] summary .ic { transform: rotate(90deg); }
+.schedule-table { margin-top: 12px; max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.schedule-table .t th { position: sticky; top: 0; border-top: 0; }
+.schedule-table .t td, .schedule-table .t th { padding: 8px 16px; }
+.schedule-table tr.total td { font-weight: 700; background: #FAFAFB; }
+.rub { display: block; font-size: 12px; line-height: 16px; color: var(--muted); font-weight: 500; }
+
+/* ---------- Графики аналитики ---------- */
+.funnel { display: grid; gap: 12px; }
+.funnel-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 96px; gap: 16px; align-items: center; }
+.funnel-bar { height: 24px; border-radius: 0 4px 4px 0; background: var(--brand); min-width: 4px; transition: transform 700ms var(--ease); transform-origin: left; }
+.funnel-value { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.funnel-value span { display: block; font-size: 12px; line-height: 16px; color: var(--muted); font-weight: 500; }
+.weeks { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; align-items: end; height: 160px; padding-top: 24px; }
+.week { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 8px; text-align: center; }
+.week-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.week-bar { width: 100%; max-width: 40px; border-radius: 4px 4px 0 0; background: var(--brand); min-height: 2px; }
+.week-bar.zero { background: var(--line); }
+.week-n { font-size: 12px; line-height: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.week-label { font-size: 12px; line-height: 16px; color: var(--muted); white-space: nowrap; }
+@media (max-width: 760px) { .funnel-row { grid-template-columns: minmax(0, 1fr) 80px; } .funnel-row .funnel-track { grid-column: 1 / -1; grid-row: 2; } }

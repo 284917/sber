@@ -12,7 +12,8 @@
     </div>
     <div class="actions">
         {{ ui.app_status(application.status) }}
-        {% if user.role in ('admin', 'operator') %}<a href="/operator/deal/{{ application.id }}" class="btn btn-primary">Проверить и подтвердить</a>{% endif %}
+        {% if application.status == 'agreed' %}<a href="/deal/{{ application.id }}/summary.pdf" target="_blank" class="btn btn-primary">{{ ui.icon('file-text') }} Скачать сводку PDF</a>{% endif %}
+        {% if user.role in ('admin', 'operator') and application.status == 'in_work' %}<a href="/operator/deal/{{ application.id }}" class="btn btn-primary">Проверить и подтвердить</a>{% endif %}
     </div>
 </div>
 
@@ -55,6 +56,8 @@
         <section class="card">
             <h2 class="card-title">Условия сделки</h2>
             <div class="kv"><span>Сумма</span><span class="num">{{ offer.funding_amount|money }} {{ cur }}</span></div>
+            {% if cost and cost.effective_rate is not none %}<div class="kv"><span>Полная стоимость</span><span>{{ cost.effective_rate|round(2)|percent }} годовых</span></div>
+            <div class="kv"><span>Переплата</span><span class="num">{{ cost.overpayment|money }} {{ cur }}{% if overpayment_rub %}<span class="rub">{{ overpayment_rub|rub }} по курсу ЦБ на {{ fx.date.strftime('%d.%m') }}</span>{% endif %}</span></div>{% endif %}
             <div class="kv"><span>Ставка</span><span>{{ offer.annual_interest_rate|percent }} годовых</span></div>
             <div class="kv"><span>Комиссия за организацию</span><span>{{ offer.total_commission|percent }}</span></div>
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>

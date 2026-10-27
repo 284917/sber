@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, applications, offers
-from liquidity.services.costs import compare_offers
+from liquidity.services import Invalid, applications, fx, offers
+from liquidity.services.costs import compare_offers, payment_schedule
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
 
@@ -38,10 +38,20 @@ def application_page(app_id: int, request: Request, user: models.User = Depends(
                      db: Session = Depends(get_db)):
     application = applications.get_own(db, user, app_id)
     rows, best_id, savings = compare_offers(application, offers.visible_to_borrower(db, app_id))
+    for row in rows:
+        row["schedule"] = payment_schedule(row["offer"], application)
     shown = sum(1 for r in rows if r["offer"].status == "shown")
+    rates = fx.current_rates(db)
+    rub = lambda amount: fx.to_rub(amount, application.currency_code, rates)  # noqa: E731
     return render(request, "offers.html", user=user, application=application, rows=rows, best_id=best_id,
-                  savings=savings, events=get_events(db, app_id),
+                  savings=savings, events=get_events(db, app_id), fx=rates, rub=rub,
                   stages=applications.stages(db, application, shown))
+
+
+@router.post("/applications/{app_id}/withdraw", summary="Отозвать заявку (до сделки)")
+def withdraw_application(app_id: int, user: models.User = Depends(borrower_only), db: Session = Depends(get_db)):
+    applications.withdraw(db, user, app_id)
+    return redirect(f"/applications/{app_id}/offers?withdrawn=1")
 
 
 @router.post("/accept_offer/{offer_id}", summary="Принять предложение (остальные отклоняются)")

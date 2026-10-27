@@ -11,7 +11,7 @@
         <div class="sub">Проверка компаний и заявок, аналитика и архив сделок</div>
     </div>
     {% if DEMO_MODE %}
-    <form method="post" action="/demo/reset" onsubmit="return confirm('Пересоздать демо-данные? Данные компаний @demo.local будут удалены и созданы заново.');">{{ csrf_field(request) }}
+    <form method="post" action="/demo/reset" data-confirm="Пересоздать демо-данные?" data-confirm-kind="danger" data-confirm-ok="Пересоздать" data-confirm-text="Данные компаний @demo.local будут удалены и созданы заново. Данные остальных компаний не изменятся.">{{ csrf_field(request) }}
         <button type="submit" class="btn btn-secondary">Сбросить демо-данные</button>
     </form>
     {% endif %}
@@ -56,6 +56,44 @@
     {% endfor %}
 </div>
 
+<!-- Графики: воронка и динамика -->
+<div class="grid grid-2">
+    <section class="card">
+        <h2 class="card-title">Воронка заявок <span class="muted">от подачи до согласования</span></h2>
+        {% set top = funnel[0].count or 1 %}
+        <div class="funnel" role="img" aria-label="Воронка: {% for s in funnel %}{{ s.label }} {{ s.count }}{{ ', ' if not loop.last }}{% endfor %}">
+            {% for s in funnel %}
+            <div class="funnel-row" title="{{ s.label }}: {{ s.count }} ({{ s.share }}% от поданных)">
+                <span>{{ s.label }}</span>
+                <div class="funnel-track"><div class="funnel-bar" style="width: {{ (100 * s.count / top)|round(1) }}%;"></div></div>
+                <div class="funnel-value">{{ s.count }}<span>{{ s.share }}%</span></div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="hint">Процент считается от всех поданных заявок.</p>
+    </section>
+    <section class="card">
+        <h2 class="card-title">Новые заявки по неделям <span class="muted">последние 8 недель</span></h2>
+        {% set wmax = weeks_max or 1 %}
+        <div class="weeks" role="img" aria-label="Новые заявки по неделям: {% for w in weeks %}{{ w.start.strftime('%d.%m') }} {{ w.count }}{{ ', ' if not loop.last }}{% endfor %}">
+            {% for w in weeks %}
+            <div class="week" title="Неделя с {{ w.start.strftime('%d.%m.%Y') }}: {{ w.count }} {{ 'заявка' if w.count == 1 else 'заявки' if w.count in (2, 3, 4) else 'заявок' }}">
+                <div class="week-col">
+                    {% if w.count %}<span class="week-n">{{ w.count }}</span>{% endif %}
+                    <div class="week-bar {{ 'zero' if not w.count }}" style="height: {{ (100 * w.count / wmax)|round(1) if w.count else 2 }}{{ '%' if w.count else 'px' }};"></div>
+                </div>
+                <span class="week-label">{{ w.start.strftime('%d.%m') }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <table class="visually-hidden">
+            <caption>Новые заявки по неделям</caption>
+            <tr><th>Неделя с</th><th>Заявок</th></tr>
+            {% for w in weeks %}<tr><td>{{ w.start.strftime('%d.%m.%Y') }}</td><td>{{ w.count }}</td></tr>{% endfor %}
+        </table>
+    </section>
+</div>
+
 <!-- Очередь KYC -->
 <section class="card card-tight" id="kyc">
     <div class="card-head"><h2 class="card-title">Очередь на проверку KYC <span class="muted">{{ kyc_queue|length }}</span></h2></div>
@@ -72,8 +110,8 @@
             <td>{% for doc in docs %}<a href="/{{ doc.file_path }}" target="_blank" class="small" style="display: block;">{{ doc.doc_type }}</a>{% endfor %}</td>
             <td>
                 <div class="actions" style="flex-wrap: nowrap;">
-                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Одобрить</button></form>
-                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
+                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}" data-confirm="Одобрить верификацию {{ company.display_name }}?" data-confirm-ok="Одобрить" data-confirm-text="Компания сможет {{ 'создавать заявки' if company.role == 'borrower' else 'отправлять предложения' }}. Решение принимается по всему пакету документов.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Одобрить</button></form>
+                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" data-confirm="Отклонить верификацию {{ company.display_name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Загруженные документы будут удалены, компания увидит причину и загрузит пакет заново." class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
                         <input type="text" name="reason" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
                         <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
                     </form>
@@ -108,7 +146,7 @@
                         <input type="hidden" name="decision" value="approve">
                         <button type="submit" class="btn btn-primary btn-sm">Опубликовать</button>
                     </form>
-                    <form method="post" action="/admin/application/{{ app.id }}/moderate" class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
+                    <form method="post" action="/admin/application/{{ app.id }}/moderate" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя." class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
                         <input type="hidden" name="decision" value="reject">
                         <input type="text" name="comment" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
                         <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
@@ -129,7 +167,7 @@
     {% if archive %}
     <div class="table-wrap">
     <table class="t">
-        <thead><tr><th>№</th><th>Заёмщик</th><th>Кредитор</th><th class="num">Сумма</th><th class="num">Ставка · комиссия</th><th>Срок</th><th>Подтверждена</th></tr></thead>
+        <thead><tr><th>№</th><th>Заёмщик</th><th>Кредитор</th><th class="num">Сумма</th><th class="num">Ставка · комиссия</th><th>Срок</th><th>Подтверждена</th><th></th></tr></thead>
         <tbody>
         {% for row in archive %}
         <tr class="row-link">
@@ -140,6 +178,7 @@
             <td class="num">{% if row.offer %}{{ row.offer.annual_interest_rate|percent }} · {{ row.offer.total_commission|percent }}{% else %}—{% endif %}</td>
             <td>{{ row.app.term_months ~ ' мес.' if row.app.term_months else '—' }}</td>
             <td class="small">{{ row.app.confirmed_at.strftime('%d.%m.%Y') if row.app.confirmed_at else '—' }}{% if row.confirmed_by %}<div class="muted">{{ row.confirmed_by.email }}</div>{% endif %}</td>
+            <td class="r"><a href="/deal/{{ row.app.id }}/summary.pdf" target="_blank" class="btn btn-secondary btn-sm">{{ ui.icon('file-text') }} PDF</a></td>
         </tr>
         {% endfor %}
         </tbody>

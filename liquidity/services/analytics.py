@@ -1,9 +1,39 @@
 """Аналитика администратора и архив согласованных сделок."""
 from collections import Counter, defaultdict
+from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
 from liquidity import models
+
+
+def funnel(apps, offers, published_ids=None):
+    """Воронка: подано -> опубликовано -> получили предложения -> дошли до сделки -> согласовано.
+    published_ids — заявки, прошедшие модерацию (по истории); без неё считаем по текущему статусу."""
+    if published_ids is None:
+        published_ids = {a.id for a in apps if a.status in ("published", "in_work", "agreed")}
+    with_offers = {o.application_id for o in offers if o.operator_decision_at is not None and o.status != "hidden"}
+    total = len(apps)
+    stages = [("Подано заявок", total),
+              ("Прошли модерацию", sum(1 for a in apps if a.id in published_ids)),
+              ("Получили предложения", sum(1 for a in apps if a.id in with_offers)),
+              ("Дошли до сделки", sum(1 for a in apps if a.status in ("in_work", "agreed"))),
+              ("Согласованы", sum(1 for a in apps if a.status == "agreed"))]
+    return [{"label": label, "count": count, "share": round(100 * count / total) if total else 0}
+            for label, count in stages]
+
+
+def weekly(apps, weeks=8, today=None):
+    """Новые заявки по неделям (понедельник — начало недели), последние `weeks` недель включая текущую."""
+    today = today or date.today()
+    start = today - timedelta(days=today.weekday()) - timedelta(weeks=weeks - 1)
+    counts = Counter()
+    for a in apps:
+        if a.created_at:
+            d = a.created_at.date()
+            if d >= start:
+                counts[(d - start).days // 7] += 1
+    return [{"start": start + timedelta(weeks=i), "count": counts.get(i, 0)} for i in range(weeks)]
 
 
 def build(apps, offers):
@@ -35,5 +65,10 @@ def overview(db: Session):
     archive = [{"app": a, "offer": accepted.get(a.id),
                 "confirmed_by": db.get(models.User, a.confirmed_by) if a.confirmed_by else None}
                for a in apps if a.status == "agreed"]
+    published_ids = {e.application_id for e in db.query(models.ApplicationEvent).filter(
+        models.ApplicationEvent.text.like("%прошла модерацию%"))}
+    weeks = weekly(apps)
     return {"apps": apps, "archive": archive, "analytics": build(apps, offers),
+            "funnel": funnel(apps, offers, published_ids), "weeks": weeks,
+            "weeks_max": max((w["count"] for w in weeks), default=0),
             "moderation_apps": [a for a in apps if a.status == "moderation"]}

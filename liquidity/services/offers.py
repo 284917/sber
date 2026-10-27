@@ -38,6 +38,20 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
     return offer
 
 
+def withdraw(db: Session, creditor: models.User, offer_id: int):
+    """Кредитор отзывает своё предложение, пока заёмщик его не принял."""
+    offer = db.get(models.Offer, offer_id)
+    if not offer or offer.user_id != creditor.id:
+        raise NotFound()
+    if offer.status not in ("pending", "shown"):
+        raise Invalid("withdraw", "Отозвать можно только предложение, по которому ещё нет решения")
+    offer.status = "withdrawn"
+    log_event(db, offer.application_id, creditor,
+              "Кредитор отозвал предложение" if offer.operator_decision_at is None
+              else f"{creditor.display_name} отозвал предложение")
+    db.commit()
+
+
 def for_creditor(db: Session, creditor: models.User):
     return db.query(models.Offer).filter(models.Offer.user_id == creditor.id).order_by(
         models.Offer.created_at.desc(), models.Offer.id.desc()).all()
@@ -47,7 +61,7 @@ def visible_to_borrower(db: Session, app_id: int):
     """Заёмщик видит только офферы, прошедшие оператора: показанные и уже решённые им самим."""
     return db.query(models.Offer).filter(
         models.Offer.application_id == app_id,
-        models.Offer.status.in_(["shown", "accepted", "rejected"]),
+        models.Offer.status.in_(["shown", "accepted", "rejected", "withdrawn"]),
         models.Offer.operator_decision_at.isnot(None),
     ).all()
 

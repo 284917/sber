@@ -10,7 +10,7 @@ from liquidity.web import templates
 from liquidity.database import SessionLocal, create_schema, find_database_url
 from liquidity.routers import admin, auth, borrower, creditor, deals, kyc, operator
 from liquidity.security import SESSION_COOKIE, csrf_cookie_middleware, verify_csrf
-from liquidity.services import Forbidden, Invalid, NotFound, accounts, demo
+from liquidity.services import Forbidden, Invalid, NotFound, accounts, demo, fx
 
 app = FastAPI(
     title="Платформа ликвидности Сбер",
@@ -68,8 +68,14 @@ async def security_headers(request: Request, call_next):
 
 @app.get("/health", tags=["Служебное"], summary="Состояние БД и переменных окружения")
 def health():
+    fx_date = None
+    if not DB_INIT_ERROR:
+        with SessionLocal() as db:
+            rates = fx.current_rates(db)
+            fx_date = rates["date"].isoformat() if rates else None
     return {
         "db": "ok" if not DB_INIT_ERROR else DB_INIT_ERROR,
+        "cbr_rates_date": fx_date,
         "database_url_set": bool(find_database_url()),
         "secret_key_set": config.SECRET_KEY != "dev-only-secret-change-me",
         "admin_env_set": bool(config.ADMIN_EMAIL and config.ADMIN_PASSWORD),

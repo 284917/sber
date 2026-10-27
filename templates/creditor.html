@@ -15,6 +15,7 @@
 {% if qp.get('error') == 'kyc' %}{{ ui.flash('bad', 'Отправлять предложения можно после верификации компании (KYC).') }}{% endif %}
 {% if qp.get('error') == 'offer' %}{{ ui.flash('bad', 'Проверьте предложение: сумма больше 0 и не больше запрошенной, ставка и комиссия от 0 до 100%, дополнительные условия не длиннее 1000 символов.') }}{% endif %}
 {% if qp.get('error') == 'duplicate' %}{{ ui.flash('warn', 'Вы уже отправили предложение по этой заявке.') }}{% endif %}
+{% if qp.get('offer_withdrawn') %}{{ ui.flash('ok', 'Предложение отозвано. По этой заявке можно отправить новое.') }}{% endif %}
 {% if qp.get('offer_sent') %}{{ ui.flash('ok', 'Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.') }}{% endif %}
 
 {% if kyc == 'none' %}
@@ -138,7 +139,7 @@
     {% if my_offers %}
     <div class="table-wrap">
     <table class="t">
-        <thead><tr><th>Заявка</th><th class="num">Сумма</th><th class="num">Ставка</th><th class="num">Комиссия итого</th><th>Статус</th></tr></thead>
+        <thead><tr><th>Заявка</th><th class="num">Сумма</th><th class="num">Ставка</th><th class="num">Комиссия итого</th><th>Статус</th><th></th></tr></thead>
         <tbody>
         {% for offer in my_offers %}
         <tr>
@@ -149,6 +150,14 @@
             <td>
                 {{ ui.offer_status(offer.status) }}
                 {% if offer.status == 'hidden' and offer.hide_reason %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ offer.hide_reason }}</div>{% endif %}
+            </td>
+            <td class="r">
+                {% if offer.status in ('pending', 'shown') %}
+                <form method="post" action="/offers/{{ offer.id }}/withdraw" data-confirm="Отозвать предложение по заявке №{{ offer.application_id }}?" data-confirm-kind="danger" data-confirm-ok="Отозвать"
+                      data-confirm-text="{{ 'Заёмщик больше не увидит это предложение.' if offer.status == 'shown' else 'Оператор не будет его проверять.' }} Потом по этой заявке можно отправить новое.">{{ csrf_field(request) }}
+                    <button type="submit" class="btn btn-ghost btn-sm">Отозвать</button>
+                </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

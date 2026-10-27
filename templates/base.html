@@ -50,6 +50,50 @@
         {% block content %}{% endblock %}
     </main>
 </div>
+<dialog class="confirm" id="confirm" aria-labelledby="confirm-title">
+    <div class="confirm-body">
+        <span class="confirm-icon" id="confirm-icon">{{ base_ui.icon('warning-circle') }}</span>
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-text"></p>
+    </div>
+    <div class="confirm-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">Отмена</button>
+        <button type="button" class="btn btn-primary" id="confirm-ok">Подтвердить</button>
+    </div>
+</dialog>
+<script>
+    // Подтверждение необратимых действий: форма с data-confirm сначала показывает окно
+    (function () {
+        const dlg = document.getElementById('confirm');
+        if (!dlg || !dlg.showModal) return;
+        const ok = document.getElementById('confirm-ok'), cancel = document.getElementById('confirm-cancel');
+        let pending = null;
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (!form.dataset.confirm || form.dataset.confirmed) return;
+            e.preventDefault();
+            pending = form;
+            const danger = form.dataset.confirmKind === 'danger';
+            document.getElementById('confirm-title').textContent = form.dataset.confirm;
+            document.getElementById('confirm-text').textContent = form.dataset.confirmText || '';
+            document.getElementById('confirm-icon').classList.toggle('danger', danger);
+            ok.textContent = form.dataset.confirmOk || 'Подтвердить';
+            ok.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+            dlg.showModal();
+            ok.focus();
+        });
+        ok.addEventListener('click', () => {
+            dlg.close();
+            if (!pending) return;
+            pending.dataset.confirmed = '1';
+            ok.disabled = true;
+            pending.requestSubmit ? pending.requestSubmit() : pending.submit();
+        });
+        cancel.addEventListener('click', () => { dlg.close(); pending = null; });
+        dlg.addEventListener('close', () => { ok.disabled = false; });
+        dlg.addEventListener('click', (e) => { if (e.target === dlg) { dlg.close(); pending = null; } });
+    })();
+</script>
 <script>
     // Мобильное меню: панель на всю высоту, пункты появляются по очереди (шаг 60 мс, не дольше 400 мс)
     (function () {

@@ -24,9 +24,21 @@ def format_percent(value):
     return f"{Decimal(str(value)).normalize():f}".replace(".", ",") + "%"
 
 
+def format_rub_short(value):
+    """2 912 345 -> «≈ 2,9 млн ₽», 87 500 -> «≈ 87,5 тыс. ₽» — для подсказок рядом с валютными суммами."""
+    if value is None:
+        return ""
+    for limit, unit in ((1e9, "млрд"), (1e6, "млн"), (1e3, "тыс.")):
+        if abs(value) >= limit:
+            short = f"{value / limit:.1f}".replace(".", ",").replace(",0", "")
+            return f"≈ {short} {unit} ₽"
+    return f"≈ {format_money(round(value))} ₽"
+
+
 templates = Jinja2Templates(directory=config.TEMPLATES_DIR)
 templates.env.filters["money"] = format_money
 templates.env.filters["percent"] = format_percent
+templates.env.filters["rub"] = format_rub_short
 templates.env.globals.update(
     APPLICATION_STATUSES=config.APPLICATION_STATUSES, OFFER_STATUSES=config.OFFER_STATUSES,
     COUNTRY_NAMES=config.COUNTRY_NAMES, TRANSFER_METHODS=config.TRANSFER_METHODS, ROLE_NAMES=config.ROLE_NAMES,

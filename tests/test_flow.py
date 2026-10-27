@@ -184,9 +184,11 @@ def test_roles_and_files(world):
 
 
 def _all_apps_and_offers():
+    """Заявки и предложения этого сценария (заёмщик alfa@alfa.ru) — другие тесты пишут в ту же базу."""
     db = SessionLocal()
-    apps = db.query(models.Application).all()
-    offers = db.query(models.Offer).all()
+    alfa_id = db.query(models.User).filter(models.User.email == "alfa@alfa.ru").one().id
+    apps = db.query(models.Application).filter(models.Application.user_id == alfa_id).all()
+    offers = db.query(models.Offer).filter(models.Offer.application_id.in_([a.id for a in apps])).all()
     for o in offers:
         _ = o.sender  # подгрузить до закрытия сессии
     return apps, offers

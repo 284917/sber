@@ -5,6 +5,8 @@ from liquidity import config, models
 from liquidity.services import Invalid, NotFound, kyc
 from liquidity.services.events import log_event
 
+WITHDRAWABLE = ("moderation", "published")
+
 STAGES = [("Модерация", "Проверка заявки администратором"), ("Публикация", "Заявку видят кредиторы"),
           ("Предложения", "Выбор лучшего предложения"), ("Сделка", "Обсуждение условий в чате"),
           ("Договор", "Подписанный договор загружен"), ("Согласовано", "Подтверждено оператором")]
@@ -48,6 +50,20 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
     else:
         raise Invalid("decision")
     db.commit()
+
+
+def withdraw(db: Session, borrower: models.User, app_id: int) -> models.Application:
+    """Заёмщик снимает заявку, пока по ней нет сделки; открытые предложения закрываются."""
+    application = get_own(db, borrower, app_id)
+    if application.status not in WITHDRAWABLE:
+        raise Invalid("withdraw", "Заявку в работе или согласованную отозвать нельзя")
+    application.status = "withdrawn"
+    db.query(models.Offer).filter(models.Offer.application_id == app_id,
+                                  models.Offer.status.in_(["pending", "shown"])).update(
+        {"status": "rejected"}, synchronize_session=False)
+    log_event(db, app_id, borrower, "Заёмщик отозвал заявку, открытые предложения закрыты")
+    db.commit()
+    return application
 
 
 def for_borrower(db: Session, borrower: models.User):
@@ -96,8 +112,8 @@ def stages(db: Session, application: models.Application, shown_offers: int = 0):
     from liquidity.services.deals import contract_uploaded
 
     status = application.status
-    failed = status == "rejected"
-    current = {"rejected": 0, "moderation": 0, "published": 2, "agreed": len(STAGES)}.get(status)
+    failed = status in ("rejected", "withdrawn")
+    current = {"rejected": 0, "moderation": 0, "published": 2, "withdrawn": 2, "agreed": len(STAGES)}.get(status)
     if status == "in_work":
         current = 5 if contract_uploaded(db, application.id) else 3
 
@@ -109,6 +125,8 @@ def stages(db: Session, application: models.Application, shown_offers: int = 0):
         result[2]["note"] = f"Получено предложений: {shown_offers}" if shown_offers else "Ждём предложений кредиторов"
     if status == "rejected":
         result[0]["note"] = "Отклонена: " + (application.moderation_comment or "без комментария")
+    if status == "withdrawn":
+        result[2]["note"] = "Заявка отозвана заёмщиком"
     if status == "in_work" and current == 5:
         result[5]["note"] = "Ждёт подтверждения оператором"
     return result
