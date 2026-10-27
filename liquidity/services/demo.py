@@ -84,7 +84,7 @@ def seed(db: Session):
     for key, email, role, name, country, regnum, kyc_state in COMPANIES:
         user = models.User(email=email, password_hash=hash_password(secrets.token_urlsafe(16)), role=role,
                            company_name=name, country_code=country, registration_number=regnum,
-                           created_at=at(14))
+                           created_at=at(14), is_superadmin=(key == "admin"))
         db.add(user)
         db.flush()
         users[key] = user

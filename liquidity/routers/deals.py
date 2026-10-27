@@ -2,7 +2,7 @@
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from liquidity import models
@@ -12,7 +12,7 @@ from liquidity.services import Invalid, NotFound, applications, deals, files, fx
 from liquidity.services.costs import offer_cost
 from liquidity.services.documents import deal_summary_pdf
 from liquidity.services.events import get_events
-from liquidity.web import redirect, render
+from liquidity.web import redirect, render, templates
 
 router = APIRouter(tags=["Сделка"])
 
@@ -44,14 +44,42 @@ def deal_summary(app_id: int, user: models.User = Depends(get_current_user), db:
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
+def render_messages(messages, user) -> str:
+    template = templates.get_template("_message.html")
+    return "".join(template.render(msg=m, viewer_id=user.id) for m in messages)
+
+
 @router.post("/deal/{app_id}/send", summary="Сообщение в чат сделки (с файлом или без)")
-def send_message(app_id: int, text: str = Form(None), file: UploadFile = File(None),
+def send_message(request: Request, app_id: int, text: str = Form(None), file: UploadFile = File(None),
                  user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    as_json = "application/json" in request.headers.get("accept", "")
     try:
-        deals.send_message(db, user, app_id, text, file)
+        message = deals.send_message(db, user, app_id, text, file)
+    except Invalid as e:
+        if as_json:
+            return JSONResponse({"ok": False, "error": e.message}, status_code=400)
+        return redirect(f"/deal/{app_id}?error={e.code}")
+    if as_json:
+        return {"ok": True, "id": message.id if message else None,
+                "html": render_messages([message], user) if message else ""}
+    return redirect(f"/deal/{app_id}")
+
+
+@router.get("/deal/{app_id}/messages", summary="Новые сообщения чата после указанного (без перезагрузки)")
+def new_messages(app_id: int, after: int = 0, user: models.User = Depends(get_current_user),
+                 db: Session = Depends(get_db)):
+    messages = deals.messages_after(db, user, app_id, after)
+    return {"html": render_messages(messages, user), "last_id": messages[-1].id if messages else after,
+            "contract_changed": any(deals.is_contract(m) for m in messages)}
+
+
+@router.post("/deal/{app_id}/contract/delete", summary="Удалить договор, чтобы загрузить новый (до подтверждения)")
+def delete_contract(app_id: int, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        deals.delete_contract(db, user, app_id)
     except Invalid as e:
         return redirect(f"/deal/{app_id}?error={e.code}")
-    return redirect(f"/deal/{app_id}")
+    return redirect(f"/deal/{app_id}?contract_deleted=1")
 
 
 @router.post("/deal/{app_id}/upload_contract", summary="Загрузить подписанный договор (PDF)")

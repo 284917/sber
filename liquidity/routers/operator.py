@@ -13,6 +13,15 @@ router = APIRouter(prefix="/operator", tags=["Оператор"])
 staff = require_role(*config.STAFF_ROLES)
 
 
+@router.get("/moderation", summary="Заявки на модерации и опубликованные заявки")
+def moderation_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
+    apps = db.query(models.Application).filter(models.Application.status.in_(["moderation", "published"])).order_by(
+        models.Application.created_at, models.Application.id).all()
+    return render(request, "operator_moderation.html", user=user,
+                  moderation_apps=[a for a in apps if a.status == "moderation"],
+                  published_apps=[a for a in apps if a.status == "published"])
+
+
 @router.get("/offers", summary="Предложения на проверке")
 def offers_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
     return render(request, "operator_offers.html", user=user, offers_data=offers.review_list(db))

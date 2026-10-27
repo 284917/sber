@@ -44,18 +44,28 @@ def checks(db: Session, application: models.Application, offer) -> dict:
     }
 
 
+CONTRACT_TEXT = "Загружен основной договор займа"
+
+
+def is_contract(msg) -> bool:
+    """Основной договор — только файл, загруженный кнопкой «Загрузить договор». «Проект договора» из чата им не считается."""
+    return bool(msg.file_path) and "основной договор" in (msg.text or "")
+
+
 def room(db: Session, application: models.Application):
-    """Сообщения чата и документы сделки: первый файл с «договор» в тексте — основной договор."""
+    """Сообщения чата и документы сделки: основной договор отдельно, остальные файлы из чата отдельно."""
     messages = db.query(models.Message).filter(models.Message.application_id == application.id).order_by(
         models.Message.created_at, models.Message.id).all()
-    main_contract, other_documents = None, []
-    for msg in messages:
-        if msg.file_path:
-            if "договор" in msg.text.lower() and not main_contract:
-                main_contract = msg
-            else:
-                other_documents.append(msg)
+    main_contract = next((m for m in reversed(messages) if is_contract(m)), None)
+    other_documents = [m for m in messages if m.file_path and not is_contract(m)]
     return messages, main_contract, other_documents
+
+
+def messages_after(db: Session, user: models.User, app_id: int, after_id: int):
+    """Новые сообщения после after_id — для подгрузки без перезагрузки страницы."""
+    get_for_user(db, user, app_id)
+    return db.query(models.Message).filter(models.Message.application_id == app_id,
+                                           models.Message.id > after_id).order_by(models.Message.id).all()
 
 
 def _participants(db: Session, application):
@@ -68,9 +78,10 @@ def send_message(db: Session, user: models.User, app_id: int, text: str, file: U
     path = save_upload(db, file, f"deal_{app_id}") if file and file.filename else None
     text = (text or "").strip()
     if not text and not path:
-        return
-    db.add(models.Message(application_id=app_id, sender_id=user.id,
-                          text=text[:1000] if text else "Прикреплён документ", file_path=path))
+        return None
+    message = models.Message(application_id=app_id, sender_id=user.id,
+                             text=text[:1000] if text else "Прикреплён документ", file_path=path)
+    db.add(message)
     staff = user.role in config.STAFF_ROLES
     for uid in _participants(db, application):
         if uid != user.id:
@@ -78,15 +89,42 @@ def send_message(db: Session, user: models.User, app_id: int, text: str, file: U
                    else f"Новое сообщение от {user.display_name} в сделке №{app_id}", f"/deal/{app_id}",
                    "warn" if staff else "info")
     db.commit()
+    return message
 
 
 def upload_contract(db: Session, user: models.User, app_id: int, file: UploadFile):
-    get_for_user(db, user, app_id)
+    application = get_for_user(db, user, app_id)
+    if application.status != "in_work":
+        raise Invalid("closed", "Сделка уже не в работе")
+    if contract_uploaded(db, app_id):
+        raise Invalid("contract_exists", "Договор уже загружен. Чтобы заменить его, сначала удалите текущий")
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise Invalid("pdf", "Договор нужно загрузить в PDF")
     path = save_upload(db, file, f"contract_{app_id}")
-    db.add(models.Message(application_id=app_id, sender_id=user.id, text="Загружен основной договор займа",
-                          file_path=path))
+    db.add(models.Message(application_id=app_id, sender_id=user.id, text=CONTRACT_TEXT, file_path=path))
     log_event(db, app_id, user, f"{user.display_name} загрузил основной договор займа")
     notify_staff(db, f"По сделке №{app_id} загружен договор, её можно подтвердить", f"/operator/deal/{app_id}")
+    db.commit()
+
+
+def delete_contract(db: Session, user: models.User, app_id: int):
+    """Удалить загруженный договор, чтобы загрузить исправленный. Можно до подтверждения сделки:
+    тому, кто загрузил, и сотрудникам платформы."""
+    application = get_for_user(db, user, app_id)
+    if application.status != "in_work":
+        raise Invalid("closed", "Сделка уже подтверждена, договор изменить нельзя")
+    contracts = [m for m in db.query(models.Message).filter(models.Message.application_id == app_id) if is_contract(m)]
+    if not contracts:
+        raise NotFound()
+    if user.role not in config.STAFF_ROLES and any(m.sender_id != user.id for m in contracts):
+        raise Forbidden()
+    for message in contracts:
+        db.query(models.StoredFile).filter(models.StoredFile.path == message.file_path).delete()
+        db.delete(message)
+    log_event(db, app_id, user, f"{user.display_name} удалил договор займа, нужно загрузить новый")
+    for uid in _participants(db, application):
+        if uid != user.id:
+            notify(db, uid, f"{user.display_name} удалил договор в сделке №{app_id}, ждём новый", f"/deal/{app_id}", "warn")
     db.commit()
 
 

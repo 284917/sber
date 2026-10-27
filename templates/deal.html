@@ -18,36 +18,35 @@
 </div>
 
 <section class="card">{{ ui.stepper(stages) }}</section>
-{% if request.query_params.get('error') == 'file_size' %}{{ ui.flash('bad', 'Файл больше 4 МБ — сожмите его и загрузите снова.') }}{% endif %}
+{% set qp = request.query_params %}
+{% if qp.get('error') == 'file_size' %}{{ ui.flash('bad', 'Файл больше 4 МБ. Сожмите его и загрузите снова.') }}{% endif %}
+{% if qp.get('error') == 'pdf' %}{{ ui.flash('bad', 'Договор нужно загрузить в PDF.') }}{% endif %}
+{% if qp.get('error') == 'contract_exists' %}{{ ui.flash('bad', 'Договор уже загружен. Чтобы заменить его, сначала удалите текущий.') }}{% endif %}
+{% if qp.get('contract_deleted') %}{{ ui.flash('ok', 'Договор удалён. Загрузите новый, и оператор сможет подтвердить сделку.') }}{% endif %}
 
 <div class="grid grid-side">
     <section class="card chat">
         <div class="chat-head"><span>Обсуждение условий</span><span class="muted small">видят участники сделки и оператор</span></div>
-        <div class="chat-body" id="chat-body">
+        <div class="chat-body" id="chat-body" data-last="{{ messages[-1].id if messages else 0 }}">
             {% for msg in messages %}
-            {% set system = 'оператора' in msg.text and not msg.file_path %}
-            <div class="msg {{ 'mine' if msg.sender_id == user.id }} {{ 'system' if system }}">
-                <span class="msg-meta">{{ msg.sender.display_name if msg.sender else 'Система' }} · {{ msg.created_at.strftime('%d.%m %H:%M') if msg.created_at else '' }}</span>
-                {{ msg.text }}
-                {% if msg.file_path %}
-                <div><a href="/{{ msg.file_path }}" target="_blank" class="file-chip">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-                    {{ msg.file_path.split('/')[-1] }}</a></div>
-                {% endif %}
-            </div>
+            {% with viewer_id = user.id %}{% include "_message.html" %}{% endwith %}
             {% else %}
-            {{ ui.empty('chat-circle-text', 'Начните обсуждение', 'Согласуйте здесь график платежей, обеспечение и детали договора.') }}
+            <div id="chat-empty">{{ ui.empty('chat-circle-text', 'Начните обсуждение', 'Согласуйте здесь график платежей, обеспечение и детали договора.') }}</div>
             {% endfor %}
         </div>
         {% if application.status == 'in_work' %}
-        <form method="post" action="/deal/{{ application.id }}/send" enctype="multipart/form-data" class="chat-form">{{ csrf_field(request) }}
-            <label class="btn btn-secondary btn-sm" title="Прикрепить файл" style="margin: 0;">
-                Файл
-                <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png" hidden>
+        <form method="post" action="/deal/{{ application.id }}/send" enctype="multipart/form-data" class="chat-form" id="chat-form">{{ csrf_field(request) }}
+            <label class="btn btn-secondary btn-sm chat-attach" title="Прикрепить файл: PDF, документ или фото">
+                {{ ui.icon('paperclip', 'ic-sm') }}<span class="visually-hidden">Прикрепить файл</span>
+                <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" class="visually-hidden">
             </label>
-            <input type="text" name="text" class="input" placeholder="Сообщение" maxlength="1000" id="textInput">
-            <button type="submit" class="btn btn-primary">Отправить</button>
+            <div class="chat-input-wrap">
+                <span class="chat-file" id="chat-file" hidden></span>
+                <input type="text" name="text" class="input" placeholder="Сообщение" maxlength="1000" id="textInput" autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary" id="chat-send">Отправить</button>
         </form>
+        <div class="field-error" id="chat-error" hidden style="padding: 0 16px 12px;"></div>
         {% endif %}
     </section>
 
@@ -69,21 +68,30 @@
         <section class="card">
             <h2 class="card-title">Договор займа</h2>
             {% if main_contract %}
+                {% set can_delete = application.status == 'in_work' and (user.role in ('admin', 'operator') or main_contract.sender_id == user.id) %}
                 <div class="doc-row" style="padding-top: 0;">
-                    <div>
-                        <div style="font-weight: 500;">{{ main_contract.file_path.split('/')[-1] }}</div>
+                    <div class="doc-info">
+                        <a href="/{{ main_contract.file_path }}" target="_blank" class="doc-name">{{ main_contract.file_path|filename }}</a>
                         <div class="small muted">Загрузил: {{ main_contract.sender.display_name if main_contract.sender else '' }}</div>
                     </div>
-                    <a href="/{{ main_contract.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть</a>
+                    <div class="doc-buttons">
+                        <a href="/{{ main_contract.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть</a>
+                        {% if can_delete %}
+                        <form method="post" action="/deal/{{ application.id }}/contract/delete" data-confirm="Удалить договор?" data-confirm-kind="danger" data-confirm-ok="Удалить"
+                              data-confirm-text="Файл будет удалён, а сделку нельзя будет подтвердить, пока не загружен новый договор.">{{ csrf_field(request) }}
+                            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                        </form>
+                        {% endif %}
+                    </div>
                 </div>
             {% elif application.status == 'in_work' %}
-                <p class="muted" style="margin-top: 0;">Загрузите подписанный договор в PDF — после этого оператор сможет подтвердить сделку.</p>
-                <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data">{{ csrf_field(request) }}
-                    <input type="file" name="file" class="input" accept=".pdf" required style="margin-bottom: 12px;">
+                <p class="muted">Загрузите подписанный договор в PDF. После этого оператор сможет подтвердить сделку.</p>
+                <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data" style="margin-top: 12px;">{{ csrf_field(request) }}
+                    <input type="file" name="file" class="input" accept=".pdf,application/pdf" required style="margin-bottom: 12px;">
                     <button type="submit" class="btn btn-primary btn-block">Загрузить договор</button>
                 </form>
             {% else %}
-                <p class="muted" style="margin: 0;">Договор не загружен.</p>
+                <p class="muted">Договор не загружен.</p>
             {% endif %}
         </section>
 
@@ -92,8 +100,11 @@
             <h2 class="card-title">Документы из чата</h2>
             {% for doc in other_documents %}
             <div class="doc-row">
-                <div><div style="font-weight: 500;">{{ doc.file_path.split('/')[-1] }}</div><div class="small muted">{{ doc.sender.display_name if doc.sender else 'Система' }}</div></div>
-                <a href="/{{ doc.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть</a>
+                <div class="doc-info">
+                    <a href="/{{ doc.file_path }}" target="_blank" class="doc-name">{{ doc.file_path|filename }}</a>
+                    <div class="small muted">{{ doc.sender.display_name if doc.sender else 'Система' }}</div>
+                </div>
+                <div class="doc-buttons"><a href="/{{ doc.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть</a></div>
             </div>
             {% endfor %}
         </section>
@@ -112,9 +123,73 @@
 
 {% block scripts %}
 <script>
-    const body = document.getElementById('chat-body');
-    if (body) body.scrollTop = body.scrollHeight;
-    const file = document.getElementById('fileInput'), text = document.getElementById('textInput');
-    if (file) file.addEventListener('change', () => { if (file.files.length) text.placeholder = 'Файл: ' + file.files[0].name + ' — можно добавить комментарий'; });
+    // Чат без перезагрузки: отправка в фоне, новые сообщения подтягиваются каждые 5 секунд
+    (function () {
+        const body = document.getElementById('chat-body');
+        if (!body) return;
+        const scrollDown = () => { body.scrollTop = body.scrollHeight; };
+        scrollDown();
+        let last = Number(body.dataset.last || 0);
+        const seen = new Set([...body.querySelectorAll('.msg[data-id]')].map((m) => m.dataset.id));
+
+        function append(html) {
+            if (!html) return;
+            const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 120;
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            [...tmp.children].forEach((node) => {
+                if (seen.has(node.dataset.id)) return;
+                seen.add(node.dataset.id);
+                last = Math.max(last, Number(node.dataset.id));
+                body.appendChild(node);
+            });
+            const empty = document.getElementById('chat-empty');
+            if (empty) empty.remove();
+            if (nearBottom) scrollDown();
+        }
+
+        const form = document.getElementById('chat-form');
+        if (form) {
+            const file = document.getElementById('fileInput'), text = document.getElementById('textInput');
+            const chip = document.getElementById('chat-file'), error = document.getElementById('chat-error');
+            const send = document.getElementById('chat-send');
+            file.addEventListener('change', () => {
+                chip.hidden = !file.files.length;
+                chip.textContent = file.files.length ? file.files[0].name : '';
+            });
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!text.value.trim() && !file.files.length) { text.focus(); return; }
+                if (file.files.length && file.files[0].size > 4 * 1024 * 1024) {
+                    error.textContent = 'Файл больше 4 МБ. Сожмите его и отправьте снова'; error.hidden = false; return;
+                }
+                send.disabled = true; error.hidden = true;
+                try {
+                    const r = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } });
+                    const data = await r.json();
+                    if (!data.ok) throw new Error(data.error);
+                    append(data.html);
+                    scrollDown();
+                    text.value = ''; file.value = ''; chip.hidden = true;
+                } catch (err) {
+                    error.textContent = err.message || 'Не удалось отправить сообщение. Попробуйте ещё раз'; error.hidden = false;
+                } finally {
+                    send.disabled = false; text.focus();
+                }
+            });
+        }
+
+        async function poll() {
+            if (document.hidden) return;
+            try {
+                const r = await fetch('/deal/{{ application.id }}/messages?after=' + last, { headers: { 'Accept': 'application/json' } });
+                if (!r.ok) return;
+                const data = await r.json();
+                append(data.html);
+                if (data.contract_changed) location.reload();  // договор загружен другой стороной — обновить блок документов
+            } catch (e) { /* сеть недоступна — попробуем в следующий раз */ }
+        }
+        setInterval(poll, 5000);
+    })();
 </script>
 {% endblock %}

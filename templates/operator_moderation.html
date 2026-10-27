@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% import "_staff.html" as staff_ui %}
+{% set active = 'op-moderation' %}
+{% block title %}Модерация заявок{% endblock %}
+{% block content %}
+{% set qp = request.query_params %}
+<div class="page-head">
+    <div>
+        <h1>Модерация заявок</h1>
+        <div class="sub">Проверьте заявку перед публикацией: при отказе заёмщик увидит причину. Опубликованную заявку можно снять, пока по ней нет сделки.</div>
+    </div>
+</div>
+
+{% if qp.get('moderated') %}{{ ui.flash('ok', 'Решение по заявке сохранено.') }}{% endif %}
+{% if qp.get('unpublished') %}{{ ui.flash('ok', 'Заявка снята с публикации, заёмщик и кредиторы получили уведомления.') }}{% endif %}
+{% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину, её увидит заёмщик.') }}{% endif %}
+
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Ждут модерации <span class="muted">{{ moderation_apps|length }}</span></h2></div>
+    {{ staff_ui.moderation_table(moderation_apps, request) }}
+</section>
+
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Опубликованные заявки <span class="muted">{{ published_apps|length }}</span></h2></div>
+    {% if published_apps %}
+    <div class="table-wrap">
+    <table class="t t-top">
+        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Назначение</th><th style="width: 280px;">Снять с публикации</th></tr></thead>
+        <tbody>
+        {% for app in published_apps %}
+        <tr>
+            <td class="muted">{{ app.id }}</td>
+            <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b></td>
+            <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
+            <td>{{ ui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}</td>
+            <td class="cell-wrap">{{ app.purpose }}</td>
+            <td>{{ staff_ui.unpublish_form(app, request) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}{{ ui.empty('list-checks', 'Опубликованных заявок нет') }}{% endif %}
+</section>
+{% endblock %}

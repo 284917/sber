@@ -1,11 +1,13 @@
 """Регистрация юрлиц, вход и создание сотрудников."""
 import re
+import secrets
 
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.security import hash_password, verify_password
-from liquidity.services import Invalid
+
+from liquidity.services import Forbidden, Invalid, NotFound
 
 
 INN_WEIGHTS = (2, 4, 10, 3, 5, 9, 4, 6, 8)
@@ -57,6 +59,28 @@ def authenticate(db: Session, email: str, password: str):
     return user
 
 
+def staff_list(db: Session):
+    return db.query(models.User).filter(models.User.role.in_(config.STAFF_ROLES)).order_by(
+        models.User.is_superadmin.desc(), models.User.role, models.User.email).all()
+
+
+def remove_staff(db: Session, actor: models.User, staff_id: int):
+    """Отключает сотрудника: войти больше нельзя, но история его действий сохраняется.
+    Email освобождается, чтобы при необходимости завести учётку заново."""
+    if not actor.is_superadmin:
+        raise Forbidden()
+    target = db.get(models.User, staff_id)
+    if not target or target.role not in config.STAFF_ROLES:
+        raise NotFound()
+    if target.id == actor.id or target.is_superadmin:
+        raise Invalid("self", "Главного администратора отключить нельзя")
+    target.role = "removed"
+    target.email = f"removed-{target.id}-{target.email}"[:255]
+    target.password_hash = hash_password(secrets.token_urlsafe(24))
+    db.commit()
+    return target
+
+
 def create_staff(db: Session, *, email: str, password: str, role: str) -> models.User:
     if role not in config.STAFF_ROLES:
         raise Invalid("role", "Недопустимая роль")
@@ -77,5 +101,10 @@ def ensure_admin(db: Session):
         return
     if not db.query(models.User).filter(models.User.email == config.ADMIN_EMAIL).first():
         db.add(models.User(email=config.ADMIN_EMAIL, password_hash=hash_password(config.ADMIN_PASSWORD),
-                           role="admin", company_name="Администрация платформы"))
+                           role="admin", company_name="Администрация платформы", is_superadmin=True))
         db.commit()
+    else:
+        owner = db.query(models.User).filter(models.User.email == config.ADMIN_EMAIL).first()
+        if owner.role == "admin" and not owner.is_superadmin:
+            owner.is_superadmin = True
+            db.commit()

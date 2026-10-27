@@ -49,3 +49,10 @@ def load_file(db: Session, filename: str, user: models.User, can_access_deal):
     if os.path.isfile(path):
         return path, media_type
     raise NotFound()
+
+
+def display_name(path: str) -> str:
+    """Имя файла для показа: uploads/<префикс>_<uuid>_<имя> -> <имя>."""
+    name = (path or "").split("/")[-1]
+    match = re.match(r".*?_[0-9a-f]{12}_(.+)$", name)
+    return match.group(1) if match else name

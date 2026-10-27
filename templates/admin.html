@@ -1,31 +1,44 @@
 {% extends "base.html" %}
 {% import "_ui.html" as ui %}
-{% set active = '' %}
-{% block title %}Администрирование{% endblock %}
+{% import "_staff.html" as staff_ui %}
+{% set active = {'overview': 'analytics'}.get(tab, tab) %}
+{% set titles = {'overview': 'Обзор и аналитика', 'kyc': 'Очередь KYC', 'moderation': 'Модерация заявок', 'archive': 'Архив сделок', 'history': 'Все заявки', 'staff': 'Сотрудники'} %}
+{% block title %}{{ titles[tab] }}{% endblock %}
 {% block content %}
 {% set qp = request.query_params %}
 {% set a = analytics %}
 <div class="page-head">
     <div>
-        <h1>Администрирование</h1>
-        <div class="sub">Проверка компаний и заявок, аналитика и архив сделок</div>
+        <h1>{{ titles[tab] }}</h1>
+        <div class="sub">Администрирование{% if user.is_superadmin %} · главный администратор{% endif %}</div>
     </div>
-    {% if DEMO_MODE %}
+    {% if DEMO_MODE and tab == 'overview' %}
     <form method="post" action="/demo/reset" data-confirm="Пересоздать демо-данные?" data-confirm-kind="danger" data-confirm-ok="Пересоздать" data-confirm-text="Данные компаний @demo.local будут удалены и созданы заново. Данные остальных компаний не изменятся.">{{ csrf_field(request) }}
         <button type="submit" class="btn btn-secondary">Сбросить демо-данные</button>
     </form>
     {% endif %}
 </div>
-{% if qp.get('demo_reset') %}{{ ui.flash('ok', 'Демо-данные пересозданы.') }}{% endif %}
 
+<nav class="tabs" aria-label="Разделы администрирования">
+    {% for key, label, count in [('overview', 'Обзор', None), ('kyc', 'Очередь KYC', kyc_queue|length), ('moderation', 'Модерация', moderation_apps|length),
+                                 ('archive', 'Архив', archive|length), ('history', 'Все заявки', None), ('staff', 'Сотрудники', None)] if key != 'staff' or user.is_superadmin %}
+    <a href="/admin{{ '?tab=' ~ key if key != 'overview' }}" class="{{ 'active' if tab == key }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}{% if count %}<span class="count-pill">{{ count }}</span>{% endif %}</a>
+    {% endfor %}
+</nav>
+
+{% if qp.get('demo_reset') %}{{ ui.flash('ok', 'Демо-данные пересозданы.') }}{% endif %}
 {% if qp.get('success') %}{{ ui.flash('ok', 'Сотрудник создан.') }}{% endif %}
+{% if qp.get('removed') %}{{ ui.flash('ok', 'Сотрудник отключён: войти он больше не сможет, история его действий сохранена.') }}{% endif %}
 {% if qp.get('error') == 'exists' %}{{ ui.flash('bad', 'Пользователь с таким email уже существует.') }}{% endif %}
-{% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину отказа — её увидит компания.') }}{% endif %}
+{% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину, её увидит компания.') }}{% endif %}
 {% if qp.get('error') == 'password' %}{{ ui.flash('bad', 'Пароль сотрудника должен быть не короче 8 символов.') }}{% endif %}
+{% if qp.get('error') == 'self' %}{{ ui.flash('bad', 'Главного администратора отключить нельзя.') }}{% endif %}
 {% if qp.get('kyc_approved') %}{{ ui.flash('ok', 'Верификация компании одобрена.') }}{% endif %}
 {% if qp.get('kyc_rejected') %}{{ ui.flash('warn', 'Верификация отклонена, компания увидит причину.') }}{% endif %}
 {% if qp.get('moderated') %}{{ ui.flash('ok', 'Решение по заявке сохранено.') }}{% endif %}
+{% if qp.get('unpublished') %}{{ ui.flash('ok', 'Заявка снята с публикации, заёмщик и кредиторы получили уведомления.') }}{% endif %}
 
+{% if tab == 'overview' %}
 {% include "_inbox.html" %}
 <!-- Аналитика -->
 <div id="analytics" class="grid grid-4" style="margin-bottom: 16px;">
@@ -94,26 +107,31 @@
         </table>
     </section>
 </div>
-
-<!-- Очередь KYC -->
-<section class="card card-tight" id="kyc">
-    <div class="card-head"><h2 class="card-title">Очередь на проверку KYC <span class="muted">{{ kyc_queue|length }}</span></h2></div>
+{% elif tab == 'kyc' %}
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Компании ждут проверки <span class="muted">{{ kyc_queue|length }}</span></h2></div>
     {% if kyc_queue %}
     <div class="table-wrap">
-    <table class="t">
-        <thead><tr><th>Компания</th><th>Роль · страна</th><th>Рег. номер</th><th>Документы</th><th style="width: 380px;">Решение по пакету</th></tr></thead>
+    <table class="t t-top">
+        <thead><tr><th>Компания</th><th>Роль и страна</th><th>Рег. номер</th><th>Документы</th><th style="width: 320px;">Решение по пакету</th></tr></thead>
         <tbody>
         {% for company, docs in kyc_queue %}
         <tr>
-            <td><b>{{ company.display_name }}</b><div class="small muted">{{ company.email }}</div></td>
-            <td>{{ ROLE_NAMES.get(company.role, company.role) }} · {{ ui.country(company.country_code) }}</td>
+            <td><b class="cell-wrap">{{ company.display_name }}</b><div class="small muted cell-wrap">{{ company.email }}</div></td>
+            <td>{{ ROLE_NAMES.get(company.role, company.role) }}<div class="small muted">{{ ui.country(company.country_code) }}</div></td>
             <td class="num">{{ company.registration_number or '—' }}</td>
-            <td>{% for doc in docs %}<a href="/{{ doc.file_path }}" target="_blank" class="small" style="display: block;">{{ doc.doc_type }}</a>{% endfor %}</td>
             <td>
-                <div class="actions" style="flex-wrap: nowrap;">
-                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}" data-confirm="Одобрить верификацию {{ company.display_name }}?" data-confirm-ok="Одобрить" data-confirm-text="Компания сможет {{ 'создавать заявки' if company.role == 'borrower' else 'отправлять предложения' }}. Решение принимается по всему пакету документов.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Одобрить</button></form>
-                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" data-confirm="Отклонить верификацию {{ company.display_name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Загруженные документы будут удалены, компания увидит причину и загрузит пакет заново." class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
-                        <input type="text" name="reason" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
+                <ul class="doc-links">
+                {% for doc in docs %}<li><a href="/{{ doc.file_path }}" target="_blank">{{ ui.icon('file-text', 'ic-sm') }}<span>{{ doc_names.get(doc.doc_type, doc.doc_type)|terms }}</span></a></li>{% endfor %}
+                </ul>
+            </td>
+            <td>
+                <div class="decision">
+                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}" data-confirm="Одобрить верификацию {{ company.display_name }}?" data-confirm-ok="Одобрить" data-confirm-text="Компания сможет {{ 'создавать заявки' if company.role == 'borrower' else 'отправлять предложения' }}. Решение принимается по всему пакету документов.">{{ csrf_field(request) }}
+                        <button type="submit" class="btn btn-primary btn-sm btn-block">Одобрить</button>
+                    </form>
+                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="decision-reject" data-confirm="Отклонить верификацию {{ company.display_name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Загруженные документы будут удалены, компания увидит причину и загрузит пакет заново.">{{ csrf_field(request) }}
+                        <input type="text" name="reason" class="input input-sm" placeholder="Причина отказа" maxlength="500" required aria-label="Причина отказа для {{ company.display_name }}">
                         <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
                     </form>
                 </div>
@@ -126,45 +144,16 @@
     {% else %}{{ ui.empty('identification-card', 'Очередь пуста', 'Новые пакеты документов появятся здесь, как только компания отправит их на проверку.') }}{% endif %}
 </section>
 
-<!-- Модерация заявок -->
-<section class="card card-tight" id="moderation">
-    <div class="card-head"><h2 class="card-title">Модерация заявок <span class="muted">{{ moderation_apps|length }}</span></h2></div>
-    {% if moderation_apps %}
-    <div class="table-wrap">
-    <table class="t">
-        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок · передача</th><th>Назначение</th><th style="width: 380px;">Решение</th></tr></thead>
-        <tbody>
-        {% for app in moderation_apps %}
-        <tr>
-            <td class="muted">{{ app.id }}</td>
-            <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b></td>
-            <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
-            <td>{{ ui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }} · {{ TRANSFER_METHODS.get(app.transfer_method, '—') }}</td>
-            <td class="small" style="max-width: 240px;">{{ app.purpose }}</td>
-            <td>
-                <div class="actions" style="flex-wrap: nowrap;">
-                    <form method="post" action="/admin/application/{{ app.id }}/moderate">{{ csrf_field(request) }}
-                        <input type="hidden" name="decision" value="approve">
-                        <button type="submit" class="btn btn-primary btn-sm">Опубликовать</button>
-                    </form>
-                    <form method="post" action="/admin/application/{{ app.id }}/moderate" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя." class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
-                        <input type="hidden" name="decision" value="reject">
-                        <input type="text" name="comment" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
-                        <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    {% else %}{{ ui.empty('list-checks', 'Все заявки проверены', 'Новые заявки заёмщиков попадут сюда до публикации.') }}{% endif %}
+{% elif tab == 'moderation' %}
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Заявки на модерации <span class="muted">{{ moderation_apps|length }}</span></h2></div>
+    {{ staff_ui.moderation_table(moderation_apps, request) }}
 </section>
+<p class="hint">Модерировать заявки может и оператор: у него тот же раздел в кабинете.</p>
 
-<!-- Архив сделок -->
-<section class="card card-tight" id="archive">
-    <div class="card-head"><h2 class="card-title">Архив согласованных сделок <span class="muted">{{ archive|length }}</span></h2></div>
+{% elif tab == 'archive' %}
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Согласованные сделки <span class="muted">{{ archive|length }}</span></h2></div>
     {% if archive %}
     <div class="table-wrap">
     <table class="t">
@@ -188,13 +177,13 @@
     {% else %}{{ ui.empty('archive', 'Архив пока пуст', 'Сюда попадают сделки, подтверждённые оператором.') }}{% endif %}
 </section>
 
-<!-- Все заявки -->
-<section class="card card-tight" id="history">
+{% elif tab == 'history' %}
+<section class="card card-tight">
     <div class="card-head"><h2 class="card-title">Все заявки <span class="muted">{{ apps|length }}</span></h2></div>
     {% if apps %}
     <div class="table-wrap">
-    <table class="t">
-        <thead><tr><th>№</th><th>Создана</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Статус</th><th></th></tr></thead>
+    <table class="t t-top">
+        <thead><tr><th>№</th><th>Создана</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Статус</th><th style="width: 280px;"></th></tr></thead>
         <tbody>
         {% for app in apps %}
         <tr class="row-link">
@@ -203,8 +192,11 @@
             <td>{{ app.borrower.display_name if app.borrower else '—' }}</td>
             <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
             <td>{{ ui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}</td>
-            <td>{{ ui.app_status(app.status) }}</td>
-            <td class="r">{% if app.status in ('in_work', 'agreed') %}<a href="/operator/deal/{{ app.id }}" class="small">Сделка и история</a>{% endif %}</td>
+            <td>{{ ui.app_status(app.status) }}{% if app.moderation_comment and app.status == 'rejected' %}<div class="small cell-wrap" style="color: var(--danger); margin-top: 4px;">{{ app.moderation_comment }}</div>{% endif %}</td>
+            <td class="r">
+                {% if app.status in ('in_work', 'agreed') %}<a href="/operator/deal/{{ app.id }}" class="btn btn-secondary btn-sm">Сделка и история</a>
+                {% elif app.status == 'published' %}{{ staff_ui.unpublish_form(app, request) }}{% endif %}
+            </td>
         </tr>
         {% endfor %}
         </tbody>
@@ -213,21 +205,47 @@
     {% else %}{{ ui.empty('files', 'Заявок пока нет') }}{% endif %}
 </section>
 
-<!-- Сотрудники -->
-<section class="card" id="staff" style="max-width: 520px;">
-    <h2 class="card-title">Добавить сотрудника</h2>
-    <form method="post" action="/admin/create_user">{{ csrf_field(request) }}
-        <div class="field"><label class="f" for="s-email">Email</label><input type="email" name="email" id="s-email" class="input" required></div>
-        <div class="form-row field">
-            <div><label class="f" for="s-pass">Пароль</label><input type="password" name="password" id="s-pass" class="input" minlength="8" required></div>
-            <div><label class="f" for="s-role">Роль</label>
+{% elif tab == 'staff' %}
+<div class="grid grid-side">
+    <section class="card card-tight">
+        <div class="card-head"><h2 class="card-title">Сотрудники платформы <span class="muted">{{ staff_members|length }}</span></h2></div>
+        <div class="table-wrap">
+        <table class="t">
+            <thead><tr><th>Email</th><th>Роль</th><th></th></tr></thead>
+            <tbody>
+            {% for member in staff_members %}
+            <tr>
+                <td class="cell-wrap"><b>{{ member.email }}</b>{% if member.id == user.id %} <span class="tag">это вы</span>{% endif %}</td>
+                <td>{{ 'Главный администратор' if member.is_superadmin else ROLE_NAMES.get(member.role, member.role) }}</td>
+                <td class="r">
+                    {% if not member.is_superadmin and member.id != user.id %}
+                    <form method="post" action="/admin/staff/{{ member.id }}/remove" data-confirm="Отключить {{ member.email }}?" data-confirm-kind="danger" data-confirm-ok="Отключить"
+                          data-confirm-text="Сотрудник больше не сможет войти. История его действий сохранится.">{{ csrf_field(request) }}
+                        <button type="submit" class="btn btn-danger btn-sm">Отключить</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="card" id="staff">
+        <h2 class="card-title">Добавить сотрудника</h2>
+        <form method="post" action="/admin/create_user">{{ csrf_field(request) }}
+            <div class="field"><label class="f" for="s-email">Email</label><input type="email" name="email" id="s-email" class="input" required></div>
+            <div class="field"><label class="f" for="s-pass">Пароль</label><input type="password" name="password" id="s-pass" class="input" minlength="8" required autocomplete="new-password"></div>
+            <div class="field"><label class="f" for="s-role">Роль</label>
                 <select name="role" id="s-role" class="input" required>
                     <option value="operator">Оператор</option>
                     <option value="admin">Администратор</option>
                 </select>
             </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Создать сотрудника</button>
-    </form>
-</section>
+            <button type="submit" class="btn btn-primary btn-block">Создать сотрудника</button>
+            <p class="hint">Создавать и отключать сотрудников может только главный администратор.</p>
+        </form>
+    </section>
+</div>
+{% endif %}
 {% endblock %}

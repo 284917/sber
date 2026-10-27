@@ -4,11 +4,12 @@
 {% block title %}Заявка №{{ application.id }}{% endblock %}
 {% block content %}
 {% set cur = application.currency_code %}
+{% set rate_note = ('По курсу ЦБ РФ на ' ~ fx.date.strftime('%d.%m.%Y') ~ ': 1 ' ~ cur ~ ' = ' ~ (fx.rates[cur]|money) ~ ' ₽') if fx and cur in fx.rates else '' %}
 <a href="/dashboard" class="back">{{ ui.icon('arrow-left', 'ic-sm') }} Все заявки</a>
 <div class="page-head">
     <div>
         <h1>Заявка №{{ application.id }} · <span class="num">{{ application.funding_amount|money }}</span> {{ cur }}</h1>
-        <div class="sub">{{ ui.country(application.target_jurisdiction) }} · {{ application.term_months ~ ' мес.' if application.term_months else 'срок не указан' }} · {{ TRANSFER_METHODS.get(application.transfer_method, 'способ передачи не указан') }}{% if rub(application.funding_amount) %} · {{ rub(application.funding_amount)|rub }}{% endif %}</div>
+        <div class="sub">{{ ui.country(application.target_jurisdiction) }} · {{ application.term_months ~ ' мес.' if application.term_months else 'срок не указан' }} · {{ TRANSFER_METHODS.get(application.transfer_method, 'способ передачи не указан')|terms }}{% if rub(application.funding_amount) %} · {{ rub(application.funding_amount)|rub }}{% endif %}</div>
     </div>
     <div class="actions">
         {{ ui.app_status(application.status) }}
@@ -39,6 +40,7 @@
             <div class="card-head" style="display: block;">
                 <h2 class="card-title">Сравнение предложений <span class="muted">{{ rows|length }} {{ 'предложение' if rows|length == 1 else 'предложения' if rows|length in (2, 3, 4) else 'предложений' }}</span></h2>
                 <p class="muted small" style="margin: 4px 0 0;">Отсортированы по полной стоимости: ставка плюс комиссия за организацию, разнесённая на срок заявки.</p>
+                {% if rate_note %}<p class="fx-note">Суммы в рублях пересчитаны {{ rate_note|replace('По курсу', 'по курсу') }}</p>{% endif %}
             </div>
 
             {% if best_id and savings is not none %}
@@ -46,7 +48,7 @@
             <div class="callout" style="margin: 0 24px 16px;">
                 <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 600;">{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}</div></div>
                 <div><div class="small muted">Полная стоимость</div><div class="big">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
-                <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub">{{ rub(savings)|rub }}</span>{% endif %}</div>
+                <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub" title="{{ rate_note }}">{{ rub(savings)|rub }}</span>{% endif %}</div>
             </div>
             {% endif %}
 
@@ -80,7 +82,7 @@
                     <td class="num">
                         {% if c.overpayment is not none %}
                         <b>{{ c.overpayment|money }}</b> {{ cur }}
-                        {% if rub(c.overpayment) %}<span class="rub">{{ rub(c.overpayment)|rub }}</span>{% endif %}
+                        {% if rub(c.overpayment) %}<span class="rub" title="{{ rate_note }}">{{ rub(c.overpayment)|rub }}</span>{% endif %}
                         {% else %}—{% endif %}
                     </td>
                     <td class="num"><span class="big-num">{{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }}</span><div class="small muted">годовых</div></td>
@@ -145,10 +147,10 @@
     <div class="grid grid-2">
         <section class="card">
             <h2 class="card-title">Параметры заявки</h2>
-            <div class="kv"><span>Сумма</span><span class="num">{{ application.funding_amount|money }} {{ cur }}{% if rub(application.funding_amount) %}<span class="rub">{{ rub(application.funding_amount)|rub }}</span>{% endif %}</span></div>
+            <div class="kv"><span>Сумма</span><span class="num">{{ application.funding_amount|money }} {{ cur }}{% if rub(application.funding_amount) %}<span class="rub" title="{{ rate_note }}">{{ rub(application.funding_amount)|rub }}</span>{% endif %}</span></div>
             <div class="kv"><span>Страна получения</span><span>{{ ui.country(application.target_jurisdiction) }}</span></div>
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>
-            <div class="kv"><span>Способ передачи</span><span>{{ TRANSFER_METHODS.get(application.transfer_method, '—') }}</span></div>
+            <div class="kv"><span>Способ передачи</span><span>{{ TRANSFER_METHODS.get(application.transfer_method, '—')|terms }}</span></div>
             <div class="kv"><span>Назначение</span><span>{{ application.purpose }}</span></div>
         </section>
         <section class="card">

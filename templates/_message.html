@@ -1,0 +1,17 @@
+{# Одно сообщение чата: используется и при отрисовке страницы, и для сообщений, пришедших без перезагрузки #}
+{% set system = 'оператора' in msg.text and not msg.file_path %}
+{% set fname = msg.file_path|filename if msg.file_path else '' %}
+{% set is_image = fname.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')) %}
+<div class="msg {{ 'mine' if msg.sender_id == viewer_id }} {{ 'system' if system }}" data-id="{{ msg.id }}">
+    <span class="msg-meta">{{ msg.sender.display_name if msg.sender else 'Система' }} · {{ msg.created_at.strftime('%d.%m %H:%M') if msg.created_at else '' }}</span>
+    <div class="msg-text">{{ msg.text }}</div>
+    {% if msg.file_path %}
+        {% if is_image %}
+        <a href="/{{ msg.file_path }}" target="_blank" class="msg-image" title="Открыть в полном размере"><img src="/{{ msg.file_path }}" alt="{{ fname }}" loading="lazy"></a>
+        {% endif %}
+        <a href="/{{ msg.file_path }}" target="_blank" class="file-chip">
+            <svg class="ic ic-sm" aria-hidden="true"><use href="/static/icons/phosphor.svg#ph-{{ 'file-text' if not is_image else 'paperclip' }}"></use></svg>
+            <span>{{ fname }}</span>
+        </a>
+    {% endif %}
+</div>

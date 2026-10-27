@@ -4,7 +4,7 @@
 {% block title %}Проверка сделки №{{ app.id }}{% endblock %}
 {% block content %}
 {% set cur = app.currency_code %}
-<a href="{{ '/admin#history' if user.role == 'admin' else '/operator/deals' }}" class="back">← Назад</a>
+<a href="{{ '/admin?tab=history' if user.role == 'admin' else '/operator/deals' }}" class="back">← Назад</a>
 <div class="page-head">
     <div>
         <h1>Сделка №{{ app.id }}</h1>

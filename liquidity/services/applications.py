@@ -29,8 +29,8 @@ def create(db: Session, borrower: models.User, *, amount: float, currency: str, 
     db.add(application)
     db.flush()
     log_event(db, application.id, borrower, "Заявка создана и отправлена на модерацию")
-    notify_staff(db, f"Заявка №{application.id} от {borrower.display_name} ждёт модерации", "/admin#moderation",
-                 roles=("admin",))
+    notify_staff(db, f"Заявка №{application.id} от {borrower.display_name} ждёт модерации", "/operator/moderation",
+                 roles=("admin", "operator"))
     db.commit()
     return application
 
@@ -72,6 +72,26 @@ def withdraw(db: Session, borrower: models.User, app_id: int) -> models.Applicat
     log_event(db, app_id, borrower, "Заёмщик отозвал заявку, открытые предложения закрыты")
     db.commit()
     return application
+
+
+def unpublish(db: Session, staff: models.User, app_id: int, reason: str):
+    """Сотрудник снимает опубликованную заявку (например, по жалобе или ошибке в данных).
+    Заявка получает статус «Отклонена» с причиной, открытые предложения закрываются."""
+    application = db.get(models.Application, app_id)
+    if not application or application.status != "published":
+        raise NotFound()
+    reason = reason.strip()[:500]
+    if not reason:
+        raise Invalid("reason", "Укажите причину")
+    application.status = "rejected"
+    application.moderation_comment = reason
+    for offer in db.query(models.Offer).filter(models.Offer.application_id == app_id,
+                                               models.Offer.status.in_(["pending", "shown"])).all():
+        offer.status = "rejected"
+        notify(db, offer.user_id, f"Заявка №{app_id} снята с публикации, ваше предложение закрыто", "/dashboard#my-offers", "warn")
+    log_event(db, app_id, staff, f"Заявка снята с публикации: {reason}")
+    notify(db, application.user_id, f"Заявка №{app_id} снята с публикации: {reason}", f"/applications/{app_id}/offers", "bad")
+    db.commit()
 
 
 def for_borrower(db: Session, borrower: models.User):

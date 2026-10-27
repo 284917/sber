@@ -94,7 +94,7 @@
         <div class="actions">
             <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>
             <span class="tag">{{ app.term_months ~ ' мес.' if app.term_months else 'срок не указан' }}</span>
-            <span class="tag">{{ TRANSFER_METHODS.get(app.transfer_method, 'способ не указан') }}</span>
+            <span class="tag">{{ TRANSFER_METHODS.get(app.transfer_method, 'способ не указан')|terms }}</span>
         </div>
     </div>
 

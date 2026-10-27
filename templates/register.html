@@ -15,7 +15,7 @@
     <main class="auth-main" id="main">
         <div class="auth-form">
             <h1>Регистрация компании</h1>
-            <p class="lead">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
+            <p class="lead">{{ "Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC)."|terms }}</p>
             {% if error %}<div class="note note-bad" role="alert">{{ error }}</div>{% endif %}
             <form method="post" action="/register" id="register-form" novalidate>{{ csrf_field(request) }}
                 <div class="seg">

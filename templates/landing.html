@@ -10,25 +10,43 @@
 <a href="#main" class="skip">Перейти к содержимому</a>
 {{ site.nav(request) }}
 
-<main id="main">
+{% set aud = 'creditor' if request.query_params.get('for') == 'creditor' else 'borrower' %}
+<main id="main" class="audience" data-audience="{{ aud }}">{% filter terms %}
     <!-- Первый экран: обещание, одно главное действие, доказательство, витрина продукта -->
     <section class="hero">
         <div class="wrap hero-grid">
             <div>
-                <span class="eyebrow">{{ ui.icon('globe-hemisphere-east', 'ic-sm') }} Трансграничное финансирование для юрлиц</span>
-                <h1 class="h-display">Валютное финансирование<br>от проверенных кредиторов</h1>
-                <p class="lead-lg">Опубликуйте заявку один раз. Кредиторы из ОАЭ, Кипра, Китая и Турции пришлют предложения, а платформа сведёт ставку и комиссии в одну цифру и проведёт сделку до подписания договора.</p>
-                <div class="hero-cta">
-                    <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
+                <div class="aud-switch" role="tablist" aria-label="Для кого">
+                    <a href="/" role="tab" data-set="borrower" aria-selected="{{ 'true' if aud == 'borrower' else 'false' }}">Для заёмщиков</a>
+                    <a href="/?for=creditor" role="tab" data-set="creditor" aria-selected="{{ 'true' if aud == 'creditor' else 'false' }}">Для кредиторов</a>
                 </div>
-                <div class="proof">
-                    <span>{{ ui.icon('check') }} Регистрация и заявка бесплатно</span>
-                    <span>{{ ui.icon('check') }} SWIFT, СПФС, CIPS или платёжный агент</span>
-                    <span>{{ ui.icon('check') }} Каждый участник проходит KYC</span>
+                <div data-for="borrower">
+                    <h1 class="h-display">Валютное финансирование<br>от проверенных кредиторов</h1>
+                    <p class="lead-lg">Опубликуйте заявку один раз. Кредиторы из ОАЭ, Кипра, Китая и Турции пришлют предложения, а платформа сведёт ставку и комиссии в одну цифру и проведёт сделку до подписания договора.</p>
+                    <div class="hero-cta">
+                        <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
+                    </div>
+                    <div class="proof">
+                        <span>{{ ui.icon('check') }} Регистрация и заявка бесплатно</span>
+                        <span>{{ ui.icon('check') }} SWIFT, СПФС, CIPS или платёжный агент</span>
+                        <span>{{ ui.icon('check') }} Каждый участник проходит KYC</span>
+                    </div>
+                </div>
+                <div data-for="creditor">
+                    <h1 class="h-display">Заявки проверенных<br>российских компаний</h1>
+                    <p class="lead-lg">Каждый заёмщик прошёл KYC, каждая заявка прошла модерацию. Фильтруйте по стране, валюте, сумме и сроку и отправляйте условия, сразу видя полную стоимость, с которой заёмщик сравнит ваше предложение.</p>
+                    <div class="hero-cta">
+                        <a href="/register?role=creditor" class="btn btn-primary btn-lg">Зарегистрироваться как кредитор {{ ui.icon('arrow-right') }}</a>
+                    </div>
+                    <div class="proof">
+                        <span>{{ ui.icon('check') }} Заёмщики проверены по ЕГРЮЛ и UBO</span>
+                        <span>{{ ui.icon('check') }} EUR, USD и CNY</span>
+                        <span>{{ ui.icon('check') }} Сделка под контролем оператора</span>
+                    </div>
                 </div>
             </div>
 
-            <figure class="showcase" style="margin: 0;" aria-label="Пример экрана сравнения предложений">
+            <figure class="showcase" data-for="borrower" style="margin: 0;" aria-label="Пример экрана сравнения предложений">
                 <div class="showcase-inner">
                     <div class="showcase-bar"><i></i><i></i><i></i><b>Заявка №1 · 500 000 EUR · Германия · 6 мес. · SWIFT</b></div>
                     <div class="showcase-body">
@@ -50,6 +68,35 @@
                     </div>
                 </div>
             </figure>
+
+            <figure class="showcase" data-for="creditor" style="margin: 0;" aria-label="Пример ленты заявок для кредитора">
+                <div class="showcase-inner">
+                    <div class="showcase-bar"><i></i><i></i><i></i><b>Заявки на финансирование · Германия · EUR · до 12 мес.</b></div>
+                    <div class="showcase-body">
+                        <div class="app-preview">
+                            <div>
+                                <div class="big-num" style="font-size: 24px; line-height: 32px;">500 000 EUR</div>
+                                <div><b>ООО «Альфа Технологии»</b> <span class="muted">· заявка №1</span></div>
+                                <div class="muted" style="margin-top: 4px;">Закупка станков с ЧПУ у поставщика в Германии</div>
+                            </div>
+                            <div class="actions"><span class="tag">Германия</span><span class="tag">6 мес.</span><span class="tag">SWIFT</span></div>
+                        </div>
+                        <div class="offer-preview">
+                            <div><span class="small muted">Сумма</span><b>500 000</b></div>
+                            <div><span class="small muted">Ставка</span><b>8%</b></div>
+                            <div><span class="small muted">Ваша комиссия</span><b>1%</b></div>
+                            <div class="offer-preview-result"><span class="small muted">Заёмщик увидит</span><b>11,6% годовых</b></div>
+                        </div>
+                        <div class="app-preview muted-preview">
+                            <div>
+                                <div class="big-num" style="font-size: 24px; line-height: 32px;">300 000 USD</div>
+                                <div><b>ООО «Северный терминал»</b> <span class="muted">· заявка №6</span></div>
+                            </div>
+                            <div class="actions"><span class="tag">Китай</span><span class="tag">6 мес.</span><span class="tag">CIPS</span></div>
+                        </div>
+                    </div>
+                </div>
+            </figure>
         </div>
     </section>
 
@@ -64,8 +111,9 @@
     <section class="section" id="how">
         <div class="wrap">
             <span class="eyebrow reveal">Как это работает</span>
-            <h2 class="h-section reveal" style="margin-top: 16px;">От заявки до согласованной сделки в три шага</h2>
-            <div class="steps">
+            <h2 class="h-section reveal" style="margin-top: 16px;" data-for="borrower">От заявки до согласованной сделки в три шага</h2>
+            <h2 class="h-section reveal" style="margin-top: 16px;" data-for="creditor">От заявки заёмщика до вашей сделки в три шага</h2>
+            <div class="steps" data-for="borrower">
                 <article class="step-card reveal">
                     <span class="n">1</span>
                     <h3>Пройдите проверку компании</h3>
@@ -80,6 +128,23 @@
                     <span class="n">3</span>
                     <h3>Выберите предложение</h3>
                     <p>Сравните офферы по полной стоимости, примите лучший, согласуйте детали в чате и загрузите договор. Оператор подтверждает сделку.</p>
+                </article>
+            </div>
+            <div class="steps" data-for="creditor">
+                <article class="step-card reveal">
+                    <span class="n">1</span>
+                    <h3>Пройдите проверку компании</h3>
+                    <p>Свидетельство о регистрации, устав, реестр директоров, UBO, налоговое резидентство и подтверждение источника средств.</p>
+                </article>
+                <article class="step-card reveal">
+                    <span class="n">2</span>
+                    <h3>Найдите подходящую заявку</h3>
+                    <p>Фильтры по стране получения, валюте, сумме и сроку. Видны назначение средств, срок и способ передачи.</p>
+                </article>
+                <article class="step-card reveal">
+                    <span class="n">3</span>
+                    <h3>Отправьте условия</h3>
+                    <p>Сумма, ставка, комиссия и дополнительные условия. Оператор проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.</p>
                 </article>
             </div>
         </div>
@@ -178,10 +243,24 @@
             <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
         </div>
     </section>
-</main>
+{% endfilter %}</main>
 
 {{ site.footer() }}
 {{ site.scripts() }}
+<script>
+    // Переключатель «Для заёмщиков / Для кредиторов»: меняет содержимое без перезагрузки и запоминает выбор в адресе
+    (function () {
+        const root = document.querySelector('.audience');
+        document.querySelectorAll('.aud-switch [data-set]').forEach((tab) => tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const aud = tab.dataset.set;
+            root.dataset.audience = aud;
+            document.querySelectorAll('.aud-switch [data-set]').forEach((t) => t.setAttribute('aria-selected', t === tab));
+            history.replaceState(null, '', aud === 'creditor' ? '/?for=creditor' : '/');
+            root.querySelectorAll('[data-for="' + aud + '"] .reveal, [data-for="' + aud + '"].reveal').forEach((el) => el.classList.add('in'));
+        }));
+    })();
+</script>
 <script>
     // Слоган: каждое слово переходит из приглушённого цвета в основной, когда пересекает линию на экране
     (function () {

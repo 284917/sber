@@ -6,59 +6,136 @@
 {% set kyc = user.kyc_status %}
 {% set uploaded_types = user_docs|map(attribute='doc_type')|unique|list %}
 {% set done = required_docs|selectattr(0, 'in', uploaded_types)|list|length %}
+{% set total = required_docs|length %}
+{% set editable = kyc in ('none', 'rejected') %}
+{% set qp = request.query_params %}
 <div class="page-head">
     <div>
         <h1>Верификация компании</h1>
-        <div class="sub">KYC/AML: документы в PDF, проверку проводит администратор платформы вручную.</div>
+        <div class="sub">{{ "KYC и AML: документы в PDF до 4 МБ, проверку проводит администратор платформы вручную."|terms }}</div>
     </div>
     <span class="pill pill-{{ {'approved': 'ok', 'pending': 'warn', 'rejected': 'bad'}.get(kyc, 'none') }}">{{ KYC_STATUSES[kyc] }}</span>
 </div>
 
-{% if request.query_params.get('error') == 'file_size' %}{{ ui.flash('bad', 'Файл больше 4 МБ — сожмите PDF и загрузите снова.') }}{% endif %}
-{% if request.query_params.get('success') %}{{ ui.flash('ok', 'Документы отправлены на проверку. Обычно администратор принимает решение в течение рабочего дня.') }}{% endif %}
+{% if qp.get('error') == 'file_size' %}{{ ui.flash('bad', 'Файл больше 4 МБ. Сожмите PDF и загрузите снова.') }}{% endif %}
+{% if qp.get('error') == 'pdf' %}{{ ui.flash('bad', 'Нужен файл в формате PDF.') }}{% endif %}
+{% if qp.get('error') == 'incomplete' %}{{ ui.flash('bad', 'Загрузите все документы из списка, чтобы отправить пакет.') }}{% endif %}
+{% if qp.get('success') %}{{ ui.flash('ok', 'Документы отправлены на проверку. Обычно администратор принимает решение в течение рабочего дня.') }}{% endif %}
 {% if kyc == 'rejected' %}{{ ui.flash('bad', 'Администратор отклонил верификацию: ' ~ user.kyc_reject_reason ~ '. Загрузите документы заново.') }}{% endif %}
 {% if kyc == 'approved' %}{{ ui.flash('ok', 'Компания верифицирована. ' ~ ('Можно создавать заявки.' if user.role == 'borrower' else 'Можно отправлять предложения.')) }}{% endif %}
 
-<div class="grid grid-side">
+<div class="grid kyc-grid">
     <section class="card">
-        <h2 class="card-title">Пакет документов <span class="muted">{{ done }} из {{ required_docs|length }}</span></h2>
-        <div class="bar-track" style="margin-bottom: 8px;"><div class="bar best" style="width: {{ (100 * done / (required_docs|length or 1))|round|int }}%;"></div></div>
+        <h2 class="card-title">Пакет документов <span class="muted" id="kyc-count">{{ done }} из {{ total }}</span></h2>
+        <div class="bar-track"><div class="bar best" id="kyc-bar" style="width: {{ (100 * done / (total or 1))|round|int }}%;"></div></div>
+        {% if editable %}<p class="hint">Файлы загружаются сразу после выбора, по одному или подряд. До отправки любой можно заменить.</p>{% endif %}
+
+        <ul class="kyc-list">
         {% for doc_type, doc_name in required_docs %}
         {% set doc = user_docs|selectattr('doc_type', 'equalto', doc_type)|list|last %}
-        <div class="doc-row">
-            <div>
-                <div style="font-weight: 500;">{{ doc_name }}</div>
-                {% if doc %}<a href="/{{ doc.file_path }}" target="_blank" class="small">{{ doc.file_path.split('/')[-1] }}</a>{% endif %}
+        {% set state = doc.status if doc else 'missing' %}
+        <li class="kyc-row" data-doc="{{ doc_type }}" data-state="{{ state }}">
+            <span class="kyc-check" aria-hidden="true">{{ ui.icon('check', 'ic-sm') }}</span>
+            <div class="kyc-info">
+                <div class="kyc-name">{{ doc_name|terms }}</div>
+                <a class="kyc-file" href="{{ '/' ~ doc.file_path if doc else '#' }}" target="_blank" {% if not doc %}hidden{% endif %}>{{ ui.icon('file-text', 'ic-sm') }}<span>{{ doc.file_path|filename if doc else '' }}</span></a>
+                <div class="field-error" hidden></div>
             </div>
-            {% if doc %}
-                <span class="pill pill-{{ {'approved': 'ok', 'pending': 'warn'}.get(doc.status, 'none') }}">{{ {'approved': 'Одобрен', 'pending': 'На проверке'}.get(doc.status, 'Загружен') }}</span>
-            {% else %}
-            <form method="post" action="/kyc/upload" enctype="multipart/form-data" class="actions">{{ csrf_field(request) }}
-                <input type="hidden" name="doc_type" value="{{ doc_type }}">
-                <input type="file" name="file" class="input input-sm" accept=".pdf" required style="width: 240px;">
-                <button type="submit" class="btn btn-secondary btn-sm">Загрузить</button>
-            </form>
-            {% endif %}
-        </div>
+            <div class="kyc-actions">
+                {% if state in ('pending', 'approved') %}
+                    <span class="pill pill-{{ 'ok' if state == 'approved' else 'warn' }}">{{ 'Одобрен' if state == 'approved' else 'На проверке' }}</span>
+                {% elif editable %}
+                    <span class="pill pill-ok kyc-done-pill" {% if state != 'uploaded' %}hidden{% endif %}>Загружен</span>
+                    <form method="post" action="/kyc/upload" enctype="multipart/form-data" class="kyc-form">{{ csrf_field(request) }}
+                        <input type="hidden" name="doc_type" value="{{ doc_type }}">
+                        <label class="btn {{ 'btn-ghost' if state == 'uploaded' else 'btn-secondary' }} btn-sm kyc-pick">
+                            {{ ui.icon('upload-simple', 'ic-sm') }}<span class="kyc-pick-label">{{ 'Заменить' if state == 'uploaded' else 'Выбрать PDF' }}</span>
+                            <input type="file" name="file" accept=".pdf,application/pdf" class="visually-hidden" aria-label="{{ doc_name }}: выбрать PDF">
+                        </label>
+                        <noscript><button type="submit" class="btn btn-secondary btn-sm">Загрузить</button></noscript>
+                    </form>
+                {% endif %}
+            </div>
+        </li>
         {% endfor %}
+        </ul>
     </section>
 
     <aside class="card">
         <h2 class="card-title">Отправка на проверку</h2>
         {% if kyc == 'approved' %}
-            <p class="muted" style="margin: 0;">Проверка пройдена, отправлять ничего не нужно.</p>
+            <p class="muted">Проверка пройдена, отправлять ничего не нужно.</p>
         {% elif kyc == 'pending' %}
-            <p class="muted" style="margin: 0;">Пакет на проверке у администратора.</p>
-        {% elif done >= required_docs|length %}
-            <p class="muted">Все документы загружены. Администратор проверит пакет целиком и одобрит или вернёт с комментарием.</p>
-            <form method="post" action="/kyc/submit">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-block">Отправить на проверку</button></form>
+            <p class="muted">Пакет на проверке у администратора. Мы пришлём уведомление, когда будет решение.</p>
         {% else %}
-            <p class="muted">Загрузите все документы из списка — кнопка станет активной.</p>
-            <button class="btn btn-primary btn-block" disabled>Отправить на проверку</button>
+            <p class="muted" id="kyc-submit-hint">{{ 'Все документы загружены. Администратор проверит пакет целиком и одобрит его или вернёт с комментарием.' if done >= total else 'Загрузите все документы из списка, и кнопка станет активной.' }}</p>
+            <form method="post" action="/kyc/submit" style="margin-top: 16px;" data-confirm="Отправить документы на проверку?" data-confirm-ok="Отправить"
+                  data-confirm-text="После отправки заменить файлы будет нельзя, пока администратор не примет решение.">{{ csrf_field(request) }}
+                <button type="submit" class="btn btn-primary btn-block" id="kyc-submit" {% if done < total %}disabled{% endif %}>Отправить на проверку</button>
+            </form>
         {% endif %}
-        <div class="kv" style="margin-top: 16px;"><span>Компания</span><span>{{ user.display_name }}</span></div>
-        <div class="kv"><span>{{ 'ИНН' if user.role == 'borrower' else 'Рег. номер' }}</span><span>{{ user.registration_number or '—' }}</span></div>
+        <div class="kv" style="margin-top: 24px;"><span>Компания</span><span class="kyc-wrap">{{ user.display_name }}</span></div>
+        <div class="kv"><span>{{ ('ИНН'|terms) if user.role == 'borrower' else 'Рег. номер' }}</span><span>{{ user.registration_number or '—' }}</span></div>
         <div class="kv"><span>Страна</span><span>{{ ui.country(user.country_code) }}</span></div>
     </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Загрузка документа сразу после выбора, в фоне: страница не перезагружается, выбранное в других строках не теряется
+    (function () {
+        const MAX = 4 * 1024 * 1024;
+        const count = document.getElementById('kyc-count'), bar = document.getElementById('kyc-bar');
+        const submit = document.getElementById('kyc-submit'), hint = document.getElementById('kyc-submit-hint');
+
+        document.querySelectorAll('.kyc-form').forEach((form) => {
+            const row = form.closest('.kyc-row');
+            const input = form.querySelector('input[type=file]');
+            const pick = form.querySelector('.kyc-pick'), label = form.querySelector('.kyc-pick-label');
+            const error = row.querySelector('.field-error'), link = row.querySelector('.kyc-file');
+            const donePill = row.querySelector('.kyc-done-pill');
+
+            const showError = (text) => { error.textContent = text; error.hidden = !text; };
+
+            input.addEventListener('change', async () => {
+                const file = input.files[0];
+                if (!file) return;
+                showError('');
+                if (!/\.pdf$/i.test(file.name)) { showError('Нужен файл в формате PDF'); input.value = ''; return; }
+                if (file.size > MAX) { showError('Файл больше 4 МБ. Сожмите PDF и загрузите снова'); input.value = ''; return; }
+
+                const before = label.textContent;
+                row.dataset.state = 'uploading';
+                pick.setAttribute('aria-disabled', 'true');
+                label.textContent = 'Загрузка…';
+                try {
+                    const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } });
+                    const data = await response.json().catch(() => ({ ok: false, error: 'Не удалось загрузить файл. Попробуйте ещё раз' }));
+                    if (!data.ok) throw new Error(data.error);
+                    row.dataset.state = 'uploaded';
+                    link.hidden = false;
+                    link.href = data.url;
+                    link.querySelector('span').textContent = data.filename;
+                    donePill.hidden = false;
+                    label.textContent = 'Заменить';
+                    pick.classList.replace('btn-secondary', 'btn-ghost');
+                    count.textContent = data.done + ' из ' + data.total;
+                    bar.style.width = Math.round(100 * data.done / data.total) + '%';
+                    if (submit && data.done >= data.total) {
+                        submit.disabled = false;
+                        hint.textContent = 'Все документы загружены. Администратор проверит пакет целиком и одобрит его или вернёт с комментарием.';
+                    }
+                } catch (e) {
+                    row.dataset.state = link.hidden ? 'missing' : 'uploaded';
+                    label.textContent = before;
+                    showError(e.message || 'Не удалось загрузить файл. Попробуйте ещё раз');
+                } finally {
+                    pick.removeAttribute('aria-disabled');
+                    input.value = '';
+                }
+            });
+        });
+    })();
+</script>
 {% endblock %}

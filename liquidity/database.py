@@ -52,6 +52,7 @@ MIGRATIONS = [
     "ALTER TABLE applications ADD COLUMN IF NOT EXISTS transfer_method VARCHAR(30)",
     "ALTER TABLE applications ADD COLUMN IF NOT EXISTS moderation_comment VARCHAR(500)",
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS extra_terms VARCHAR(1000)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
 

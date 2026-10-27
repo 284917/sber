@@ -74,7 +74,7 @@ def test_full_deal_flow(world):
         beta.post("/kyc/upload", data={"doc_type": t}, files={"file": PDF})
     beta.post("/kyc/submit")
     beta_id = get(models.User, email="beta@beta.cy").id
-    assert admin.post(f"/admin/kyc/reject_user/{beta_id}", data={"reason": ""}).headers["location"].endswith("error=reason#kyc")
+    assert admin.post(f"/admin/kyc/reject_user/{beta_id}", data={"reason": ""}).headers["location"].endswith("tab=kyc&error=reason")
     admin.post(f"/admin/kyc/reject_user/{beta_id}", data={"reason": "Нет сертификата резидентства"})
     assert get(models.User, id=beta_id).kyc_reject_reason == "Нет сертификата резидентства"
     assert "Нет сертификата резидентства" in beta.get("/kyc").text
@@ -93,7 +93,7 @@ def test_full_deal_flow(world):
     assert "Закупка оборудования" not in beta.get("/dashboard").text  # до модерации кредиторы не видят
 
     assert admin.post(f"/admin/application/{spam.id}/moderate",
-                      data={"decision": "reject", "comment": ""}).headers["location"].endswith("error=reason#moderation")
+                      data={"decision": "reject", "comment": ""}).headers["location"].endswith("tab=moderation&error=reason")
     admin.post(f"/admin/application/{spam.id}/moderate", data={"decision": "reject", "comment": "Неполное назначение"})
     admin.post(f"/admin/application/{application.id}/moderate", data={"decision": "approve"})
     assert get(models.Application, id=spam.id).status == "rejected"
@@ -160,8 +160,8 @@ def test_full_deal_flow(world):
     for text in ("отправлена на модерацию", "прошла модерацию", "Оператор показал", "Отклонено предложение",
                  "Принято предложение", "загрузил основной договор", "Сделка подтверждена"):
         assert text in history, text
-    admin_page = admin.get("/admin").text
-    assert "Архив согласованных сделок" in admin_page and "Beta Capital Ltd" in admin_page
+    admin_page = admin.get("/admin?tab=archive").text
+    assert "Согласованные сделки" in admin_page and "Beta Capital Ltd" in admin_page
     stats = analytics.build(*_all_apps_and_offers())
     assert {row["currency"]: row["count"] for row in stats["avg_by_currency"]} == {"EUR": 2}
     assert dict(stats["top_supply"]) == {"CY": 1, "AE": 1}

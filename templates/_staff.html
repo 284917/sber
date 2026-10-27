@@ -1,0 +1,46 @@
+{# Общие блоки сотрудников: модерация заявок и снятие опубликованной заявки (админка и кабинет оператора) #}
+{% import "_ui.html" as sui %}
+
+{% macro moderation_table(apps, request) -%}
+{% if apps %}
+<div class="table-wrap">
+<table class="t t-top">
+    <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок · передача</th><th>Назначение</th><th style="width: 320px;">Решение</th></tr></thead>
+    <tbody>
+    {% for app in apps %}
+    <tr>
+        <td class="muted">{{ app.id }}</td>
+        <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if app.borrower and app.borrower.registration_number %}<div class="small muted">ИНН {{ app.borrower.registration_number }}</div>{% endif %}</td>
+        <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
+        <td>{{ sui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}<div class="small muted">{{ TRANSFER_METHODS.get(app.transfer_method, '—')|terms }}</div></td>
+        <td class="cell-wrap">{{ app.purpose }}</td>
+        <td>
+            <div class="decision">
+                <form method="post" action="/admin/application/{{ app.id }}/moderate" data-confirm="Опубликовать заявку №{{ app.id }}?" data-confirm-ok="Опубликовать"
+                      data-confirm-text="Заявку увидят все верифицированные кредиторы.">{{ csrf_field(request) }}
+                    <input type="hidden" name="decision" value="approve">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block">Опубликовать</button>
+                </form>
+                <form method="post" action="/admin/application/{{ app.id }}/moderate" class="decision-reject" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
+                      data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя.">{{ csrf_field(request) }}
+                    <input type="hidden" name="decision" value="reject">
+                    <input type="text" name="comment" class="input input-sm" placeholder="Причина отказа" maxlength="500" required aria-label="Причина отказа по заявке №{{ app.id }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
+                </form>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}{{ sui.empty('list-checks', 'Все заявки проверены', 'Новые заявки заёмщиков попадут сюда до публикации.') }}{% endif %}
+{%- endmacro %}
+
+{% macro unpublish_form(app, request) -%}
+<form method="post" action="/admin/application/{{ app.id }}/unpublish" class="decision-reject" data-confirm="Снять заявку №{{ app.id }} с публикации?" data-confirm-kind="danger" data-confirm-ok="Снять"
+      data-confirm-text="Кредиторы перестанут её видеть, открытые предложения закроются. Заёмщик увидит причину.">{{ csrf_field(request) }}
+    <input type="text" name="reason" class="input input-sm" placeholder="Причина" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}">
+    <button type="submit" class="btn btn-danger btn-sm">Снять</button>
+</form>
+{%- endmacro %}

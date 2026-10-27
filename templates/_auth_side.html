@@ -1,5 +1,5 @@
 {% import "_ui.html" as ui %}
-<aside class="auth-side">
+{% filter terms %}<aside class="auth-side">
     <a href="/" class="brand" style="padding: 0;">{{ ui.brand_mark() }}<span class="brand-name">Сбер<span>Платформа ликвидности</span></span></a>
     <div>
         <h2>Валютное финансирование от проверенных кредиторов</h2>
@@ -14,4 +14,4 @@
         <a href="/" class="back" style="color: #9B9B9B; margin: 0;">{{ ui.icon('arrow-left', 'ic-sm') }} На главную</a>
         <button type="button" class="theme-btn" onclick="toggleTheme()" title="Светлая или тёмная тема" aria-label="Переключить тему">{{ ui.icon('moon', 'ic-moon') }}{{ ui.icon('sun', 'ic-sun') }}</button>
     </div>
-</aside>
+</aside>{% endfilter %}

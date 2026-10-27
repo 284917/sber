@@ -53,7 +53,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = db.get(models.User, payload.get("user_id"))
-    if not user:
+    if not user or user.role == "removed":
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 

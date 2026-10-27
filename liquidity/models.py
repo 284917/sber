@@ -19,6 +19,8 @@ class User(Base):
     registration_number = Column(String(50), nullable=True)
     # Причина отказа в KYC, видна компании до повторной отправки документов
     kyc_reject_reason = Column(String(500), nullable=True)
+    # Главный администратор: только он создаёт и отключает других сотрудников
+    is_superadmin = Column(Boolean, nullable=False, default=False, server_default="false")
 
     documents = relationship("Document", viewonly=True)
     notifications = relationship("Notification", viewonly=True,
