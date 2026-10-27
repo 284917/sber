@@ -22,8 +22,12 @@ DATABASE_URL = find_database_url() or "postgresql+psycopg2://liquidity_user:Sber
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
 
-# На Vercel каждый запрос — отдельная serverless-функция, держать пул соединений нельзя
-engine = create_engine(DATABASE_URL, poolclass=NullPool) if os.getenv("VERCEL") else create_engine(DATABASE_URL)
+# На Vercel каждый запрос — отдельная serverless-функция, держать пул соединений нельзя.
+# SQLite используется в тестах: соединение должно быть доступно из потоков тестового клиента
+engine_kwargs = {"poolclass": NullPool} if os.getenv("VERCEL") else {}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

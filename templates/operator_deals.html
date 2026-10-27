@@ -30,7 +30,7 @@
     <div class="top-bar">
         <h4 class="m-0">Сделки в работе</h4>
         <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-light text-dark border">{{ user.email }} ({{ user.role }})</span>
+            <span class="badge bg-light text-dark border">{{ user.email }} · {{ ROLE_NAMES.get(user.role, user.role) }}</span>
             <a href="/logout" class="text-danger text-decoration-none" style="font-size: 14px; font-weight: 500;">Выйти</a>
         </div>
     </div>
@@ -41,7 +41,7 @@
             <div>
                 <h5 class="mb-1" style="color: #21A038;">Сделка по заявке №{{ app.id }}</h5>
                 <p class="text-muted mb-0" style="font-size: 14px;">
-                    Сумма: <b>{{ app.funding_amount }} {{ app.currency_code }}</b> | 
+                    {{ app.borrower.display_name if app.borrower else "" }} · Сумма: <b>{{ app.funding_amount|money }} {{ app.currency_code }}</b>{% if app.term_months %} · {{ app.term_months }} мес.{% endif %} | 
                     Назначение: {{ app.purpose }}
                 </p>
             </div>

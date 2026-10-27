@@ -2,177 +2,277 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Админ-панель | Сбер</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; background-color: #F8F9FA; color: #333F48; margin: 0; }
+        html { scroll-behavior: smooth; scroll-padding-top: 20px; }
         .sidebar { width: 250px; background: #FFFFFF; height: 100vh; position: fixed; border-right: 1px solid #E5E7EB; padding-top: 20px; }
         .sidebar-brand { color: #21A038; font-weight: 700; font-size: 18px; padding: 0 20px 20px 20px; display: block; text-decoration: none; }
-        .nav-item { padding: 12px 20px; color: #4B5563; text-decoration: none; display: block; font-weight: 500; font-size: 14px; transition: 0.2s; }
+        .nav-item { padding: 12px 20px; color: #4B5563; text-decoration: none; display: flex; justify-content: space-between; font-weight: 500; font-size: 14px; transition: 0.2s; }
         .nav-item:hover { background: #F3F4F6; color: #21A038; }
-        .nav-item.active { background: #E3FCEF; color: #21A038; border-right: 4px solid #21A038; }
-        
+        .nav-count { background: #21A038; color: #fff; border-radius: 10px; padding: 0 8px; font-size: 12px; }
+
         .main-content { margin-left: 250px; padding: 30px 40px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .user-badge { background: #E5E7EB; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-        
+
         .card-sber { background: #FFF; border-radius: 16px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.03); padding: 24px; margin-bottom: 24px; }
+        .section-title { font-weight: 600; margin-bottom: 16px; }
         .stat-card { border-left: 4px solid #21A038; }
         .stat-title { font-size: 13px; color: #6B7280; margin-bottom: 5px; }
-        .stat-value { font-size: 24px; font-weight: 700; color: #333F48; }
-        
+        .stat-value { font-size: 24px; font-weight: 700; color: #333F48; font-variant-numeric: tabular-nums; }
+
         .table-sber th { border-top: none; color: #6B7280; font-weight: 500; font-size: 13px; }
-        .form-control, .form-select { border-radius: 10px; border: 1px solid #D1D5DB; padding: 10px 15px; }
-        .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; padding: 10px 20px; }
+        .table-sber td { font-variant-numeric: tabular-nums; }
+        .form-control, .form-select { border-radius: 10px; border: 1px solid #D1D5DB; padding: 8px 12px; }
+        .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; padding: 8px 16px; }
         .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        
-        .badge-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-        .bg-pending { background-color: #FEF3C7; color: #92400E; }
-        .bg-approved { background-color: #E3FCEF; color: #21A038; }
+        .btn-decline { background: #fff; color: #B42318; border: 1px solid #F3B4AE; border-radius: 10px; font-weight: 500; padding: 8px 16px; }
+        .btn-decline:hover { background: #FDE2E1; color: #B42318; }
+
+        .badge-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+        .bg-moderation { background-color: #E5E7EB; color: #374151; }
+        .bg-rejected { background-color: #FDE2E1; color: #B42318; }
         .bg-published { background-color: #E3FCEF; color: #21A038; }
         .bg-in_work { background-color: #FFF3CD; color: #856404; }
+        .bg-agreed { background-color: #D1FAE5; color: #065F46; }
+        .bar { height: 8px; background: #21A038; border-radius: 4px; }
+        .bar-track { background: #EEF1F4; border-radius: 4px; }
+        @media (max-width: 900px) { .sidebar { display: none; } .main-content { margin-left: 0; padding: 20px; } }
     </style>
 </head>
 <body>
 
-<!-- Боковое меню -->
 <div class="sidebar">
-    <a href="#" class="sidebar-brand">Платформа ликвидности</a>
-    <a href="/admin" class="nav-item active">Главная</a>
-    <a href="#" class="nav-item">Очередь КУС</a>
-    <a href="#" class="nav-item">Заявки</a>
-    <a href="#" class="nav-item">Аналитика</a>
-    <a href="#" class="nav-item">Архив сделок</a>
+    <a href="/admin" class="sidebar-brand">Платформа ликвидности</a>
+    <a href="#kyc" class="nav-item">Очередь KYC {% if kyc_queue %}<span class="nav-count">{{ kyc_queue|length }}</span>{% endif %}</a>
+    <a href="#moderation" class="nav-item">Модерация заявок {% if moderation_apps %}<span class="nav-count">{{ moderation_apps|length }}</span>{% endif %}</a>
+    <a href="#analytics" class="nav-item">Аналитика</a>
+    <a href="#archive" class="nav-item">Архив сделок</a>
+    <a href="#history" class="nav-item">Все заявки</a>
+    <a href="#staff" class="nav-item">Сотрудники</a>
+    <a href="/operator/offers" class="nav-item">Кабинет оператора →</a>
 </div>
 
-<!-- Основной контент -->
 <div class="main-content">
     <div class="top-bar">
         <h4 class="m-0">Кабинет администратора</h4>
         <div class="d-flex align-items-center gap-3">
-            <span class="user-badge">{{ user.email }} ({{ user.role }})</span>
+            <span class="user-badge">{{ user.email }} · {{ ROLE_NAMES.get(user.role, user.role) }}</span>
             <a href="/logout" class="text-danger text-decoration-none" style="font-size: 14px; font-weight: 500;">Выйти</a>
         </div>
     </div>
 
-    <!-- Уведомления -->
-    {% if request.query_params.get('success') %}
-    <div class="alert alert-success" style="border-radius: 10px;">Сотрудник успешно создан!</div>
-    {% endif %}
-    {% if request.query_params.get('error') %}
-    <div class="alert alert-danger" style="border-radius: 10px;">Пользователь с таким email уже существует.</div>
-    {% endif %}
-    {% if request.query_params.get('kyc_approved') %}
-    <div class="alert alert-success" style="border-radius: 10px;">Верификация компании одобрена!</div>
-    {% endif %}
+    {% set qp = request.query_params %}
+    {% if qp.get('success') %}<div class="alert alert-success" style="border-radius: 10px;">Сотрудник создан.</div>{% endif %}
+    {% if qp.get('error') == 'exists' %}<div class="alert alert-danger" style="border-radius: 10px;">Пользователь с таким email уже существует.</div>{% endif %}
+    {% if qp.get('error') == 'reason' %}<div class="alert alert-danger" style="border-radius: 10px;">Укажите причину отказа — её увидит компания.</div>{% endif %}
+    {% if qp.get('kyc_approved') %}<div class="alert alert-success" style="border-radius: 10px;">Верификация компании одобрена.</div>{% endif %}
+    {% if qp.get('kyc_rejected') %}<div class="alert alert-warning" style="border-radius: 10px;">Верификация отклонена, компания увидит причину.</div>{% endif %}
+    {% if qp.get('moderated') %}<div class="alert alert-success" style="border-radius: 10px;">Решение по заявке сохранено.</div>{% endif %}
 
-    <!-- Блок Очередь КУС -->
-    <div class="card card-sber mb-4">
-        <h6 class="mb-3" style="font-weight: 600;">Очередь на проверку КУС</h6>
+    <!-- Очередь KYC -->
+    <div class="card card-sber" id="kyc">
+        <h6 class="section-title">Очередь на проверку KYC</h6>
+        {% if kyc_queue %}
+        <div class="table-responsive">
         <table class="table table-sber align-middle">
-            <thead>
-                <tr>
-                    <th>Компания (Email)</th>
-                    <th>Роль</th>
-                    <th>Документы</th>
-                    <th>Действие</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Компания</th><th>Роль · страна</th><th>Рег. номер</th><th>Документы</th><th style="width: 360px;">Решение</th></tr></thead>
             <tbody>
-                {% set processed_users = [] %}
-                {% for doc in pending_docs %}
-                    {% if doc.user_id not in processed_users %}
-                        {% set _ = processed_users.append(doc.user_id) %}
-                        <tr>
-                            <td><strong>{{ doc.user.email if doc.user else 'User ' ~ doc.user_id }}</strong></td>
-                            <td>{{ doc.user.role if doc.user else '-' }}</td>
-                            <td>
-                                {{ pending_docs|selectattr('user_id', 'equalto', doc.user_id)|list|length }} файлов
-                                <br><small class="text-muted">Пакет документов загружен</small>
-                            </td>
-                            <td>
-                                <form method="post" action="/admin/kyc/approve_user/{{ doc.user_id }}" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-sber">Одобрить</button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
+            {% for company, docs in kyc_queue %}
+            <tr>
+                <td><strong>{{ company.display_name }}</strong><br><small class="text-muted">{{ company.email }}</small></td>
+                <td>{{ ROLE_NAMES.get(company.role, company.role) }} · {{ COUNTRY_NAMES.get(company.country_code, company.country_code or '—') }}</td>
+                <td>{{ company.registration_number or '—' }}</td>
+                <td>
+                    {% for doc in docs %}
+                    <a href="/{{ doc.file_path }}" target="_blank" style="color: #21A038; font-size: 13px; display: block;">{{ doc.doc_type }}</a>
+                    {% endfor %}
+                </td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <form method="post" action="/admin/kyc/approve_user/{{ company.id }}">
+                            <button type="submit" class="btn btn-sm btn-sber">Одобрить</button>
+                        </form>
+                        <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="d-flex gap-2 flex-grow-1">
+                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Причина отказа" maxlength="500" required>
+                            <button type="submit" class="btn btn-sm btn-decline">Отклонить</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
             </tbody>
         </table>
-        {% if not pending_docs %}
-        <p class="text-muted m-0" style="font-size: 14px;">Нет документов на проверке.</p>
+        </div>
+        {% else %}
+        <p class="text-muted m-0" style="font-size: 14px;">Нет компаний на проверке.</p>
         {% endif %}
     </div>
 
-    <!-- Карточки статистики -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card card-sber stat-card">
-                <div class="stat-title">Всего заявок</div>
-                <div class="stat-value">{{ total_apps }}</div>
+    <!-- Модерация заявок -->
+    <div class="card card-sber" id="moderation">
+        <h6 class="section-title">Модерация заявок</h6>
+        {% if moderation_apps %}
+        <div class="table-responsive">
+        <table class="table table-sber align-middle">
+            <thead><tr><th>№</th><th>Заёмщик</th><th>Сумма</th><th>Страна · срок · передача</th><th>Назначение</th><th style="width: 360px;">Решение</th></tr></thead>
+            <tbody>
+            {% for app in moderation_apps %}
+            <tr>
+                <td>{{ app.id }}</td>
+                <td>{{ app.borrower.display_name if app.borrower else '—' }}</td>
+                <td><strong>{{ app.funding_amount|money }} {{ app.currency_code }}</strong></td>
+                <td>{{ COUNTRY_NAMES.get(app.target_jurisdiction, app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }} · {{ TRANSFER_METHODS.get(app.transfer_method, '—') }}</td>
+                <td style="font-size: 13px;">{{ app.purpose }}</td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <form method="post" action="/admin/application/{{ app.id }}/moderate">
+                            <input type="hidden" name="decision" value="approve">
+                            <button type="submit" class="btn btn-sm btn-sber">Опубликовать</button>
+                        </form>
+                        <form method="post" action="/admin/application/{{ app.id }}/moderate" class="d-flex gap-2 flex-grow-1">
+                            <input type="hidden" name="decision" value="reject">
+                            <input type="text" name="comment" class="form-control form-control-sm" placeholder="Причина отказа" maxlength="500" required>
+                            <button type="submit" class="btn btn-sm btn-decline">Отклонить</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <p class="text-muted m-0" style="font-size: 14px;">Нет заявок на модерации.</p>
+        {% endif %}
+    </div>
+
+    <!-- Аналитика -->
+    <div id="analytics">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card card-sber stat-card">
+                    <div class="stat-title">Всего заявок</div>
+                    <div class="stat-value">{{ analytics.total_apps }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-sber stat-card">
+                    <div class="stat-title">Всего предложений</div>
+                    <div class="stat-value">{{ analytics.total_offers }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-sber stat-card">
+                    <div class="stat-title">Заявок дошли до сделки</div>
+                    <div class="stat-value">{{ analytics.deal_share }}%</div>
+                </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card card-sber stat-card">
-                <div class="stat-title">Всего офферов</div>
-                <div class="stat-value">{{ total_offers }}</div>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-sber">
+                    <h6 class="section-title">Средний размер финансирования</h6>
+                    {% for row in analytics.avg_by_currency %}
+                    <div class="d-flex justify-content-between py-2" style="border-bottom: 1px solid #EEF1F4;">
+                        <span>{{ row.currency }} <small class="text-muted">· {{ row.count }} заяв.</small></span>
+                        <b style="font-variant-numeric: tabular-nums;">{{ row.avg|money }}</b>
+                    </div>
+                    {% else %}
+                    <p class="text-muted m-0" style="font-size: 14px;">Заявок пока нет.</p>
+                    {% endfor %}
+                    <p class="text-muted mt-2 mb-0" style="font-size: 12px;">Считается отдельно по каждой валюте.</p>
+                </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-sber stat-card">
-                <div class="stat-title">Средняя сумма (EUR)</div>
-                <div class="stat-value">{{ avg_amount }}</div>
+            {% for title, rows, note in [('Топ стран по спросу', analytics.top_demand, 'Куда заёмщики хотят получить средства, по числу заявок'), ('Топ стран по предложению', analytics.top_supply, 'Откуда кредиторы, по числу предложений')] %}
+            <div class="col-lg-4">
+                <div class="card card-sber">
+                    <h6 class="section-title">{{ title }}</h6>
+                    {% set max_count = rows[0][1] if rows else 1 %}
+                    {% for code, count in rows %}
+                    <div class="py-1">
+                        <div class="d-flex justify-content-between" style="font-size: 14px;"><span>{{ COUNTRY_NAMES.get(code, code) }}</span><b>{{ count }}</b></div>
+                        <div class="bar-track"><div class="bar" style="width: {{ (100 * count / max_count)|round|int }}%;"></div></div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted m-0" style="font-size: 14px;">Данных пока нет.</p>
+                    {% endfor %}
+                    <p class="text-muted mt-2 mb-0" style="font-size: 12px;">{{ note }}</p>
+                </div>
             </div>
+            {% endfor %}
         </div>
     </div>
 
-    <div class="row">
-        <!-- Форма создания сотрудника -->
-        <div class="col-md-4">
-            <div class="card card-sber">
-                <h6 class="mb-3" style="font-weight: 600;">Добавить сотрудника</h6>
-                <form method="post" action="/admin/create_user">
-                    <div class="mb-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
-                    <div class="mb-3"><input type="password" name="password" class="form-control" placeholder="Пароль" required></div>
-                    <div class="mb-3">
-                        <select name="role" class="form-select" required>
-                            <option value="operator">Оператор</option>
-                            <option value="admin">Администратор</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-sber w-100">Создать</button>
-                </form>
-            </div>
+    <!-- Архив сделок -->
+    <div class="card card-sber" id="archive">
+        <h6 class="section-title">Архив согласованных сделок</h6>
+        {% if archive %}
+        <div class="table-responsive">
+        <table class="table table-sber align-middle">
+            <thead><tr><th>№</th><th>Заёмщик</th><th>Кредитор</th><th>Сумма</th><th>Ставка · комиссия</th><th>Срок</th><th>Подтверждена</th></tr></thead>
+            <tbody>
+            {% for row in archive %}
+            <tr>
+                <td>{{ row.app.id }}</td>
+                <td>{{ row.app.borrower.display_name if row.app.borrower else '—' }}</td>
+                <td>{{ row.offer.sender.display_name if row.offer and row.offer.sender else '—' }}</td>
+                <td><strong>{{ (row.offer.funding_amount if row.offer else row.app.funding_amount)|money }} {{ row.app.currency_code }}</strong></td>
+                <td>{% if row.offer %}{{ row.offer.annual_interest_rate|percent }} · {{ row.offer.total_commission|percent }}{% else %}—{% endif %}</td>
+                <td>{{ row.app.term_months ~ ' мес.' if row.app.term_months else '—' }}</td>
+                <td style="font-size: 13px;">{{ row.app.confirmed_at.strftime('%d.%m.%Y') if row.app.confirmed_at else '—' }}{% if row.confirmed_by %}<br><span class="text-muted">{{ row.confirmed_by.email }}</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
         </div>
-        <!-- Модерация заявок -->
-        <div class="col-md-8">
-            <div class="card card-sber">
-                <h6 class="mb-3" style="font-weight: 600;">Модерация заявок</h6>
-                <table class="table table-sber align-middle">
-                    <thead><tr><th>Сумма</th><th>Страна</th><th>Статус</th><th>Действие</th></tr></thead>
-                    <tbody>
-                        {% for app in apps %}
-                        <tr>
-                            <td><strong>{{ app.funding_amount }} {{ app.currency_code }}</strong></td>
-                            <td>{{ app.target_jurisdiction }}</td>
-                            <td><span class="badge-status bg-{{ app.status }}">{{ app.status }}</span></td>
-                            <td>
-                                <form method="post" action="/admin/application/{{ app.id }}/status" class="d-flex gap-2">
-                                    <select name="new_status" class="form-select form-select-sm" style="width: auto;">
-                                        <option value="published" {% if app.status == 'published' %}selected{% endif %}>Опубликовать</option>
-                                        <option value="in_work" {% if app.status == 'in_work' %}selected{% endif %}>В работе</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-sm btn-sber">ОК</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        {% else %}
+        <p class="text-muted m-0" style="font-size: 14px;">Согласованных сделок пока нет.</p>
+        {% endif %}
+    </div>
+
+    <!-- Все заявки: история -->
+    <div class="card card-sber" id="history">
+        <h6 class="section-title">Все заявки</h6>
+        <div class="table-responsive">
+        <table class="table table-sber align-middle">
+            <thead><tr><th>№</th><th>Создана</th><th>Заёмщик</th><th>Сумма</th><th>Страна · срок</th><th>Статус</th><th></th></tr></thead>
+            <tbody>
+            {% for app in apps %}
+            <tr>
+                <td>{{ app.id }}</td>
+                <td style="font-size: 13px;">{{ app.created_at.strftime('%d.%m.%Y') if app.created_at else '—' }}</td>
+                <td>{{ app.borrower.display_name if app.borrower else '—' }}</td>
+                <td><strong>{{ app.funding_amount|money }} {{ app.currency_code }}</strong></td>
+                <td>{{ COUNTRY_NAMES.get(app.target_jurisdiction, app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}</td>
+                <td><span class="badge-status bg-{{ app.status }}">{{ APPLICATION_STATUSES.get(app.status, app.status) }}</span></td>
+                <td class="text-end">{% if app.status in ('in_work', 'agreed') %}<a href="/operator/deal/{{ app.id }}" style="color: #21A038; font-size: 13px;">Сделка и история</a>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
         </div>
+        {% if not apps %}<p class="text-muted m-0" style="font-size: 14px;">Заявок пока нет.</p>{% endif %}
+    </div>
+
+    <!-- Сотрудники -->
+    <div class="card card-sber" id="staff" style="max-width: 480px;">
+        <h6 class="section-title">Добавить сотрудника</h6>
+        <form method="post" action="/admin/create_user">
+            <div class="mb-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
+            <div class="mb-3"><input type="password" name="password" class="form-control" placeholder="Пароль" minlength="8" required></div>
+            <div class="mb-3">
+                <select name="role" class="form-select" required>
+                    <option value="operator">Оператор</option>
+                    <option value="admin">Администратор</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sber w-100">Создать</button>
+        </form>
     </div>
 </div>
 </body>

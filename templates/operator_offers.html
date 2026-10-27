@@ -36,7 +36,7 @@
     <div class="top-bar">
         <h4 class="m-0">Офферы на проверке</h4>
         <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-light text-dark border">{{ user.email }} ({{ user.role }})</span>
+            <span class="badge bg-light text-dark border">{{ user.email }} · {{ ROLE_NAMES.get(user.role, user.role) }}</span>
             <a href="/logout" class="text-danger text-decoration-none" style="font-size: 14px; font-weight: 500;">Выйти</a>
         </div>
     </div>
@@ -58,22 +58,28 @@
                 <tbody>
                     {% for item in offers_data %}
                     <tr>
-                        <td style="padding-left: 20px;"><b>{{ item.offer.sender.email if item.offer.sender else 'Кредитор' }}</b></td>
-                        <td>№{{ item.app.id }} ({{ item.app.currency_code }})</td>
-                        <td><b>{{ item.offer.funding_amount }} {{ item.app.currency_code }}</b></td>
-                        <td>{{ item.offer.annual_interest_rate }}%</td>
-                        <td>{{ item.offer.total_commission }}%</td>
+                        <td style="padding-left: 20px;">
+                            <b>{{ item.offer.sender.display_name if item.offer.sender else 'Кредитор' }}</b>
+                            {% if item.offer.extra_terms %}<div class="text-muted" style="font-size: 12px; max-width: 260px;">{{ item.offer.extra_terms }}</div>{% endif %}
+                        </td>
+                        <td>№{{ item.app.id }} · {{ item.app.funding_amount|money }} {{ item.app.currency_code }}{% if item.app.term_months %} · {{ item.app.term_months }} мес.{% endif %}</td>
+                        <td><b>{{ item.offer.funding_amount|money }} {{ item.app.currency_code }}</b></td>
+                        <td>{{ item.offer.annual_interest_rate|percent }}</td>
+                        <td>{{ item.offer.total_commission|percent }}</td>
                         <td>
-                            {% if item.is_valid %}<span class="badge-ok">В рамках</span>
-                            {% else %}<span class="badge-error">Ошибка</span>{% endif %}
+                            {% if item.is_valid %}<span class="badge-ok">В рамках заявки</span>
+                            {% else %}<span class="badge-error">{{ item.problems|join(', ') }}</span>{% endif %}
                         </td>
                         <td style="text-align: right; padding-right: 20px;">
-                            <form method="post" action="/operator/offer/{{ item.offer.id }}/show" style="display:inline;">
-                                <button type="submit" class="btn btn-sber">Показать</button>
-                            </form>
-                            <form method="post" action="/operator/offer/{{ item.offer.id }}/hide" style="display:inline;">
-                                <button type="submit" class="btn btn-hide">Скрыть</button>
-                            </form>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <form method="post" action="/operator/offer/{{ item.offer.id }}/show">
+                                    <button type="submit" class="btn btn-sber" {% if not item.is_valid %}disabled{% endif %}>Показать</button>
+                                </form>
+                                <form method="post" action="/operator/offer/{{ item.offer.id }}/hide" class="d-flex gap-2">
+                                    <input type="text" name="reason" class="form-control form-control-sm" placeholder="Причина" maxlength="255" style="width: 140px;" {% if not item.is_valid %}value="{{ item.problems|join(', ') }}"{% endif %}>
+                                    <button type="submit" class="btn btn-hide">Скрыть</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

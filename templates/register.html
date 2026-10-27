@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Регистрация | Платформа ликвидности Сбер</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
@@ -12,27 +13,57 @@
         .btn-sber:hover { background-color: #1a7e2c; color: white; }
         .form-control, .form-select { border-radius: 12px; padding: 12px; border: 1px solid #D1D5DB; background-color: #F9FAFB; }
         .form-control:focus, .form-select:focus { border-color: #21A038; box-shadow: 0 0 0 0.2rem rgba(33, 160, 56, 0.25); }
-        .logo-placeholder { font-size: 32px; font-weight: 700; color: #21A038; text-align: center; margin-bottom: 20px; letter-spacing: 2px; }
+        .form-label { font-size: 13px; color: #6B7280; margin-bottom: 4px; }
+        .logo-placeholder { font-size: 32px; font-weight: 700; color: #21A038; text-align: center; margin-bottom: 12px; letter-spacing: 2px; }
+        .role-switch { display: flex; gap: 8px; }
+        .role-switch input { display: none; }
+        .role-switch label { flex: 1; text-align: center; padding: 12px; border: 1px solid #D1D5DB; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .role-switch input:checked + label { border: 2px solid #21A038; background: #E3FCEF; color: #1a7e2c; }
     </style>
 </head>
 <body>
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="col-md-5">
+<div class="container d-flex justify-content-center align-items-center py-5" style="min-height: 100vh;">
+    <div class="col-lg-6 col-md-8">
         <div class="sber-card">
             <div class="logo-placeholder">СБЕР</div>
-            <h4 class="text-center mb-4" style="font-weight: 500;">Регистрация</h4>
+            <h4 class="text-center mb-1" style="font-weight: 500;">Регистрация компании</h4>
+            <p class="text-center text-muted mb-4" style="font-size: 14px;">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
             {% if error %}<div class="alert alert-danger" style="border-radius: 12px;">{{ error }}</div>{% endif %}
             <form method="post" action="/register">
-                <div class="mb-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
-                <div class="mb-3"><input type="password" name="password" class="form-control" placeholder="Пароль" required></div>
-                <div class="mb-4">
-                    <select name="role" class="form-select" required>
-                        <option value="" disabled selected>Выберите роль</option>
-                        <option value="borrower">Заемщик (РФ)</option>
-                        <option value="creditor">Кредитор (Зарубежье)</option>
-                    </select>
+                <div class="role-switch mb-4">
+                    <input type="radio" name="role" id="role-borrower" value="borrower" {% if form.role != 'creditor' %}checked{% endif %}>
+                    <label for="role-borrower">Заёмщик (РФ)</label>
+                    <input type="radio" name="role" id="role-creditor" value="creditor" {% if form.role == 'creditor' %}checked{% endif %}>
+                    <label for="role-creditor">Кредитор (зарубежное юрлицо)</label>
                 </div>
-                <button type="submit" class="btn btn-sber w-100">Зарегистрироваться</button>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="company_name">Название компании</label>
+                        <input type="text" name="company_name" id="company_name" class="form-control" maxlength="255" value="{{ form.company_name or '' }}" placeholder="ООО «Альфа»" required>
+                    </div>
+                    <div class="col-md-6" id="country-field">
+                        <label class="form-label" for="country_code">Страна регистрации</label>
+                        <select name="country_code" id="country_code" class="form-select">
+                            <option value="">Выберите страну</option>
+                            {% for code, name in creditor_countries.items() %}
+                            <option value="{{ code }}" {% if form.country_code == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6" id="regnum-field">
+                        <label class="form-label" for="registration_number" id="regnum-label">ИНН</label>
+                        <input type="text" name="registration_number" id="registration_number" class="form-control" maxlength="50" value="{{ form.registration_number or '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" name="email" id="email" class="form-control" value="{{ form.email or '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="password">Пароль (не короче 8 символов)</label>
+                        <input type="password" name="password" id="password" class="form-control" minlength="8" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-sber w-100 mt-4">Зарегистрироваться</button>
             </form>
             <div class="text-center mt-3">
                 <a href="/" style="color: #21A038; text-decoration: none;">Уже есть аккаунт? Войти</a>
@@ -40,5 +71,20 @@
         </div>
     </div>
 </div>
+<script>
+    // Заёмщик — российское юрлицо (ИНН, страна РФ); кредитор — зарубежное (страна и регистрационный номер)
+    function syncRole() {
+        const creditor = document.getElementById('role-creditor').checked;
+        document.getElementById('country-field').style.display = creditor ? '' : 'none';
+        document.getElementById('country_code').required = creditor;
+        document.getElementById('regnum-field').className = creditor ? 'col-md-6' : 'col-12';
+        document.getElementById('regnum-label').textContent = creditor ? 'Регистрационный номер' : 'ИНН (10 цифр)';
+        const reg = document.getElementById('registration_number');
+        reg.placeholder = creditor ? 'HE 123456' : '7700000000';
+        if (creditor) { reg.removeAttribute('pattern'); } else { reg.setAttribute('pattern', '\\d{10}'); }
+    }
+    document.querySelectorAll('input[name=role]').forEach(r => r.addEventListener('change', syncRole));
+    syncRole();
+</script>
 </body>
 </html>

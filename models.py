@@ -12,6 +12,17 @@ class User(Base):
     role = Column(String(20), nullable=False)  # borrower, creditor, admin, operator
     created_at = Column(DateTime, server_default=func.now())
 
+    # Данные юрлица (для заёмщика страна всегда RU, регномер — ИНН)
+    company_name = Column(String(255), nullable=True)
+    country_code = Column(String(2), nullable=True)
+    registration_number = Column(String(50), nullable=True)
+    # Причина отказа в KYC, видна компании до повторной отправки документов
+    kyc_reject_reason = Column(String(500), nullable=True)
+
+    @property
+    def display_name(self):
+        return self.company_name or self.email
+
 
 class Application(Base):
     __tablename__ = "applications"
@@ -21,12 +32,18 @@ class Application(Base):
     currency_code = Column(String(3), nullable=False)
     target_jurisdiction = Column(String(2), nullable=False)
     purpose = Column(String(255), nullable=False)
-    status = Column(String(20), default="published")  # published, in_work, agreed
+    term_months = Column(Integer, nullable=True)
+    transfer_method = Column(String(30), nullable=True)
+    # moderation -> published | rejected; published -> in_work -> agreed
+    status = Column(String(20), default="moderation")
+    moderation_comment = Column(String(500), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
-    # ДОБАВЛЕНО: для подтверждения оператором
+    # Подтверждение сделки оператором
     confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
+
+    borrower = relationship("User", foreign_keys=[user_id])
 
 
 class Offer(Base):
@@ -39,17 +56,16 @@ class Offer(Base):
     platform_commission = Column(Numeric(5, 2), default=0.8)
     lender_commission = Column(Numeric(5, 2), nullable=False)
     total_commission = Column(Numeric(5, 2), nullable=False)
+    extra_terms = Column(String(1000), nullable=True)
 
-    # ИЗМЕНЕНО: статусы pending, shown, hidden, accepted
+    # pending -> shown | hidden (оператор); shown -> accepted | rejected (заёмщик)
     status = Column(String(20), default="pending")
 
-    # ДОБАВЛЕНО: для оператора
     hide_reason = Column(String(255), nullable=True)
     operator_decision_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
 
-    # Связи для удобного доступа
     sender = relationship("User", foreign_keys=[user_id])
     application = relationship("Application")
 
@@ -76,6 +92,19 @@ class Message(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     application = relationship("Application")
+
+
+class ApplicationEvent(Base):
+    """История заявки: каждое изменение статуса и ключевое действие участников."""
+    __tablename__ = "application_events"
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    text = Column(String(500), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    actor = relationship("User")
+
 
 class StoredFile(Base):
     __tablename__ = "stored_files"

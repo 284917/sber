@@ -70,14 +70,14 @@
     <div class="chat-section">
         <div class="chat-header">
             <span>Чат по сделке</span>
-            <span class="badge" style="background-color: #E3FCEF; color: #21A038;">В работе</span>
+            <span class="badge" style="background-color: {{ "#D1FAE5" if application.status == "agreed" else "#FFF3CD" }}; color: {{ "#065F46" if application.status == "agreed" else "#856404" }};">{{ APPLICATION_STATUSES.get(application.status, application.status) }}</span>
         </div>
         
         <div class="chat-messages">
             {% for msg in messages %}
                 <div class="message {% if msg.sender_id == user.id %}message-right{% else %}message-left{% endif %}">
                     <span class="message-meta">
-                        {{ msg.sender.email if msg.sender else 'Система' }} • {{ msg.created_at.strftime('%d.%m %H:%M') }}
+                        {{ msg.sender.display_name if msg.sender else 'Система' }} • {{ msg.created_at.strftime('%d.%m %H:%M') }}
                     </span>
                     {{ msg.text }}
                     {% if msg.file_path %}
@@ -128,7 +128,7 @@
                 <div class="doc-item" style="background-color: #E3FCEF; border-color: #21A038;">
                     <div class="doc-info">
                         <p class="doc-name">{{ main_contract.file_path.split('/')[-1] }}</p>
-                        <p class="doc-meta">Загружен: {{ main_contract.sender.email }}</p>
+                        <p class="doc-meta">Загружен: {{ main_contract.sender.display_name if main_contract.sender else '' }}</p>
                     </div>
                     <a href="/{{ main_contract.file_path }}" target="_blank" class="btn btn-sm btn-sber">Скачать</a>
                 </div>
@@ -150,7 +150,7 @@
                     <div class="doc-item">
                         <div class="doc-info">
                             <p class="doc-name">{{ doc.file_path.split('/')[-1] }}</p>
-                            <p class="doc-meta">{{ doc.sender.email if doc.sender else 'Система' }}</p>
+                            <p class="doc-meta">{{ doc.sender.display_name if doc.sender else 'Система' }}</p>
                         </div>
                         <a href="/{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-sber">Скачать</a>
                     </div>

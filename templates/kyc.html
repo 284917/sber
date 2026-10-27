@@ -40,7 +40,7 @@
 <nav class="navbar navbar-sber py-3 mb-4">
     <div class="container">
         <a href="/dashboard" class="navbar-brand fw-bold" style="color: #21A038; text-decoration: none;">← Назад в кабинет</a>
-        <span class="text-muted">{{ user.email }} ({{ 'Кредитор' if user.role == 'creditor' else 'Заемщик' }})</span>
+        <span class="text-muted">{{ user.display_name }} · {{ ROLE_NAMES.get(user.role, user.role) }}</span>
     </div>
 </nav>
 
@@ -51,6 +51,9 @@
 
         {% if request.query_params.get('success') %}
         <div class="alert alert-success" style="border-radius: 10px;">Документы успешно загружены! Ожидайте проверки администратором.</div>
+        {% endif %}
+        {% if user.kyc_reject_reason and not (user_docs|selectattr("status", "equalto", "pending")|list) and not (user_docs|selectattr("status", "equalto", "approved")|list) %}
+        <div class="alert alert-danger" style="border-radius: 10px;">Администратор отклонил верификацию: {{ user.kyc_reject_reason }}. Загрузите документы заново.</div>
         {% endif %}
 
         <div class="mb-4">

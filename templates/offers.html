@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Предложения по заявке | Сбер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Заявка №{{ application.id }} | Сбер</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -11,59 +12,103 @@
         .card-sber { border-radius: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; padding: 10px; }
         .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-        .status-shown { background-color: #E3FCEF; color: #21A038; }
-        .status-accepted { background-color: #FFF3CD; color: #856404; }
+        .btn-decline { background: #fff; color: #B42318; border: 1px solid #F3B4AE; border-radius: 10px; font-weight: 500; padding: 10px; }
+        .btn-decline:hover { background: #FDE2E1; color: #B42318; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+        .status-moderation { background-color: #E5E7EB; color: #374151; }
+        .status-rejected { background-color: #FDE2E1; color: #B42318; }
+        .status-published, .status-shown { background-color: #E3FCEF; color: #21A038; }
+        .status-in_work, .status-accepted { background-color: #FFF3CD; color: #856404; }
+        .status-agreed { background-color: #D1FAE5; color: #065F46; }
+        .kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #EEF1F4; font-size: 14px; }
+        .kv span:first-child { color: #6B7280; }
+        .event { padding: 8px 0; border-bottom: 1px solid #EEF1F4; font-size: 14px; }
+        .event time { color: #6B7280; font-size: 12px; display: block; }
     </style>
 </head>
 <body>
 <nav class="navbar navbar-sber py-3 mb-4">
     <div class="container">
         <a href="/dashboard" class="navbar-brand fw-bold" style="color: #21A038; text-decoration: none;">← Назад в кабинет</a>
-        <span class="text-muted">{{ user.email }}</span>
+        <span class="text-muted">{{ user.display_name }}</span>
     </div>
 </nav>
 <div class="container">
-    <div class="mb-4">
-        <h4>Предложения по вашей заявке</h4>
-        <p class="text-muted">
-            Сумма: <b>{{ application.funding_amount }} {{ application.currency_code }}</b> | 
-            Страна: <b>{{ application.target_jurisdiction }}</b> | 
-            Назначение: <b>{{ application.purpose }}</b>
-        </p>
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <h4 class="m-0">Заявка №{{ application.id }}</h4>
+        <span class="status-badge status-{{ application.status }}">{{ APPLICATION_STATUSES.get(application.status, application.status) }}</span>
     </div>
-
-    {% if not offers %}
-        <div class="alert alert-info">Пока нет предложений от кредиторов. Ожидайте.</div>
+    {% if application.status == 'rejected' and application.moderation_comment %}
+        <div class="alert alert-danger" style="border-radius: 12px;">Заявка отклонена модератором: {{ application.moderation_comment }}</div>
+    {% elif application.status == 'moderation' %}
+        <div class="alert alert-secondary" style="border-radius: 12px;">Заявка на модерации. Кредиторы увидят её после проверки администратором.</div>
     {% endif %}
 
-    <div class="row">
-        {% for offer in offers %}
-        <div class="col-md-6 mb-4">
-            <div class="card card-sber p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Предложение от банка</h5>
-                    <span class="status-badge status-{{ offer.status }}">{{ offer.status }}</span>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card card-sber p-4 mb-4">
+                <h6 class="mb-2" style="font-weight: 600;">Параметры заявки</h6>
+                <div class="kv"><span>Сумма</span><b>{{ application.funding_amount|money }} {{ application.currency_code }}</b></div>
+                <div class="kv"><span>Страна получения</span><b>{{ COUNTRY_NAMES.get(application.target_jurisdiction, application.target_jurisdiction) }}</b></div>
+                <div class="kv"><span>Срок</span><b>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</b></div>
+                <div class="kv"><span>Способ передачи</span><b>{{ TRANSFER_METHODS.get(application.transfer_method, '—') }}</b></div>
+                <div class="kv" style="border: none;"><span>Назначение</span><b class="text-end ms-3">{{ application.purpose }}</b></div>
+            </div>
+            <div class="card card-sber p-4">
+                <h6 class="mb-2" style="font-weight: 600;">История заявки</h6>
+                {% for event in events %}
+                <div class="event">
+                    <time>{{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '' }}</time>
+                    {{ event.text }}
                 </div>
-                
-                <ul class="list-unstyled mb-4">
-                    <li class="mb-2">Сумма к выдаче: <b class="text-success">{{ offer.funding_amount }} {{ application.currency_code }}</b></li>
-                    <li class="mb-2">Ставка: <b>{{ offer.annual_interest_rate }}%</b> годовых</li>
-                    <li class="mb-2">Комиссия кредитора: <b>{{ offer.lender_commission }}%</b></li>
-                    <li class="mb-2">Комиссия платформы: <b>{{ offer.platform_commission }}%</b></li>
-                    <li class="mb-2" style="font-size: 18px;">Итого комиссия: <b style="color: #21A038;">{{ offer.total_commission }}%</b></li>
-                </ul>
-
-                {% if offer.status == 'shown' %}
-                <form method="post" action="/accept_offer/{{ offer.id }}" class="mt-auto">
-                    <button type="submit" class="btn btn-sber w-100">Принять предложение</button>
-                </form>
-                {% elif offer.status == 'accepted' %}
-                <div class="alert alert-success text-center mt-auto mb-0">Вы приняли это предложение</div>
-                {% endif %}
+                {% else %}
+                <p class="text-muted m-0" style="font-size: 14px;">Событий пока нет.</p>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
+
+        <div class="col-lg-8">
+            <h5 class="mb-3">Предложения кредиторов</h5>
+            {% if not offers %}
+                <div class="alert alert-info" style="border-radius: 12px;">
+                    {% if application.status == 'published' %}Пока нет предложений. Они появятся здесь после проверки оператором.{% else %}Предложений нет.{% endif %}
+                </div>
+            {% endif %}
+            <div class="row">
+                {% for offer in offers %}
+                <div class="col-md-6 mb-4">
+                    <div class="card card-sber p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                            <div>
+                                <h5 class="mb-0">{{ offer.sender.display_name if offer.sender else 'Кредитор' }}</h5>
+                                {% if offer.sender and offer.sender.country_code %}<small class="text-muted">{{ COUNTRY_NAMES.get(offer.sender.country_code, offer.sender.country_code) }}</small>{% endif %}
+                            </div>
+                            <span class="status-badge status-{{ offer.status }}">{{ OFFER_STATUSES.get(offer.status, offer.status) }}</span>
+                        </div>
+                        <div class="kv"><span>Сумма к выдаче</span><b class="text-success">{{ offer.funding_amount|money }} {{ application.currency_code }}</b></div>
+                        <div class="kv"><span>Ставка</span><b>{{ offer.annual_interest_rate|percent }} годовых</b></div>
+                        <div class="kv"><span>Комиссия за организацию</span><b>{{ offer.total_commission|percent }}</b></div>
+                        {% if offer.extra_terms %}
+                        <div class="mt-2" style="font-size: 14px;"><span class="text-muted">Дополнительные условия:</span><br>{{ offer.extra_terms }}</div>
+                        {% endif %}
+
+                        {% if offer.status == 'shown' and application.status == 'published' %}
+                        <div class="d-flex gap-2 mt-4">
+                            <form method="post" action="/accept_offer/{{ offer.id }}" class="flex-grow-1">
+                                <button type="submit" class="btn btn-sber w-100">Принять</button>
+                            </form>
+                            <form method="post" action="/reject_offer/{{ offer.id }}">
+                                <button type="submit" class="btn btn-decline">Отклонить</button>
+                            </form>
+                        </div>
+                        {% elif offer.status == 'accepted' %}
+                        <a href="/deal/{{ application.id }}" class="btn btn-sber w-100 mt-4">Перейти к сделке</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 </body>

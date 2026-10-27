@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Кабинет заемщика | Сбер</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="/static/bootstrap/bootstrap.min.css" rel="stylesheet">
@@ -11,9 +12,13 @@
         .card-sber { border-radius: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .btn-sber { background-color: #21A038; color: white; border-radius: 10px; border: none; font-weight: 500; }
         .btn-sber:hover { background-color: #1a7e2c; color: white; }
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+        .status-moderation { background-color: #E5E7EB; color: #374151; }
+        .status-rejected { background-color: #FDE2E1; color: #B42318; }
         .status-published { background-color: #E3FCEF; color: #21A038; }
         .status-in_work { background-color: #FFF3CD; color: #856404; }
+        .status-agreed { background-color: #D1FAE5; color: #065F46; }
+        .form-label { font-size: 13px; color: #6B7280; margin-bottom: 2px; }
         .table-sber th { border-top: none; color: #6B7280; font-weight: 500; }
         .form-control { border-radius: 10px; }
         .btn-logout { color: #6B7280; text-decoration: none; font-weight: 500; transition: 0.2s; }
@@ -28,23 +33,19 @@
     <div class="container">
         <span class="navbar-brand fw-bold" style="color: #21A038;">СБЕР | Ликвидность</span>
         <div class="d-flex align-items-center gap-3">
-            
-            <!-- ЛОГИКА КНОПКИ KYC -->
             {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
             {% if approved_count > 0 %}
                 <span class="kyc-done-badge">Верификация пройдена</span>
             {% else %}
                 <a href="/kyc" class="btn-outline-sber">Верификация (KYC)</a>
             {% endif %}
-            
-            <span class="text-muted">{{ user.email }}</span>
+            <span class="text-muted">{{ user.display_name }}</span>
             <a href="/logout" class="btn-logout" style="font-size: 14px;">Выйти</a>
         </div>
     </div>
 </nav>
 <div class="container">
 
-    <!-- БЛОК УВЕДОМЛЕНИЙ ОБ ОШИБКЕ KYC -->
     {% if request.query_params.get('error') == 'kyc' %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
         <strong>Внимание!</strong> Вы не можете создать заявку, пока ваша компания не прошла верификацию (KYC). Пожалуйста, загрузите документы.
@@ -53,91 +54,122 @@
     {% endif %}
     {% if request.query_params.get('error') == 'form' %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; border-left: 5px solid #dc3545;">
-        Проверьте заявку: сумма больше 0, валюта и страна выбраны из списка, назначение не длиннее 255 символов.
+        Проверьте заявку: сумма больше 0, валюта, страна и способ передачи выбраны из списка, срок от 1 до {{ max_term }} месяцев, назначение не длиннее 255 символов.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('created') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        Заявка отправлена на модерацию. Кредиторы увидят её после проверки администратором.
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
 
     <div class="row">
         <!-- Форма создания заявки -->
-        <div class="col-md-4 mb-4">
+        <div class="col-lg-4 mb-4">
             <div class="card card-sber p-4">
-                <h5 class="mb-3">Создать заявку</h5>
-                
-                <!-- Блок статуса KYC в форме -->
-                {% set approved_count = user_docs|selectattr('status', 'equalto', 'approved')|list|length if user_docs else 0 %}
+                <h5 class="mb-3">Новая заявка</h5>
+
                 {% set pending_count = user_docs|selectattr('status', 'equalto', 'pending')|list|length if user_docs else 0 %}
-                
                 {% if approved_count > 0 %}
-                    <div class="alert alert-success py-2" style="font-size: 13px; border-radius: 10px;">✅ Верификация пройдена. Вы можете создавать заявки.</div>
+                    <div class="alert alert-success py-2" style="font-size: 13px; border-radius: 10px;">Верификация пройдена. Можно создавать заявки.</div>
                 {% elif pending_count > 0 %}
-                    <div class="alert alert-warning py-2" style="font-size: 13px; border-radius: 10px;">⏳ Документы на проверке у администратора.</div>
+                    <div class="alert alert-warning py-2" style="font-size: 13px; border-radius: 10px;">Документы на проверке у администратора.</div>
+                {% elif user.kyc_reject_reason %}
+                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">Верификация отклонена: {{ user.kyc_reject_reason }}. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить заново</a></div>
                 {% else %}
-                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">❌ Верификация не пройдена. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить документы</a></div>
+                    <div class="alert alert-danger py-2" style="font-size: 13px; border-radius: 10px;">Верификация не пройдена. <a href="/kyc" style="color: #dc3545; text-decoration: underline;">Загрузить документы</a></div>
                 {% endif %}
-                
+
                 <form method="post" action="/create_application">
-                    <div class="mb-2">
-                        <input type="number" step="0.01" name="amount" class="form-control" placeholder="Сумма" required>
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="form-label" for="amount">Сумма</label>
+                            <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="form-control" placeholder="500000" required>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label" for="currency">Валюта</label>
+                            <select name="currency" id="currency" class="form-select form-control" required>
+                                {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-7">
+                            <label class="form-label" for="country">Страна получения</label>
+                            <select name="country" id="country" class="form-select form-control" required>
+                                <option value="" disabled selected>Выберите</option>
+                                {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label" for="term_months">Срок, мес.</label>
+                            <input type="number" min="1" max="{{ max_term }}" step="1" name="term_months" id="term_months" class="form-control" placeholder="6" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="transfer_method">Способ передачи средств</label>
+                            <select name="transfer_method" id="transfer_method" class="form-select form-control" required>
+                                <option value="" disabled selected>Выберите</option>
+                                {% for code, name in TRANSFER_METHODS.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label" for="purpose">Назначение средств</label>
+                            <input type="text" name="purpose" id="purpose" class="form-control" placeholder="Закупка оборудования" maxlength="255" required>
+                        </div>
                     </div>
-                    <div class="mb-2">
-                        <select name="currency" class="form-select form-control" required>
-                            <option value="" disabled selected>Валюта</option>
-                            {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <select name="country" class="form-select form-control" required>
-                            <option value="" disabled selected>Страна получения средств</option>
-                            {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }} ({{ code }})</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <input type="text" name="purpose" class="form-control" placeholder="Назначение" maxlength="255" required>
-                    </div>
-                    <button type="submit" class="btn btn-sber w-100">Опубликовать</button>
+                    <button type="submit" class="btn btn-sber w-100 mt-2">Отправить на модерацию</button>
                 </form>
             </div>
         </div>
-        
-        <!-- Таблица заявок -->
-        <div class="col-md-8">
+
+        <!-- Все заявки во всех статусах: история и архив заёмщика -->
+        <div class="col-lg-8">
             <div class="card card-sber p-4">
                 <h5 class="mb-3">Мои заявки</h5>
-                <table class="table table-sber">
+                <div class="table-responsive">
+                <table class="table table-sber align-middle">
                     <thead>
                         <tr>
+                            <th>№</th>
                             <th>Сумма</th>
+                            <th>Страна · срок</th>
                             <th>Статус</th>
-                            <th>Действие</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for app in apps %}
                     <tr>
-                        <td><strong>{{ app.funding_amount }} {{ app.currency_code }}</strong></td>
-                        <td><span class="status-badge status-{{ app.status }}">{{ app.status }}</span></td>
+                        <td class="text-muted">{{ app.id }}</td>
+                        <td><strong>{{ app.funding_amount|money }} {{ app.currency_code }}</strong></td>
+                        <td>{{ COUNTRY_NAMES.get(app.target_jurisdiction, app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}</td>
                         <td>
-                            <!-- ЛОГИКА КНОПОК В ЗАВИСИМОСТИ ОТ СТАТУСА -->
-                            {% if app.status == 'in_work' or app.status == 'agreed' %}
-                                <a href="/deal/{{ app.id }}" class="btn btn-sm btn-sber">Перейти в чат</a>
-                            {% else %}
-                                <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">Посмотреть офферы</a>
+                            <span class="status-badge status-{{ app.status }}">{{ APPLICATION_STATUSES.get(app.status, app.status) }}</span>
+                            {% if app.status == 'rejected' and app.moderation_comment %}
+                            <div class="text-danger mt-1" style="font-size: 12px;">{{ app.moderation_comment }}</div>
                             {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap">
+                            {% if app.status in ('in_work', 'agreed') %}
+                                <a href="/deal/{{ app.id }}" class="btn btn-sm btn-sber">Сделка</a>
+                            {% endif %}
+                            <a href="/applications/{{ app.id }}/offers" class="btn btn-sm btn-outline-secondary">
+                                {% if app.status == 'published' %}Предложения{% if shown_counts.get(app.id) %} ({{ shown_counts[app.id] }}){% endif %}{% else %}Подробнее{% endif %}
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
+                </div>
                 {% if not apps %}
-                <p class="text-muted mt-3">У вас пока нет созданных заявок.</p>
+                <p class="text-muted mt-3">У вас пока нет заявок.</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Скрипт для закрытия уведомления -->
 <script src="/static/bootstrap/bootstrap.bundle.min.js"></script>
 </body>
 </html>

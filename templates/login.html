@@ -25,6 +25,9 @@
             {% if error %}
                 <div class="alert alert-danger" style="border-radius: 12px;">{{ error }}</div>
             {% endif %}
+            {% if request.query_params.get('registered') %}
+                <div class="alert alert-success" style="border-radius: 12px;">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
+            {% endif %}
             
             <form method="post" action="/login">
                 <div class="mb-3">
