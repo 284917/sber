@@ -29,7 +29,7 @@
 *   **Инфраструктура:** Nginx (Reverse Proxy), Ubuntu 24.04
 
 ## ☁️ Деплой на Vercel
-Проект запускается на Vercel как serverless-функция FastAPI (`api/index.py`, `vercel.json`).
+Vercel сам распознаёт FastAPI и запускает `main.py` (объект `app`), отдельная настройка не нужна.
 Каждый push в `main` выкатывается автоматически, для других веток Vercel даёт превью-ссылку.
 
 1. Vercel → **Add New → Project** → импортировать этот репозиторий с GitHub (Framework Preset: Other).
