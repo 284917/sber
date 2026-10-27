@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -18,6 +21,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(title="Платформа ликвидности Сбер")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+# Bootstrap лежит в проекте, чтобы вёрстка не зависела от доступности CDN
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+
+# Без входа (или с истёкшей сессией) страницы перекидывают на вход, а не показывают JSON-ошибку
+@app.exception_handler(StarletteHTTPException)
+async def redirect_unauthenticated(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 401 and request.method == "GET":
+        response = RedirectResponse(url="/", status_code=303)
+        response.delete_cookie("access_token")
+        return response
+    return await http_exception_handler(request, exc)
 
 # Новые файлы хранятся в БД (таблица stored_files), чтобы работать и на Vercel без диска.
 # Папка uploads нужна только для старых файлов, загруженных до этого изменения.
