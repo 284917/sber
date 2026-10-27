@@ -1,16 +1,14 @@
+{% import "_ui.html" as ui %}
 <aside class="auth-side">
-    <a href="/" class="brand" style="color: #fff; padding: 0;">
-        <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span>
-        <span class="brand-name" style="color: #fff;">Сбер<span style="color: #AEBBC8;">Платформа ликвидности</span></span>
-    </a>
+    <a href="/" class="brand" style="padding: 0;">{{ ui.brand_mark() }}<span class="brand-name">Сбер<span>Платформа ликвидности</span></span></a>
     <div>
-        <h2>Трансграничное финансирование между юрлицами</h2>
-        <p>Российские компании публикуют заявки на ликвидность, проверенные зарубежные кредиторы присылают предложения. Платформа сравнивает их по полной стоимости и ведёт сделку до согласования.</p>
+        <h2>Валютное финансирование от проверенных кредиторов</h2>
+        <p>Одна заявка, несколько предложений и честное сравнение по полной стоимости. Сделка ведётся до подписания договора.</p>
         <ul class="auth-points">
-            <li><b>Проверенные участники.</b> Каждая компания проходит KYC/AML у администратора.</li>
-            <li><b>Честное сравнение.</b> Ставка и комиссии сводятся в одну цифру — полную стоимость.</li>
-            <li><b>Сделка под контролем.</b> Чат, договор и подтверждение оператором в одном месте.</li>
+            <li>{{ ui.icon('shield-check') }}<span><b>Проверенные участники.</b> Каждая компания проходит KYC и AML у администратора.</span></li>
+            <li>{{ ui.icon('scales') }}<span><b>Честное сравнение.</b> Ставка и комиссии сводятся в одну цифру.</span></li>
+            <li>{{ ui.icon('handshake') }}<span><b>Сделка под контролем.</b> Чат, договор и подтверждение оператором.</span></li>
         </ul>
     </div>
-    <p class="small" style="margin: 0;">MVP · хакатон SBER HACK</p>
+    <a href="/" class="back" style="color: #9B9B9B; margin: 0;">{{ ui.icon('arrow-left', 'ic-sm') }} На главную</a>
 </aside>

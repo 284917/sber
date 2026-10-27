@@ -35,7 +35,7 @@
                 {% endif %}
             </div>
             {% else %}
-            <div class="empty">Сообщений пока нет. Обсудите здесь график, обеспечение и детали договора.</div>
+            {{ ui.empty('chat-circle-text', 'Начните обсуждение', 'Согласуйте здесь график платежей, обеспечение и детали договора.') }}
             {% endfor %}
         </div>
         {% if application.status == 'in_work' %}
@@ -76,7 +76,7 @@
             {% elif application.status == 'in_work' %}
                 <p class="muted" style="margin-top: 0;">Загрузите подписанный договор в PDF — после этого оператор сможет подтвердить сделку.</p>
                 <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data">{{ csrf_field(request) }}
-                    <input type="file" name="file" class="input" accept=".pdf" required style="margin-bottom: 10px;">
+                    <input type="file" name="file" class="input" accept=".pdf" required style="margin-bottom: 12px;">
                     <button type="submit" class="btn btn-primary btn-block">Загрузить договор</button>
                 </form>
             {% else %}

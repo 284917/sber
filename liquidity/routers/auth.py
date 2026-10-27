@@ -12,9 +12,24 @@ from liquidity.web import redirect, render
 router = APIRouter(tags=["Вход и регистрация"])
 
 
-@router.get("/", summary="Страница входа")
+@router.get("/", summary="Главная страница (лендинг)")
+def landing(request: Request):
+    return render(request, "landing.html")
+
+
+@router.get("/login", summary="Страница входа")
 def login_page(request: Request):
     return render(request, "login.html")
+
+
+@router.get("/privacy", summary="Политика конфиденциальности")
+def privacy(request: Request):
+    return render(request, "legal.html", page="privacy")
+
+
+@router.get("/terms", summary="Условия использования")
+def terms(request: Request):
+    return render(request, "legal.html", page="terms")
 
 
 @router.post("/login", summary="Вход по email и паролю")
@@ -36,7 +51,8 @@ def logout():
 
 @router.get("/register", summary="Форма регистрации юрлица")
 def register_page(request: Request):
-    return render(request, "register.html", form={}, creditor_countries=config.CREDITOR_COUNTRIES)
+    role = "creditor" if request.query_params.get("role") == "creditor" else "borrower"
+    return render(request, "register.html", form={"role": role}, creditor_countries=config.CREDITOR_COUNTRIES)
 
 
 @router.post("/register", summary="Регистрация заёмщика (РФ) или кредитора (зарубежье)")
@@ -51,7 +67,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
     except Invalid as e:
         return render(request, "register.html", status_code=400, error=e.message, form=form,
                       creditor_countries=config.CREDITOR_COUNTRIES)
-    return redirect("/?registered=1")
+    return redirect("/login?registered=1")
 
 
 @router.get("/dashboard", summary="Кабинет: открывается по роли пользователя")

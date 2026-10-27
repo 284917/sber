@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from liquidity import config
+from liquidity.web import templates
 from liquidity.database import SessionLocal, create_schema, find_database_url
 from liquidity.routers import admin, auth, borrower, creditor, deals, kyc, operator
 from liquidity.security import SESSION_COOKIE, csrf_cookie_middleware, verify_csrf
@@ -77,37 +78,35 @@ def health():
 
 
 # --- Ошибки ---
-def _error_page(status: int, title: str, text: str):
-    return HTMLResponse(
-        f'<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>{title}</title>'
-        f'<link href="/static/css/app.css" rel="stylesheet"></head><body>'
-        f'<main class="auth-main" style="min-height: 100vh;"><div class="auth-form"><h1>{title}</h1>'
-        f'<p class="muted">{text}</p><a class="btn btn-secondary" href="/dashboard">В кабинет</a></div></main>'
-        f'</body></html>', status_code=status)
+def _error_page(request: Request, status: int, title: str, text: str):
+    return templates.TemplateResponse(request=request, name="error.html", status_code=status,
+                                      context={"status": status, "title": title, "text": text})
 
 
 @app.exception_handler(StarletteHTTPException)
 async def http_errors(request: Request, exc: StarletteHTTPException):
     # Без входа (или с истёкшей сессией) страницы перекидывают на вход, а не показывают JSON-ошибку
     if exc.status_code == 401 and request.method == "GET":
-        response = RedirectResponse(url="/", status_code=303)
+        response = RedirectResponse(url="/login", status_code=303)
         response.delete_cookie(SESSION_COOKIE)
         return response
     if exc.status_code == 403 and exc.detail == "CSRF":
-        return _error_page(403, "Форма устарела", "Обновите страницу и отправьте форму ещё раз.")
+        return _error_page(request, 403, "Форма устарела", "Обновите страницу и отправьте форму ещё раз.")
+    if exc.status_code == 404 and "text/html" in request.headers.get("accept", ""):
+        return _error_page(request, 404, "Страница не найдена", "Такой страницы нет. Проверьте адрес или вернитесь на главную.")
     return await http_exception_handler(request, exc)
 
 
 @app.exception_handler(NotFound)
 async def not_found(request: Request, exc: NotFound):
-    return _error_page(404, "Не найдено", "Объект не существует или недоступен в текущем статусе.")
+    return _error_page(request, 404, "Не найдено", "Объект не существует или недоступен в текущем статусе.")
 
 
 @app.exception_handler(Forbidden)
 async def forbidden(request: Request, exc: Forbidden):
-    return _error_page(403, "Нет доступа", "У вас нет доступа к этой странице.")
+    return _error_page(request, 403, "Нет доступа", "У вас нет доступа к этой странице.")
 
 
 @app.exception_handler(Invalid)
 async def invalid(request: Request, exc: Invalid):
-    return _error_page(400, "Действие недоступно", exc.message)
+    return _error_page(request, 400, "Действие недоступно", exc.message)

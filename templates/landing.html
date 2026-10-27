@@ -1,0 +1,217 @@
+{% import "_ui.html" as ui %}
+{% import "_site.html" as site %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% include "_head.html" %}
+    <title>Платформа ликвидности · Валютное финансирование для российских компаний</title>
+</head>
+<body class="site">
+<a href="#main" class="skip">Перейти к содержимому</a>
+{{ site.nav(request) }}
+
+<main id="main">
+    <!-- Первый экран: обещание, одно главное действие, доказательство, витрина продукта -->
+    <section class="hero">
+        <div class="wrap hero-grid">
+            <div>
+                <span class="eyebrow">{{ ui.icon('globe-hemisphere-east', 'ic-sm') }} Трансграничное финансирование для юрлиц</span>
+                <h1 class="h-display">Валютное финансирование<br>от проверенных кредиторов</h1>
+                <p class="lead-lg">Опубликуйте заявку один раз. Кредиторы из ОАЭ, Кипра, Китая и Турции пришлют предложения, а платформа сведёт ставку и комиссии в одну цифру и проведёт сделку до подписания договора.</p>
+                <div class="hero-cta">
+                    <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
+                </div>
+                <div class="proof">
+                    <span>{{ ui.icon('check') }} Регистрация и заявка бесплатно</span>
+                    <span>{{ ui.icon('check') }} SWIFT, СПФС, CIPS или платёжный агент</span>
+                    <span>{{ ui.icon('check') }} Каждый участник проходит KYC</span>
+                </div>
+            </div>
+
+            <figure class="showcase" style="margin: 0;" aria-label="Пример экрана сравнения предложений">
+                <div class="showcase-inner">
+                    <div class="showcase-bar"><i></i><i></i><i></i><b>Заявка №1 · 500 000 EUR · Германия · 6 мес. · SWIFT</b></div>
+                    <div class="showcase-body">
+                        <div class="callout">
+                            <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 700;">Beta Capital Ltd</div></div>
+                            <div><div class="small muted">Полная стоимость</div><div class="big">11,6%</div></div>
+                            <div><div class="small muted">Экономия против следующего</div><div class="big">1 000 EUR</div></div>
+                        </div>
+                        <div class="table-wrap" style="border: 1px solid var(--line); border-radius: 12px;">
+                            <table class="t compare">
+                                <thead><tr><th>Кредитор</th><th class="num hide-sm">Сумма</th><th class="num">Ставка</th><th class="num hide-sm">Комиссия</th><th class="num hide-sm">Переплата</th><th class="num">Полная стоимость</th></tr></thead>
+                                <tbody>
+                                    <tr class="best-row"><td><b>Beta Capital Ltd</b> <span class="tag tag-best">Лучшее</span><div class="small muted">Кипр</div></td><td class="num hide-sm">500 000</td><td class="num">8%</td><td class="num hide-sm">1,8%</td><td class="num hide-sm"><b>29 000</b> EUR</td><td class="num"><span class="big-num">11,6%</span></td></tr>
+                                    <tr><td><b>Shenzhen Rongtong Capital</b><div class="small muted">Китай</div></td><td class="num hide-sm">450 000</td><td class="num">7,6%</td><td class="num hide-sm">2,2%</td><td class="num hide-sm"><b>27 000</b> EUR</td><td class="num"><span class="big-num">12%</span></td></tr>
+                                    <tr><td><b>Gulf Trade Finance FZE</b><div class="small muted">ОАЭ</div></td><td class="num hide-sm">500 000</td><td class="num">7,2%</td><td class="num hide-sm">3%</td><td class="num hide-sm"><b>33 000</b> EUR</td><td class="num"><span class="big-num">13,2%</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </figure>
+        </div>
+    </section>
+
+    <!-- Слоган: слова проявляются по одному при прокрутке -->
+    <section class="section section-dark">
+        <div class="wrap">
+            <p class="tagline" id="tagline" data-text="Самая низкая ставка ещё не значит | самый дешёвый кредит. | Мы показываем полную стоимость | до подписания договора." data-accent="полную стоимость"></p>
+        </div>
+    </section>
+
+    <!-- Как это работает -->
+    <section class="section" id="how">
+        <div class="wrap">
+            <span class="eyebrow reveal">Как это работает</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">От заявки до согласованной сделки в три шага</h2>
+            <div class="steps">
+                <article class="step-card reveal">
+                    <span class="n">1</span>
+                    <h3>Пройдите проверку компании</h3>
+                    <p>Загрузите устав, выписку из ЕГРЮЛ и сведения о бенефициарах. Администратор проверяет пакет целиком, а при отказе пишет причину.</p>
+                </article>
+                <article class="step-card reveal">
+                    <span class="n">2</span>
+                    <h3>Опубликуйте заявку</h3>
+                    <p>Сумма, валюта, страна получения, срок и способ передачи. После модерации заявку видят только верифицированные кредиторы.</p>
+                </article>
+                <article class="step-card reveal">
+                    <span class="n">3</span>
+                    <h3>Выберите предложение</h3>
+                    <p>Сравните офферы по полной стоимости, примите лучший, согласуйте детали в чате и загрузите договор. Оператор подтверждает сделку.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Преимущества -->
+    <section class="section section-dark">
+        <div class="wrap">
+            <span class="eyebrow reveal">Почему платформа</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">Прозрачные условия вместо переписки с десятком банков</h2>
+            <div class="benefits">
+                <article class="benefit reveal">
+                    {{ ui.icon('scales') }}
+                    <h3>Полная стоимость одной цифрой</h3>
+                    <p>Ставка и комиссии кредитора и платформы пересчитываются в процент годовых на срок вашей заявки. Предложения сортируются от самого выгодного.</p>
+                </article>
+                <article class="benefit reveal">
+                    {{ ui.icon('shield-check') }}
+                    <h3>Только проверенные участники</h3>
+                    <p>Заёмщики и кредиторы проходят KYC и AML у администратора. Предложение попадает к вам только после проверки оператором.</p>
+                </article>
+                <article class="benefit reveal">
+                    {{ ui.icon('globe-hemisphere-east') }}
+                    <h3>Ваш маршрут платежа</h3>
+                    <p>EUR, USD или CNY с получением в Германии, Турции или Китае. Передача через SWIFT, СПФС, CIPS или платёжного агента.</p>
+                </article>
+                <article class="benefit reveal">
+                    {{ ui.icon('handshake') }}
+                    <h3>Сделка под контролем</h3>
+                    <p>Чат с кредитором, договор и история каждого шага в одном месте. Оператор подтверждает сделку, только когда договор загружен и обе стороны проверены.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Для заёмщиков и кредиторов -->
+    <section class="section section-tint" id="roles">
+        <div class="wrap">
+            <span class="eyebrow reveal">Две стороны сделки</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">Платформа работает для обеих сторон</h2>
+            <div class="roles">
+                <article class="role-card reveal">
+                    <span class="tag">Российским компаниям</span>
+                    <h3>Привлечь валютное финансирование</h3>
+                    <ul>
+                        <li>{{ ui.icon('check') }} Одна заявка вместо поиска кредиторов по одному</li>
+                        <li>{{ ui.icon('check') }} Сравнение предложений по полной стоимости</li>
+                        <li>{{ ui.icon('check') }} Отказ от любого предложения без объяснений</li>
+                    </ul>
+                    <a href="/register" class="btn btn-primary">Зарегистрироваться как заёмщик</a>
+                </article>
+                <article class="role-card reveal">
+                    <span class="tag">Зарубежным кредиторам</span>
+                    <h3>Разместить свободную ликвидность</h3>
+                    <ul>
+                        <li>{{ ui.icon('check') }} Заявки проверенных российских компаний</li>
+                        <li>{{ ui.icon('check') }} Фильтры по стране, валюте, сумме и сроку</li>
+                        <li>{{ ui.icon('check') }} Расчёт полной стоимости прямо в форме предложения</li>
+                    </ul>
+                    <a href="/register?role=creditor" class="btn btn-secondary">Зарегистрироваться как кредитор</a>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Вопросы -->
+    <section class="section" id="faq">
+        <div class="wrap">
+            <span class="eyebrow reveal">Вопросы</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">Что спрашивают перед первой заявкой</h2>
+            <div class="faq reveal">
+                {% for q, a in [
+                    ('Сколько стоит пользоваться платформой?', 'Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.'),
+                    ('Как считается полная стоимость?', 'Ставка плюс комиссия за организацию, разнесённая на срок заявки: комиссия × 12 / срок в месяцах. Так предложение с низкой ставкой и высокой комиссией честно сравнивается с остальными.'),
+                    ('Какие документы нужны для проверки?', 'Заёмщику: устав, выписка из ЕГРЮЛ, паспорт директора, сведения о бенефициарах и документ о полномочиях директора. Кредитору: свидетельство о регистрации, устав, реестр директоров, бенефициары, налоговое резидентство и подтверждение источника средств.'),
+                    ('Сколько длится модерация заявки?', 'Администратор проверяет заявку вручную, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.'),
+                    ('Кто видит мою заявку?', 'Только кредиторы, прошедшие KYC. Название кредитора вы видите после того, как оператор проверит его предложение.'),
+                    ('Можно ли отказаться от предложения?', 'Да. Любое предложение можно отклонить. Когда вы принимаете одно, остальные по заявке отклоняются автоматически.'),
+                    ('В каких валютах и куда можно получить средства?', 'EUR, USD и CNY с получением в Германии, Турции или Китае. Способ передачи вы выбираете в заявке: SWIFT, СПФС, CIPS или платёжный агент.'),
+                    ('Что если предложений нет?', 'Заявка остаётся опубликованной, пока вы её не закроете. Можно изменить срок или сумму и подать новую заявку, чтобы она подошла большему числу кредиторов.'),
+                ] %}
+                <details>
+                    <summary>{{ q }} {{ ui.icon('plus') }}</summary>
+                    <p>{{ a }}</p>
+                </details>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Финальный призыв -->
+    <section class="section section-tint">
+        <div class="wrap final-cta reveal">
+            <h2 class="h-section" style="text-align: center;">Опубликуйте первую заявку сегодня</h2>
+            <p class="lead-lg" style="text-align: center;">Регистрация и заявка бесплатны. Комиссия 0,8% только если сделка согласована.</p>
+            <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
+        </div>
+    </section>
+</main>
+
+{{ site.footer() }}
+{{ site.scripts() }}
+<script>
+    // Слоган: каждое слово переходит из приглушённого цвета в основной, когда пересекает линию на экране
+    (function () {
+        const el = document.getElementById('tagline');
+        const accent = el.dataset.accent.split(' ');
+        // «|» в тексте — перенос строки там, где заканчивается мысль
+        el.innerHTML = el.dataset.text.split(' ').map(w => {
+            if (w === '|') return '<br>';
+            const isAccent = accent.includes(w.replace(/[.,]/g, ''));
+            return '<span class="w' + (isAccent ? ' accent' : '') + '">' + w + '</span>';
+        }).join(' ');
+        const words = el.querySelectorAll('.w');
+        if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            words.forEach(w => w.classList.add('on')); return;
+        }
+        let ticking = false;
+        const update = () => {
+            const line = window.innerHeight * 0.62;
+            const rect = el.getBoundingClientRect();
+            const progress = (line - rect.top) / Math.max(rect.height, 1);
+            const count = Math.round(Math.max(0, Math.min(1, progress)) * words.length * 1.15);
+            words.forEach((w, i) => w.classList.toggle('on', i < count));
+            ticking = false;
+        };
+        const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+        new IntersectionObserver(entries => {
+            entries.forEach(e => e.isIntersecting ? addEventListener('scroll', onScroll, {passive: true}) : removeEventListener('scroll', onScroll));
+        }).observe(el);
+        update();
+    })();
+</script>
+</body>
+</html>

@@ -46,7 +46,7 @@
         <h2 class="card-title">{{ title }}</h2>
         {% set max_count = rows[0][1] if rows else 1 %}
         {% for code, count in rows %}
-        <div style="padding: 5px 0;">
+        <div style="padding: 4px 0;">
             <div class="actions" style="justify-content: space-between;"><span>{{ ui.country(code) }}</span><b class="num">{{ count }}</b></div>
             <div class="bar-track" style="margin-top: 4px;"><div class="bar best" style="width: {{ (100 * count / max_count)|round|int }}%;"></div></div>
         </div>
@@ -58,7 +58,7 @@
 
 <!-- Очередь KYC -->
 <section class="card card-tight" id="kyc">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Очередь на проверку KYC <span class="muted">{{ kyc_queue|length }}</span></h2></div>
+    <div class="card-head"><h2 class="card-title">Очередь на проверку KYC <span class="muted">{{ kyc_queue|length }}</span></h2></div>
     {% if kyc_queue %}
     <div class="table-wrap">
     <table class="t">
@@ -84,12 +84,12 @@
         </tbody>
     </table>
     </div>
-    {% else %}<div class="empty">Нет компаний на проверке.</div>{% endif %}
+    {% else %}{{ ui.empty('identification-card', 'Очередь пуста', 'Новые пакеты документов появятся здесь, как только компания отправит их на проверку.') }}{% endif %}
 </section>
 
 <!-- Модерация заявок -->
 <section class="card card-tight" id="moderation">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Модерация заявок <span class="muted">{{ moderation_apps|length }}</span></h2></div>
+    <div class="card-head"><h2 class="card-title">Модерация заявок <span class="muted">{{ moderation_apps|length }}</span></h2></div>
     {% if moderation_apps %}
     <div class="table-wrap">
     <table class="t">
@@ -120,12 +120,12 @@
         </tbody>
     </table>
     </div>
-    {% else %}<div class="empty">Нет заявок на модерации.</div>{% endif %}
+    {% else %}{{ ui.empty('list-checks', 'Все заявки проверены', 'Новые заявки заёмщиков попадут сюда до публикации.') }}{% endif %}
 </section>
 
 <!-- Архив сделок -->
 <section class="card card-tight" id="archive">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Архив согласованных сделок <span class="muted">{{ archive|length }}</span></h2></div>
+    <div class="card-head"><h2 class="card-title">Архив согласованных сделок <span class="muted">{{ archive|length }}</span></h2></div>
     {% if archive %}
     <div class="table-wrap">
     <table class="t">
@@ -145,12 +145,12 @@
         </tbody>
     </table>
     </div>
-    {% else %}<div class="empty">Согласованных сделок пока нет.</div>{% endif %}
+    {% else %}{{ ui.empty('archive', 'Архив пока пуст', 'Сюда попадают сделки, подтверждённые оператором.') }}{% endif %}
 </section>
 
 <!-- Все заявки -->
 <section class="card card-tight" id="history">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Все заявки <span class="muted">{{ apps|length }}</span></h2></div>
+    <div class="card-head"><h2 class="card-title">Все заявки <span class="muted">{{ apps|length }}</span></h2></div>
     {% if apps %}
     <div class="table-wrap">
     <table class="t">
@@ -170,7 +170,7 @@
         </tbody>
     </table>
     </div>
-    {% else %}<div class="empty">Заявок пока нет.</div>{% endif %}
+    {% else %}{{ ui.empty('files', 'Заявок пока нет') }}{% endif %}
 </section>
 
 <!-- Сотрудники -->

@@ -180,7 +180,7 @@ def test_roles_and_files(world):
     assert alfa.get("/" + doc.file_path).status_code == 200
     assert operator.get("/" + doc.file_path).status_code == 200
     assert gamma.get("/" + doc.file_path).status_code == 403
-    assert Browser().get("/" + doc.file_path).headers["location"] == "/"  # без входа — на страницу входа
+    assert Browser().get("/" + doc.file_path).headers["location"] == "/login"  # без входа — на страницу входа
 
 
 def _all_apps_and_offers():

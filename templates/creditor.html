@@ -27,7 +27,7 @@
 
 {% if my_deals %}
 <section class="card card-tight">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Мои сделки</h2></div>
+    <div class="card-head"><h2 class="card-title">Мои сделки</h2></div>
     <table class="t">
         <tbody>
         {% for app in my_deals %}
@@ -44,7 +44,7 @@
 </section>
 {% endif %}
 
-<form method="get" action="/dashboard" class="card" style="padding: 14px 16px;">
+<form method="get" action="/dashboard" class="card" style="padding: 16px;">
     <div class="form-row" style="grid-template-columns: repeat(5, minmax(0, 1fr)) auto; align-items: end;">
         <div>
             <label class="f" for="f-country">Страна получения</label>
@@ -85,9 +85,9 @@
 <section class="card">
     <div class="actions" style="justify-content: space-between; align-items: flex-start;">
         <div>
-            <div class="big-num" style="font-size: 22px;">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
+            <div class="big-num" style="font-size: 24px; line-height: 32px;">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
             <div style="margin-top: 2px;"><b>{{ app.borrower.display_name if app.borrower else '' }}</b> <span class="muted">· заявка №{{ app.id }}</span></div>
-            <div class="muted" style="margin-top: 6px;">{{ app.purpose }}</div>
+            <div class="muted" style="margin-top: 8px;">{{ app.purpose }}</div>
         </div>
         <div class="actions">
             <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>
@@ -96,7 +96,7 @@
         </div>
     </div>
 
-    <div style="border-top: 1px solid var(--line-2); margin: 16px -20px 0; padding: 16px 20px 0;">
+    <div style="border-top: 1px solid var(--line-2); margin: 24px -24px 0; padding: 24px 24px 0;">
     {% if app.id in offered_app_ids %}
         <p class="muted" style="margin: 0;">Вы уже отправили предложение по этой заявке. Статус — в разделе <a href="#my-offers">«Мои предложения»</a>.</p>
     {% else %}
@@ -130,11 +130,11 @@
     </div>
 </section>
 {% else %}
-<section class="card"><div class="empty">Нет опубликованных заявок по выбранным условиям.</div></section>
+<section class="card">{{ ui.empty('funnel', 'Нет заявок по этим условиям', 'Сбросьте фильтры или расширьте диапазон суммы и срока.') }}</section>
 {% endfor %}
 
-<section class="card card-tight" id="my-offers" style="margin-top: 28px;">
-    <div style="padding: 16px 20px 4px;"><h2 class="card-title">Мои предложения</h2></div>
+<section class="card card-tight" id="my-offers" style="margin-top: 32px;">
+    <div class="card-head"><h2 class="card-title">Мои предложения</h2></div>
     {% if my_offers %}
     <div class="table-wrap">
     <table class="t">
@@ -156,7 +156,7 @@
     </table>
     </div>
     {% else %}
-    <div class="empty">Вы ещё не отправляли предложений.</div>
+    {{ ui.empty('hand-coins', 'Предложений пока нет', 'Выберите заявку выше и отправьте условия. Статус появится здесь.') }}
     {% endif %}
 </section>
 {% endblock %}

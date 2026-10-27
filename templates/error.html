@@ -1,0 +1,22 @@
+{% import "_ui.html" as ui %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% include "_head.html" %}
+    <title>{{ title }} · Платформа ликвидности</title>
+</head>
+<body class="site">
+<main id="main" class="auth-main" style="min-height: 100vh;">
+    <div class="auth-form" style="text-align: center;">
+        <a href="/" class="brand" style="justify-content: center; padding: 0 0 32px;">{{ ui.brand_mark() }}<span class="brand-name" style="text-align: left;">Сбер<span>Платформа ликвидности</span></span></a>
+        <div class="big-num muted" style="font-size: 60px; line-height: 1; letter-spacing: -0.03em;">{{ status }}</div>
+        <h1 style="margin-top: 16px;">{{ title }}</h1>
+        <p class="lead" style="margin: 8px 0 32px;">{{ text }}</p>
+        <div class="actions" style="justify-content: center;">
+            <a class="btn btn-primary" href="/dashboard">В кабинет</a>
+            <a class="btn btn-secondary" href="/">На главную</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

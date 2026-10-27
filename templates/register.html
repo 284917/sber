@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% include "_head.html" %}
     <title>Регистрация | Платформа ликвидности Сбер</title>
-    <link href="/static/css/app.css" rel="stylesheet">
 </head>
 <body>
+<a href="#main" class="skip">Перейти к содержимому</a>
 <div class="auth">
     {% include "_auth_side.html" %}
-    <main class="auth-main">
+    <main class="auth-main" id="main">
         <div class="auth-form">
             <h1>Регистрация компании</h1>
-            <p class="muted" style="margin: 0 0 20px;">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
-            {% if error %}<div class="note note-bad">{{ error }}</div>{% endif %}
+            <p class="lead">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
+            {% if error %}<div class="note note-bad" role="alert">{{ error }}</div>{% endif %}
             <form method="post" action="/register">{{ csrf_field(request) }}
                 <div class="seg">
                     <input type="radio" name="role" id="role-borrower" value="borrower" {% if form.role != 'creditor' %}checked{% endif %}>
@@ -51,7 +50,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Зарегистрироваться</button>
             </form>
-            <p class="muted" style="margin-top: 20px;">Уже есть аккаунт? <a href="/">Войти</a></p>
+            <p class="muted" style="margin-top: 24px;">Уже есть аккаунт? <a href="/login">Войти</a></p>
         </div>
     </main>
 </div>

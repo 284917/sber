@@ -1,0 +1,73 @@
+{# Общая шапка и подвал публичных страниц #}
+{% import "_ui.html" as ui %}
+
+{% macro nav(request) -%}
+{% set logged_in = request.cookies.get('access_token') %}
+<header class="site-nav" aria-label="Главное меню">
+    <a href="/" class="brand">{{ ui.brand_mark() }}<span class="brand-name">Платформа ликвидности</span></a>
+    <nav class="site-links">
+        <a href="/#how">Как это работает</a>
+        <a href="/#roles">Кредиторам</a>
+        <a href="/#faq">Вопросы</a>
+    </nav>
+    {% if logged_in %}
+    <a href="/dashboard" class="btn btn-primary btn-sm">Перейти в кабинет</a>
+    {% else %}
+    <a href="/login" class="btn btn-ghost btn-sm">Войти</a>
+    <a href="/register" class="btn btn-primary btn-sm">Зарегистрировать компанию</a>
+    {% endif %}
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-menu" aria-label="Меню" id="site-menu-btn"><span></span><span></span></button>
+</header>
+<div class="site-menu" id="site-menu">
+    <a href="/#how">Как это работает</a>
+    <a href="/#roles">Кредиторам</a>
+    <a href="/#faq">Вопросы</a>
+    {% if logged_in %}
+    <a href="/dashboard" class="btn btn-primary btn-lg">Перейти в кабинет</a>
+    {% else %}
+    <a href="/login">Войти</a>
+    <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию</a>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro footer() -%}
+<footer class="footer">
+    <div class="wrap">
+        <a href="/" class="brand" style="padding: 0;">{{ ui.brand_mark() }}<span class="brand-name">Платформа ликвидности<span>MVP для SBER HACK, 2026</span></span></a>
+        <nav aria-label="Документы">
+            <a href="/privacy">Политика конфиденциальности</a>
+            <a href="/terms">Условия использования</a>
+            <a href="/login">Вход</a>
+        </nav>
+    </div>
+</footer>
+{%- endmacro %}
+
+{% macro scripts() -%}
+<script>
+    // Меню на мобильных: панель на всю высоту, ссылки появляются по очереди
+    (function () {
+        const btn = document.getElementById('site-menu-btn'), menu = document.getElementById('site-menu');
+        if (!btn) return;
+        const links = menu.querySelectorAll('a');
+        const step = Math.min(60, 400 / links.length);
+        const toggle = (open) => {
+            btn.setAttribute('aria-expanded', open);
+            menu.classList.toggle('open', open);
+            links.forEach((a, i) => { a.style.transitionDelay = open ? (i * step) + 'ms' : '0ms'; });
+        };
+        btn.addEventListener('click', () => toggle(btn.getAttribute('aria-expanded') !== 'true'));
+        links.forEach(a => a.addEventListener('click', () => toggle(false)));
+    })();
+    // Секции поднимаются и проявляются один раз, когда входят в экран
+    (function () {
+        const items = document.querySelectorAll('.reveal');
+        if (!('IntersectionObserver' in window)) { items.forEach(el => el.classList.add('in')); return; }
+        const io = new IntersectionObserver((entries) => entries.forEach(e => {
+            if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+        }), { rootMargin: '0px 0px -10% 0px' });
+        items.forEach(el => io.observe(el));
+    })();
+</script>
+{%- endmacro %}

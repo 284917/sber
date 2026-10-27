@@ -80,7 +80,7 @@
     </section>
 
     <section class="card card-tight">
-        <div style="padding: 16px 20px 4px;"><h2 class="card-title">Все заявки</h2></div>
+        <div class="card-head"><h2 class="card-title">Все заявки</h2></div>
         {% if apps %}
         <div class="table-wrap">
         <table class="t">
@@ -111,7 +111,7 @@
         </table>
         </div>
         {% else %}
-        <div class="empty">Заявок пока нет. Заполните форму слева — после модерации заявку увидят кредиторы.</div>
+        {{ ui.empty('files', 'Здесь появятся ваши заявки', 'Заполните форму слева. После модерации заявку увидят верифицированные кредиторы.') }}
         {% endif %}
     </section>
 </div>

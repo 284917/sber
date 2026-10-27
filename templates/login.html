@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% include "_head.html" %}
     <title>Вход | Платформа ликвидности Сбер</title>
-    <link href="/static/css/app.css" rel="stylesheet">
 </head>
 <body>
+<a href="#main" class="skip">Перейти к содержимому</a>
 <div class="auth">
     {% include "_auth_side.html" %}
-    <main class="auth-main">
+    <main class="auth-main" id="main">
         <div class="auth-form">
             <h1>Вход</h1>
-            <p class="muted" style="margin: 0 0 24px;">Для заёмщиков, кредиторов и сотрудников платформы</p>
-            {% if error %}<div class="note note-bad">{{ error }}</div>{% endif %}
+            <p class="lead">Для заёмщиков, кредиторов и сотрудников платформы</p>
+            {% if error %}<div class="note note-bad" role="alert">{{ error }}</div>{% endif %}
             {% if request.query_params.get('registered') %}
                 <div class="note note-ok">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
             {% endif %}
@@ -28,14 +27,14 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Войти</button>
             </form>
-            <p class="muted" style="margin-top: 20px;">Нет аккаунта? <a href="/register">Зарегистрировать компанию</a></p>
+            <p class="muted" style="margin-top: 24px;">Нет аккаунта? <a href="/register">Зарегистрировать компанию</a></p>
             {% if DEMO_MODE %}
-            <div style="border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px;">
-                <div class="f" style="margin-bottom: 8px;">Демо-режим: войти в роль одной кнопкой</div>
+            <div style="border-top: 1px solid var(--line); margin-top: 24px; padding-top: 24px;">
+                <div class="f">Демо: войти в роль одной кнопкой</div>
                 <div class="grid grid-2" style="gap: 8px;">
                     {% for role, label in [('borrower', 'Заёмщик · ООО «Альфа Технологии»'), ('creditor', 'Кредитор · Beta Capital Ltd'), ('operator', 'Оператор платформы'), ('admin', 'Администратор')] %}
                     <form method="post" action="/demo/login/{{ role }}">{{ csrf_field(request) }}
-                        <button type="submit" class="btn btn-secondary btn-block" style="height: auto; padding: 8px 12px; white-space: normal; text-align: left; justify-content: flex-start;">{{ label }}</button>
+                        <button type="submit" class="btn btn-secondary btn-block" style="font-size: 14px; line-height: 20px; white-space: normal; text-align: left; justify-content: flex-start; height: 100%;">{{ label }}</button>
                     </form>
                     {% endfor %}
                 </div>

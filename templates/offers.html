@@ -27,14 +27,14 @@
 <div>
     <div>
         <section class="card card-tight">
-            <div style="padding: 16px 20px 8px;">
+            <div class="card-head" style="display: block;">
                 <h2 class="card-title">Сравнение предложений <span class="muted">{{ rows|length }} {{ 'предложение' if rows|length == 1 else 'предложения' if rows|length in (2, 3, 4) else 'предложений' }}</span></h2>
-                <p class="muted small" style="margin: -4px 0 0;">Отсортированы по полной стоимости: ставка плюс комиссия за организацию, разнесённая на срок заявки.</p>
+                <p class="muted small" style="margin: 4px 0 0;">Отсортированы по полной стоимости: ставка плюс комиссия за организацию, разнесённая на срок заявки.</p>
             </div>
 
             {% if best_id and savings is not none %}
             {% set best = (rows|selectattr('offer.id', 'equalto', best_id)|first) %}
-            <div class="callout" style="margin: 8px 20px 12px;">
+            <div class="callout" style="margin: 0 24px 16px;">
                 <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 600;">{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}</div></div>
                 <div><div class="small muted">Полная стоимость</div><div class="big">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
                 <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div></div>
@@ -95,9 +95,13 @@
             </table>
             </div>
             {% else %}
-            <div class="empty">
-                {% if application.status == 'published' %}Предложений пока нет. Они появятся здесь после проверки оператором.{% else %}Предложений нет.{% endif %}
-            </div>
+            {% if application.status == 'published' %}
+            {{ ui.empty('clock', 'Ждём предложений кредиторов', 'Каждое предложение сначала проверяет оператор, затем оно появится здесь со сравнением по полной стоимости.') }}
+            {% elif application.status == 'moderation' %}
+            {{ ui.empty('list-checks', 'Заявка на модерации', 'После проверки администратором её увидят кредиторы.') }}
+            {% else %}
+            {{ ui.empty('files', 'Предложений нет') }}
+            {% endif %}
             {% endif %}
         </section>
         {% if rows %}

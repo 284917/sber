@@ -55,7 +55,7 @@ def test_expired_or_forged_session_redirects_to_login():
         browser = Browser()
         browser.cookies.set("access_token", token)
         response = browser.get("/dashboard")
-        assert response.status_code == 303 and response.headers["location"] == "/"
+        assert response.status_code == 303 and response.headers["location"] == "/login"
 
 
 def test_role_model():
@@ -102,3 +102,15 @@ def test_demo_mode_login_and_reset(monkeypatch):
     assert admin.get("/admin").status_code == 200  # сессия выдана заново, на вход не выкинуло
     assert Browser().post("/demo/login/borrower").status_code == 303
     assert login("role-borrower@test.ru").post("/demo/reset").status_code == 403  # сброс — только админ
+
+
+def test_public_pages():
+    browser = Browser()
+    landing = browser.get("/").text
+    assert "Зарегистрировать компанию" in landing and 'href="/privacy"' in landing and "og:title" in landing
+    assert browser.get("/login").status_code == 200
+    assert "Кредитор (зарубежье)" in browser.get("/register?role=creditor").text
+    assert browser.get("/privacy").status_code == 200 and browser.get("/terms").status_code == 200
+    missing = browser.get("/no-such-page", headers={"accept": "text/html"})
+    assert missing.status_code == 404 and "Страница не найдена" in missing.text
+    assert browser.get("/static/icons/phosphor.svg").status_code == 200

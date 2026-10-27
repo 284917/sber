@@ -1,5 +1,13 @@
 {# Общие элементы интерфейса #}
 
+{% macro icon(name, cls='') -%}
+<svg class="ic {{ cls }}" aria-hidden="true"><use href="/static/icons/phosphor.svg#ph-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro brand_mark() -%}
+<span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span>
+{%- endmacro %}
+
 {% macro app_status(status) -%}
 <span class="pill pill-{{ status }}">{{ APPLICATION_STATUSES.get(status, status) }}</span>
 {%- endmacro %}
@@ -13,10 +21,10 @@
 {%- endmacro %}
 
 {% macro stepper(stages) -%}
-<ol class="stepper">
+<ol class="stepper" aria-label="Этапы сделки">
     {% for s in stages %}
-    <li class="step {{ s.state }}">
-        <div class="dot">{% if s.state == 'done' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>{% elif s.state == 'failed' %}!{% else %}{{ loop.index }}{% endif %}</div>
+    <li class="step {{ s.state }}" {% if s.state == 'current' %}aria-current="step"{% endif %}>
+        <div class="dot">{% if s.state == 'done' %}{{ icon('check', 'ic-sm') }}{% elif s.state == 'failed' %}!{% else %}{{ loop.index }}{% endif %}</div>
         <div class="s-label">{{ s.label }}</div>
         <div class="s-note">{{ s.note }}</div>
     </li>
@@ -35,10 +43,14 @@
     {% endfor %}
 </ul>
 {% else %}
-<p class="muted" style="margin: 0;">Событий пока нет.</p>
+<p class="muted">Событий пока нет.</p>
 {% endif %}
 {%- endmacro %}
 
 {% macro flash(kind, text) -%}
-<div class="note note-{{ kind }}">{{ text }}</div>
+<div class="note note-{{ kind }}" role="{{ 'alert' if kind == 'bad' else 'status' }}">{{ icon({'ok': 'check', 'bad': 'warning-circle', 'warn': 'clock'}.get(kind, 'info')) }}<div>{{ text }}</div></div>
+{%- endmacro %}
+
+{% macro empty(icon_name, title, text='') -%}
+<div class="empty">{{ icon(icon_name) }}<b>{{ title }}</b>{% if text %}<span>{{ text }}</span>{% endif %}</div>
 {%- endmacro %}
