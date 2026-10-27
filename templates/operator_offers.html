@@ -36,10 +36,10 @@
             </td>
             <td>
                 <div class="actions">
-                    <form method="post" action="/operator/offer/{{ o.id }}/show">
+                    <form method="post" action="/operator/offer/{{ o.id }}/show">{{ csrf_field(request) }}
                         <button type="submit" class="btn btn-primary btn-sm" {% if not item.is_valid %}disabled{% endif %}>Показать</button>
                     </form>
-                    <form method="post" action="/operator/offer/{{ o.id }}/hide" class="actions" style="flex-wrap: nowrap;">
+                    <form method="post" action="/operator/offer/{{ o.id }}/hide" class="actions" style="flex-wrap: nowrap;">{{ csrf_field(request) }}
                         <input type="text" name="reason" class="input input-sm" placeholder="Причина скрытия" maxlength="255" style="width: 150px;" {% if not item.is_valid %}value="{{ item.problems|join(', ') }}"{% endif %}>
                         <button type="submit" class="btn btn-danger btn-sm">Скрыть</button>
                     </form>

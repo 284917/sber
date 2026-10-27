@@ -35,7 +35,7 @@
 <div class="grid grid-side-left">
     <section class="card">
         <h2 class="card-title">Новая заявка</h2>
-        <form method="post" action="/create_application">
+        <form method="post" action="/create_application">{{ csrf_field(request) }}
             <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">
             <div class="form-row field">
                 <div>

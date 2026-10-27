@@ -45,7 +45,7 @@
             {% if app.status == 'agreed' %}
                 {{ ui.flash('ok', 'Сделка согласована ' ~ (app.confirmed_at.strftime('%d.%m.%Y %H:%M') if app.confirmed_at else '') ~ ' и перенесена в архив.') }}
             {% elif can_confirm %}
-                <form method="post" action="/operator/deal/{{ app.id }}/confirm"><button type="submit" class="btn btn-primary btn-block">Подтвердить сделку</button></form>
+                <form method="post" action="/operator/deal/{{ app.id }}/confirm">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-block">Подтвердить сделку</button></form>
             {% else %}
                 <button class="btn btn-primary btn-block" disabled>Подтвердить сделку</button>
                 <p class="hint" style="text-align: center;">Станет активной, когда все проверки пройдены</p>

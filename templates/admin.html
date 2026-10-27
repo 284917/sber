@@ -10,11 +10,18 @@
         <h1>Администрирование</h1>
         <div class="sub">Проверка компаний и заявок, аналитика и архив сделок</div>
     </div>
+    {% if DEMO_MODE %}
+    <form method="post" action="/demo/reset" onsubmit="return confirm('Пересоздать демо-данные? Данные компаний @demo.local будут удалены и созданы заново.');">{{ csrf_field(request) }}
+        <button type="submit" class="btn btn-secondary">Сбросить демо-данные</button>
+    </form>
+    {% endif %}
 </div>
+{% if qp.get('demo_reset') %}{{ ui.flash('ok', 'Демо-данные пересозданы.') }}{% endif %}
 
 {% if qp.get('success') %}{{ ui.flash('ok', 'Сотрудник создан.') }}{% endif %}
 {% if qp.get('error') == 'exists' %}{{ ui.flash('bad', 'Пользователь с таким email уже существует.') }}{% endif %}
 {% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину отказа — её увидит компания.') }}{% endif %}
+{% if qp.get('error') == 'password' %}{{ ui.flash('bad', 'Пароль сотрудника должен быть не короче 8 символов.') }}{% endif %}
 {% if qp.get('kyc_approved') %}{{ ui.flash('ok', 'Верификация компании одобрена.') }}{% endif %}
 {% if qp.get('kyc_rejected') %}{{ ui.flash('warn', 'Верификация отклонена, компания увидит причину.') }}{% endif %}
 {% if qp.get('moderated') %}{{ ui.flash('ok', 'Решение по заявке сохранено.') }}{% endif %}
@@ -65,8 +72,8 @@
             <td>{% for doc in docs %}<a href="/{{ doc.file_path }}" target="_blank" class="small" style="display: block;">{{ doc.doc_type }}</a>{% endfor %}</td>
             <td>
                 <div class="actions" style="flex-wrap: nowrap;">
-                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}"><button type="submit" class="btn btn-primary btn-sm">Одобрить</button></form>
-                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="actions" style="flex-wrap: nowrap; flex: 1;">
+                    <form method="post" action="/admin/kyc/approve_user/{{ company.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Одобрить</button></form>
+                    <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
                         <input type="text" name="reason" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
                         <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
                     </form>
@@ -97,11 +104,11 @@
             <td class="small" style="max-width: 240px;">{{ app.purpose }}</td>
             <td>
                 <div class="actions" style="flex-wrap: nowrap;">
-                    <form method="post" action="/admin/application/{{ app.id }}/moderate">
+                    <form method="post" action="/admin/application/{{ app.id }}/moderate">{{ csrf_field(request) }}
                         <input type="hidden" name="decision" value="approve">
                         <button type="submit" class="btn btn-primary btn-sm">Опубликовать</button>
                     </form>
-                    <form method="post" action="/admin/application/{{ app.id }}/moderate" class="actions" style="flex-wrap: nowrap; flex: 1;">
+                    <form method="post" action="/admin/application/{{ app.id }}/moderate" class="actions" style="flex-wrap: nowrap; flex: 1;">{{ csrf_field(request) }}
                         <input type="hidden" name="decision" value="reject">
                         <input type="text" name="comment" class="input input-sm" placeholder="Причина отказа" maxlength="500" required>
                         <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
@@ -169,7 +176,7 @@
 <!-- Сотрудники -->
 <section class="card" id="staff" style="max-width: 520px;">
     <h2 class="card-title">Добавить сотрудника</h2>
-    <form method="post" action="/admin/create_user">
+    <form method="post" action="/admin/create_user">{{ csrf_field(request) }}
         <div class="field"><label class="f" for="s-email">Email</label><input type="email" name="email" id="s-email" class="input" required></div>
         <div class="form-row field">
             <div><label class="f" for="s-pass">Пароль</label><input type="password" name="password" id="s-pass" class="input" minlength="8" required></div>

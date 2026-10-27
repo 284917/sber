@@ -14,7 +14,7 @@
             <h1>Регистрация компании</h1>
             <p class="muted" style="margin: 0 0 20px;">Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).</p>
             {% if error %}<div class="note note-bad">{{ error }}</div>{% endif %}
-            <form method="post" action="/register">
+            <form method="post" action="/register">{{ csrf_field(request) }}
                 <div class="seg">
                     <input type="radio" name="role" id="role-borrower" value="borrower" {% if form.role != 'creditor' %}checked{% endif %}>
                     <label for="role-borrower">Заёмщик (РФ)</label>

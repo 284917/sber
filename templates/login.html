@@ -17,7 +17,7 @@
             {% if request.query_params.get('registered') %}
                 <div class="note note-ok">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
             {% endif %}
-            <form method="post" action="/login">
+            <form method="post" action="/login">{{ csrf_field(request) }}
                 <div class="field">
                     <label class="f" for="email">Email</label>
                     <input type="email" name="email" id="email" class="input" autocomplete="username" required>
@@ -29,6 +29,19 @@
                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Войти</button>
             </form>
             <p class="muted" style="margin-top: 20px;">Нет аккаунта? <a href="/register">Зарегистрировать компанию</a></p>
+            {% if DEMO_MODE %}
+            <div style="border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px;">
+                <div class="f" style="margin-bottom: 8px;">Демо-режим: войти в роль одной кнопкой</div>
+                <div class="grid grid-2" style="gap: 8px;">
+                    {% for role, label in [('borrower', 'Заёмщик · ООО «Альфа Технологии»'), ('creditor', 'Кредитор · Beta Capital Ltd'), ('operator', 'Оператор платформы'), ('admin', 'Администратор')] %}
+                    <form method="post" action="/demo/login/{{ role }}">{{ csrf_field(request) }}
+                        <button type="submit" class="btn btn-secondary btn-block" style="height: auto; padding: 8px 12px; white-space: normal; text-align: left; justify-content: flex-start;">{{ label }}</button>
+                    </form>
+                    {% endfor %}
+                </div>
+                <p class="hint">Компании, заявки во всех статусах, предложения и сделки уже созданы.</p>
+            </div>
+            {% endif %}
         </div>
     </main>
 </div>

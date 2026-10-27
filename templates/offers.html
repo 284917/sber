@@ -82,8 +82,8 @@
                             <span class="small">{% if o.extra_terms %}<span class="muted">Дополнительные условия:</span> {{ o.extra_terms }}{% endif %}</span>
                             {% if o.status == 'shown' and application.status == 'published' %}
                             <div class="actions">
-                                <form method="post" action="/reject_offer/{{ o.id }}"><button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
-                                <form method="post" action="/accept_offer/{{ o.id }}"><button type="submit" class="btn btn-primary btn-sm">Принять предложение</button></form>
+                                <form method="post" action="/reject_offer/{{ o.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
+                                <form method="post" action="/accept_offer/{{ o.id }}">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Принять предложение</button></form>
                             </div>
                             {% endif %}
                         </div>

@@ -17,6 +17,7 @@
 </div>
 
 <section class="card">{{ ui.stepper(stages) }}</section>
+{% if request.query_params.get('error') == 'file_size' %}{{ ui.flash('bad', 'Файл больше 4 МБ — сожмите его и загрузите снова.') }}{% endif %}
 
 <div class="grid grid-side">
     <section class="card chat">
@@ -38,7 +39,7 @@
             {% endfor %}
         </div>
         {% if application.status == 'in_work' %}
-        <form method="post" action="/deal/{{ application.id }}/send" enctype="multipart/form-data" class="chat-form">
+        <form method="post" action="/deal/{{ application.id }}/send" enctype="multipart/form-data" class="chat-form">{{ csrf_field(request) }}
             <label class="btn btn-secondary btn-sm" title="Прикрепить файл" style="margin: 0;">
                 Файл
                 <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png" hidden>
@@ -74,7 +75,7 @@
                 </div>
             {% elif application.status == 'in_work' %}
                 <p class="muted" style="margin-top: 0;">Загрузите подписанный договор в PDF — после этого оператор сможет подтвердить сделку.</p>
-                <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data">
+                <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data">{{ csrf_field(request) }}
                     <input type="file" name="file" class="input" accept=".pdf" required style="margin-bottom: 10px;">
                     <button type="submit" class="btn btn-primary btn-block">Загрузить договор</button>
                 </form>
@@ -99,7 +100,7 @@
         <section class="card">
             <h2 class="card-title">Нужна помощь?</h2>
             <p class="muted" style="margin-top: 0;">Оператор подключится к чату и поможет с условиями и документами.</p>
-            <form method="post" action="/deal/{{ application.id }}/call_operator"><button type="submit" class="btn btn-secondary btn-block">Позвать оператора</button></form>
+            <form method="post" action="/deal/{{ application.id }}/call_operator">{{ csrf_field(request) }}<button type="submit" class="btn btn-secondary btn-block">Позвать оператора</button></form>
         </section>
         {% endif %}
     </aside>

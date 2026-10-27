@@ -1,7 +1,8 @@
+"""ORM-модели: компании (users), заявки, предложения, документы KYC, чат, история и файлы."""
 from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, LargeBinary
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from database import Base
+from liquidity.database import Base
 
 
 class User(Base):

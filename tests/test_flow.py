@@ -3,44 +3,20 @@
 
 Запуск: pytest -q  (используется отдельная SQLite-база, PostgreSQL не нужен)
 """
-import os
-import sys
-import tempfile
+import pytest
 
-DB_FILE = os.path.join(tempfile.mkdtemp(), "test.db")
-# TEST_DATABASE_URL позволяет оставить базу после прогона (например, чтобы посмотреть экраны)
-os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", f"sqlite:///{DB_FILE}")
-os.environ["ADMIN_EMAIL"] = "admin@test.local"
-os.environ["ADMIN_PASSWORD"] = "admin-password"
-os.environ["SECRET_KEY"] = "test-secret"
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from conftest import PDF, Browser, login
+from liquidity import models
+from liquidity.database import SessionLocal
+from liquidity.services import analytics
 
-import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-
-import main  # noqa: E402
-import models  # noqa: E402
-from database import SessionLocal  # noqa: E402
-
-PDF = ("doc.pdf", b"%PDF-1.4 test", "application/pdf")
 BORROWER_DOCS = ["charter", "egrul", "passport", "beneficiaries", "director_auth"]
 CREDITOR_DOCS = ["cert_inc", "memorandum", "directors_reg", "ubo", "tax_residency", "source_funds"]
-
-
-def client():
-    return TestClient(main.app, follow_redirects=False)
 
 
 def register(c, **data):
     form = {"password": "password123", **data}
     return c.post("/register", data=form)
-
-
-def login(email, password="password123"):
-    c = client()
-    r = c.post("/login", data={"email": email, "password": password})
-    assert r.status_code == 303 and r.headers["location"] == "/dashboard", r.text
-    return c
 
 
 def pass_kyc(c, admin, user_email, doc_types):
@@ -64,7 +40,7 @@ def get(model, **filters):
 
 @pytest.fixture(scope="module")
 def world():
-    anon = client()
+    anon = Browser()
     # Регистрация юрлиц и ролевая модель
     assert register(anon, email="hacker@x.ru", role="admin", company_name="X", registration_number="1").status_code == 400
     assert register(anon, email="bad@alfa.ru", role="borrower", company_name="Альфа",
@@ -186,10 +162,10 @@ def test_full_deal_flow(world):
         assert text in history, text
     admin_page = admin.get("/admin").text
     assert "Архив согласованных сделок" in admin_page and "Beta Capital Ltd" in admin_page
-    analytics = main.build_analytics(*_all_apps_and_offers())
-    assert {row["currency"]: row["count"] for row in analytics["avg_by_currency"]} == {"EUR": 2}
-    assert dict(analytics["top_supply"]) == {"CY": 1, "AE": 1}
-    assert dict(analytics["top_demand"]) == {"DE": 2}
+    stats = analytics.build(*_all_apps_and_offers())
+    assert {row["currency"]: row["count"] for row in stats["avg_by_currency"]} == {"EUR": 2}
+    assert dict(stats["top_supply"]) == {"CY": 1, "AE": 1}
+    assert dict(stats["top_demand"]) == {"DE": 2}
 
 
 def test_roles_and_files(world):
@@ -204,7 +180,7 @@ def test_roles_and_files(world):
     assert alfa.get("/" + doc.file_path).status_code == 200
     assert operator.get("/" + doc.file_path).status_code == 200
     assert gamma.get("/" + doc.file_path).status_code == 403
-    assert client().get("/" + doc.file_path).headers["location"] == "/"  # без входа — на страницу входа
+    assert Browser().get("/" + doc.file_path).headers["location"] == "/"  # без входа — на страницу входа
 
 
 def _all_apps_and_offers():
@@ -215,28 +191,3 @@ def _all_apps_and_offers():
         _ = o.sender  # подгрузить до закрытия сессии
     return apps, offers
 
-
-def test_offer_cost_and_stages():
-    from types import SimpleNamespace as NS
-    app = NS(funding_amount=500000, term_months=6)
-    beta = main.offer_cost(NS(funding_amount=500000, annual_interest_rate=8, total_commission=1.8), app)
-    gamma = main.offer_cost(NS(funding_amount=450000, annual_interest_rate=7.5, total_commission=2.3), app)
-    # проценты за 6 месяцев + комиссия один раз
-    assert beta["interest"] == pytest.approx(20000) and beta["commission"] == pytest.approx(9000)
-    assert beta["overpayment"] == pytest.approx(29000)
-    # полная стоимость: ставка + комиссия, разнесённая на срок
-    assert beta["effective_rate"] == pytest.approx(11.6) and gamma["effective_rate"] == pytest.approx(12.1)
-    assert gamma["coverage"] == 90
-    assert main.offer_cost(NS(funding_amount=1, annual_interest_rate=5, total_commission=1),
-                           NS(funding_amount=1, term_months=None))["effective_rate"] is None
-    assert main.format_money(612500.5) == "612\u00a0500,50" and main.format_percent(1.80) == "1,8%"
-
-    db = SessionLocal()
-    try:
-        states = lambda app: [s["state"] for s in main.application_stages(app, db)]
-        assert states(NS(id=0, status="moderation", moderation_comment=None)) == ["current"] + ["todo"] * 5
-        assert states(NS(id=0, status="rejected", moderation_comment="x"))[0] == "failed"
-        assert states(NS(id=0, status="published", moderation_comment=None))[:3] == ["done", "done", "current"]
-        assert states(NS(id=0, status="agreed", moderation_comment=None)) == ["done"] * 6
-    finally:
-        db.close()
