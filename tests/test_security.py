@@ -12,7 +12,7 @@ from liquidity.security import hash_password
 def make_user(email, role="borrower", **extra):
     with SessionLocal() as db:
         if not db.query(models.User).filter(models.User.email == email).first():
-            db.add(models.User(email=email, password_hash=hash_password("password123"), role=role, **extra))
+            db.add(models.User(email=email, password_hash=hash_password("Str0ng!Pass1"), role=role, **extra))
             db.commit()
 
 
@@ -20,12 +20,12 @@ def test_csrf_required_for_post():
     make_user("csrf@test.ru")
     browser = Browser()
     # без токена и с чужим токеном — 403, вход не выполнен
-    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "password123"}, csrf=False).status_code == 403
-    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "password123",
+    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "Str0ng!Pass1"}, csrf=False).status_code == 403
+    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "Str0ng!Pass1",
                                         "csrf_token": "forged"}).status_code == 403
     assert "access_token" not in browser.cookies
     # с токеном из cookie — успешно
-    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "password123"}).status_code == 303
+    assert browser.post("/login", data={"email": "csrf@test.ru", "password": "Str0ng!Pass1"}).status_code == 303
 
 
 def test_csrf_token_rendered_in_forms():
@@ -37,7 +37,7 @@ def test_csrf_token_rendered_in_forms():
 def test_session_cookie_flags_and_expiry():
     make_user("cookie@test.ru")
     browser = Browser()
-    response = browser.post("/login", data={"email": "cookie@test.ru", "password": "password123"})
+    response = browser.post("/login", data={"email": "cookie@test.ru", "password": "Str0ng!Pass1"})
     cookie = response.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=lax" in cookie and f"max-age={config.SESSION_HOURS * 3600}" in cookie
     payload = jwt.decode(browser.cookies.get("access_token"), config.SECRET_KEY, algorithms=["HS256"])
@@ -66,11 +66,11 @@ def test_role_model():
     assert borrower.get("/operator/offers").status_code == 403
     assert creditor.post("/accept_offer/1").status_code == 403
     assert borrower.post("/create_offer/1", data={"amount": "1", "rate": "1", "lender_comm": "1"}).status_code == 403
-    assert borrower.post("/admin/create_user", data={"email": "x@x.ru", "password": "password123",
+    assert borrower.post("/admin/create_user", data={"email": "x@x.ru", "password": "Str0ng!Pass1",
                                                     "role": "admin"}).status_code == 403
     # самостоятельно стать администратором нельзя
     anon = Browser()
-    assert anon.post("/register", data={"email": "evil@x.ru", "password": "password123", "role": "admin",
+    assert anon.post("/register", data={"email": "evil@x.ru", "password": "Str0ng!Pass1", "role": "admin",
                                         "company_name": "X", "registration_number": "1"}).status_code == 400
 
 
@@ -82,7 +82,7 @@ def test_html_is_escaped():
 
 def test_security_headers_and_demo_disabled():
     response = Browser().get("/")
-    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["x-frame-options"] == "SAMEORIGIN"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert Browser().post("/demo/login/admin").status_code == 404  # демо-вход выключен без DEMO_MODE=1
 

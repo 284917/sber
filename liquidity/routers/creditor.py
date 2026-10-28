@@ -30,7 +30,7 @@ def dashboard(request: Request, user: models.User, db: Session):
     available_apps = applications.search_published(db, filters)
     return render(request, "creditor.html", user=user, filters=filters, onboarding=onboarding(user, my_offers, my_deals),
                   available_apps=available_apps, my_offers=my_offers, my_deals=my_deals,
-                  funded=offers.funded_map(db, [a.id for a in available_apps]),
+                  funded=offers.funded_map(db, [a.id for a in available_apps]), min_share=config.MIN_OFFER_SHARE,
                   valid_choices=config.OFFER_VALID_CHOICES, valid_default=config.OFFER_VALID_DEFAULT,
                   offered_app_ids={o.application_id for o in my_offers if o.status in offers.ACTIVE_STATUSES},
                   saved=[(s, saved_searches.describe(s), saved_searches.as_query(s))

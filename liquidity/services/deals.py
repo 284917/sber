@@ -132,7 +132,10 @@ def send_message(db: Session, user: models.User, app_id: int, text: str, file: U
 
 
 def upload_contract(db: Session, user: models.User, app_id: int, file: UploadFile):
+    """Договор загружают только стороны сделки: заёмщик или принятый кредитор, не сотрудники."""
     application = get_for_user(db, user, app_id)
+    if user.role in config.STAFF_ROLES:
+        raise Forbidden()
     if application.status != "in_work":
         raise Invalid("closed", "Сделка уже не в работе")
     if contract_uploaded(db, app_id):
@@ -175,6 +178,16 @@ def call_operator(db: Session, user: models.User, app_id: int):
     log_event(db, app_id, user, f"{user.display_name} позвал оператора в сделку")
     notify_staff(db, f"{user.display_name} зовёт оператора в сделку №{app_id}", f"/deal/{app_id}", "warn")
     db.commit()
+
+
+def main_contracts(db: Session, app_ids):
+    """Последний загруженный основной договор по каждой сделке: {app_id: Message}."""
+    result = {}
+    for m in db.query(models.Message).filter(models.Message.application_id.in_(list(app_ids) or [0]),
+                                             models.Message.file_path.isnot(None)).order_by(models.Message.id):
+        if is_contract(m):
+            result[m.application_id] = m
+    return result
 
 
 def in_work(db: Session):

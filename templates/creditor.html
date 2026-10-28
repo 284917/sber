@@ -14,6 +14,7 @@
 
 {% if qp.get('error') == 'kyc' %}{{ ui.flash('bad', 'Отправлять предложения можно после верификации компании (KYC).') }}{% endif %}
 {% if qp.get('error') == 'offer' %}{{ ui.flash('bad', 'Проверьте предложение: сумма больше 0 и не больше запрошенной, ставка и комиссия от 0 до 100%, дополнительные условия не длиннее 1000 символов.') }}{% endif %}
+{% if qp.get('error') == 'offer_min' %}{{ ui.flash('bad', 'Сумма предложения слишком мала: минимум ' ~ min_share ~ '% от суммы заявки (или весь остаток, если он меньше). Иначе заёмщику пришлось бы собирать заявку из десятков мелких предложений.') }}{% endif %}
 {% if qp.get('error') == 'duplicate' %}{{ ui.flash('warn', 'Вы уже отправили предложение по этой заявке.') }}{% endif %}
 {% if qp.get('offer_withdrawn') %}{{ ui.flash('ok', 'Предложение отозвано. По этой заявке можно отправить новое.') }}{% endif %}
 {% if qp.get('offer_sent') %}{{ ui.flash('ok', 'Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.') }}{% endif %}
@@ -93,9 +94,12 @@
 
 <section class="card" id="saved" style="padding: 16px 24px;">
     <div class="actions" style="justify-content: space-between; align-items: center;">
-        <div>
-            <h2 class="card-title" style="margin: 0;">{{ ui.icon('bell', 'ic-sm') }} Уведомления о новых заявках</h2>
-            <p class="small muted" style="margin: 4px 0 0;">Сохраните фильтр — сообщим, когда опубликуют подходящую заявку.</p>
+        <div class="saved-head">
+            <span class="saved-icon" aria-hidden="true">{{ ui.icon('bell') }}</span>
+            <div>
+                <h2 class="saved-title">Уведомления о новых заявках</h2>
+                <p class="small muted" style="margin: 2px 0 0;">Сохраните фильтр — сообщим, когда опубликуют подходящую заявку.</p>
+            </div>
         </div>
         {% if has_filter and filter_saved %}<span class="small muted">{{ ui.icon('check', 'ic-sm') }} Этот фильтр уже сохранён</span>
         {% elif has_filter and saved|length < max_saved %}
@@ -125,6 +129,7 @@
 {% for app in available_apps %}
 {% set got = funded.get(app.id, 0) %}
 {% set left = app.funding_amount - got %}
+{% set min_amount = [app.funding_amount * min_share / 100, left]|min %}
 <section class="card" id="app-{{ app.id }}">
     <div class="actions" style="justify-content: space-between; align-items: flex-start;">
         <div>
@@ -152,8 +157,8 @@
         <div class="form-row offer-grid">
             <div>
                 <label class="f">Сумма к выдаче, {{ app.currency_code }}</label>
-                <input type="number" step="0.01" min="0.01" max="{{ left }}" name="amount" class="input" value="{{ left|int if left == left|int else left }}" required>
-                <div class="hint" style="margin-top: 4px;">Можно меньше: заявку собирают из нескольких предложений</div>
+                <input type="number" step="0.01" min="{{ min_amount|round(2) }}" max="{{ left }}" name="amount" class="input" value="{{ left|int if left == left|int else left }}" required>
+                <div class="hint" style="margin-top: 4px;">От {{ min_amount|money }} до {{ left|money }}: заявку можно собрать из нескольких предложений</div>
             </div>
             <div>
                 <label class="f">Ставка, % годовых</label>
@@ -204,6 +209,7 @@
                 {{ ui.offer_status(offer.status) }}
                 {% if offer.status == 'hidden' and offer.hide_reason %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ offer.hide_reason }}</div>{% endif %}
                 {% if offer.status == 'accepted' and offer.application and offer.application.status == 'published' %}<div class="small muted" style="margin-top: 4px;">Заёмщик собирает остальную сумму, сделка начнётся после этого</div>{% endif %}
+                {% if offer.status == 'pending' %}<div class="small muted" style="margin-top: 4px;">Заёмщик увидит его после проверки оператором, обычно до {{ SLA_HOURS.offer }} ч</div>{% endif %}
                 {% if offer.status in ('pending', 'shown') and offer.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ offer.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
                 {% if offer.counter_status == 'accepted' %}<div class="small muted" style="margin-top: 4px;">Ставка снижена по встречному предложению</div>{% endif %}
             </td>

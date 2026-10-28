@@ -99,6 +99,8 @@
                         {% endif %}
                     </div>
                 </div>
+            {% elif application.status == 'in_work' and user.role in ('admin', 'operator') %}
+                <p class="muted">Договор ещё не загружен. Его загружает заёмщик или кредитор, после этого сделку можно подтвердить.</p>
             {% elif application.status == 'in_work' %}
                 <p class="muted">Загрузите подписанный договор в PDF. После этого оператор сможет подтвердить сделку.</p>
                 <form method="post" action="/deal/{{ application.id }}/upload_contract" enctype="multipart/form-data" style="margin-top: 12px;">{{ csrf_field(request) }}

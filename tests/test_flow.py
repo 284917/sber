@@ -15,7 +15,7 @@ CREDITOR_DOCS = ["cert_inc", "memorandum", "directors_reg", "ubo", "tax_residenc
 
 
 def register(c, **data):
-    form = {"password": "password123", **data}
+    form = {"password": "Str0ng!Pass1", **data}
     return c.post("/register", data=form)
 
 
@@ -54,7 +54,7 @@ def world():
     assert get(models.User, email="alfa@alfa.ru").country_code == "RU"
 
     admin = login("admin@test.local", "admin-password")
-    assert admin.post("/admin/create_user", data={"email": "op@test.local", "password": "password123",
+    assert admin.post("/admin/create_user", data={"email": "op@test.local", "password": "Str0ng!Pass1",
                                                   "role": "operator"}).status_code == 303
     return {"admin": admin, "operator": login("op@test.local"), "alfa": login("alfa@alfa.ru"),
             "beta": login("beta@beta.cy"), "gamma": login("gamma@gamma.ae")}
@@ -116,7 +116,7 @@ def test_full_deal_flow(world):
     gamma.post(offer_url, data={"amount": "450000", "rate": "7.5", "lender_comm": "1.5"})
     beta_offer = get(models.Offer, user_id=beta_id)
     gamma_offer = get(models.Offer, user_id=get(models.User, email="gamma@gamma.ae").id)
-    assert beta_offer.extra_terms == "Льготный период 1 месяц" and float(beta_offer.total_commission) == pytest.approx(1.8)
+    assert beta_offer.extra_terms == "Льготный период 1 месяц" and float(beta_offer.total_commission) == pytest.approx(4.0)
     assert "Beta Capital" not in alfa.get(f"/applications/{application.id}/offers").text  # до оператора не видно
 
     # Оператор показывает офферы; заёмщик не может решать по чужой заявке и по непоказанным
@@ -126,8 +126,8 @@ def test_full_deal_flow(world):
     operator.post(f"/operator/offer/{gamma_offer.id}/show")
     page = alfa.get(f"/applications/{application.id}/offers").text
     assert "Beta Capital Ltd" in page and "Gamma Finance" in page and "Льготный период" in page
-    # Сравнение: Beta дешевле по полной стоимости (11,6% против 12,1%), экономия на сумму заявки за 6 мес.
-    assert "Лучшее предложение" in page and "11,6%" in page and "12,1%" in page
+    # Сравнение: Beta дешевле по полной стоимости (16% против 16,5% при комиссии платформы 3%), экономия на сумму заявки за 6 мес.
+    assert "Лучшее предложение" in page and "16%" in page and "16,5%" in page
     assert page.index("Beta Capital Ltd") < page.index("Gamma Finance")
     assert "1 250" in page
 

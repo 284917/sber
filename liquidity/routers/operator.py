@@ -44,7 +44,9 @@ def hide_offer(offer_id: int, reason: str = Form(""), user: models.User = Depend
 
 @router.get("/deals", summary="Сделки в работе")
 def deals_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
-    return render(request, "operator_deals.html", user=user, deals=deals.in_work(db))
+    items = deals.in_work(db)
+    return render(request, "operator_deals.html", user=user, deals=items,
+                  contracts=deals.main_contracts(db, [a.id for a in items]))
 
 
 @router.get("/deal/{app_id}", summary="Проверка сделки перед подтверждением")
@@ -55,7 +57,7 @@ def deal_page(app_id: int, request: Request, user: models.User = Depends(staff),
     offer = deals.accepted_offer(db, app_id)
     checks = deals.checks(db, application, offer)
     return render(request, "operator_deal.html", user=user, app=application, offer=offer, checks=checks,
-                  lenders=deals.lenders(offer),
+                  lenders=deals.lenders(offer), contract=deals.room(db, application)[1],
                   stages=applications.stages(db, application), events=get_events(db, app_id),
                   can_confirm=application.status == "in_work" and all(checks.values()))
 

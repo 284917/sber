@@ -37,7 +37,7 @@ CREDITOR_COUNTRIES = {"CY": "Кипр", "AE": "ОАЭ", "CN": "Китай", "TR"
 COUNTRY_NAMES = {"RU": "Россия", **CREDITOR_COUNTRIES, **TARGET_COUNTRIES}
 TRANSFER_METHODS = {"swift": "SWIFT", "spfs": "СПФС", "cips": "CIPS", "agent": "Платёжный агент"}
 MAX_TERM_MONTHS = 120
-PLATFORM_COMMISSION = 0.8  # % от суммы, добавляется к комиссии кредитора
+PLATFORM_COMMISSION = 3.0  # % от суммы, добавляется к комиссии кредитора (решение по итогам анализа)
 
 # --- Статусы ---
 APPLICATION_STATUSES = {"moderation": "На модерации", "rejected": "Отклонена", "published": "Опубликована",
@@ -88,3 +88,8 @@ OFFER_VALID_CHOICES = (7, 14, 30)
 OFFER_VALID_DEFAULT = 14
 # Проверка компании по ИНН через DaData (бесплатный ключ: dadata.ru). Без ключа автозаполнение выключено
 DADATA_API_KEY = os.getenv("DADATA_API_KEY", "")
+
+# Минимальное предложение: не меньше этой доли суммы заявки (или весь остаток, если он меньше)
+MIN_OFFER_SHARE = 10
+# Пароль: длина и наборы символов
+PASSWORD_MIN_LENGTH = 10

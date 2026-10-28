@@ -21,6 +21,28 @@ def inn_is_valid(inn: str) -> bool:
     return sum(w * d for w, d in zip(INN_WEIGHTS, digits)) % 11 % 10 == digits[9]
 
 
+def password_problems(password: str):
+    """Чего не хватает паролю: список коротких фраз, пустой — пароль надёжный."""
+    problems = []
+    if len(password) < config.PASSWORD_MIN_LENGTH:
+        problems.append(f"не короче {config.PASSWORD_MIN_LENGTH} символов")
+    if not re.search(r"[a-zа-яё]", password):
+        problems.append("строчная буква")
+    if not re.search(r"[A-ZА-ЯЁ]", password):
+        problems.append("заглавная буква")
+    if not re.search(r"\d", password):
+        problems.append("цифра")
+    if not re.search(r"[^A-Za-zА-Яа-яЁё0-9\s]", password):
+        problems.append("спецсимвол, например ! ? # %")
+    return problems
+
+
+def check_password(password: str):
+    problems = password_problems(password)
+    if problems:
+        raise Invalid("password", "Пароль слишком простой. Нужно: " + ", ".join(problems))
+
+
 def register_company(db: Session, *, email: str, password: str, role: str, company_name: str,
                      registration_number: str, country_code: str) -> models.User:
     """Самостоятельная регистрация: только заёмщик (российское юрлицо) или кредитор (зарубежное)."""
@@ -29,8 +51,7 @@ def register_company(db: Session, *, email: str, password: str, role: str, compa
     company_name, registration_number = company_name.strip(), registration_number.strip()
     if not company_name or len(company_name) > 255:
         raise Invalid("company", "Укажите название компании")
-    if len(password) < 8:
-        raise Invalid("password", "Пароль должен быть не короче 8 символов")
+    check_password(password)
     if role == "borrower":
         if not re.fullmatch(r"\d{10}", registration_number):
             raise Invalid("inn", "ИНН юрлица должен состоять из 10 цифр")
@@ -85,8 +106,7 @@ def remove_staff(db: Session, actor: models.User, staff_id: int):
 def create_staff(db: Session, *, email: str, password: str, role: str, actor=None) -> models.User:
     if role not in config.STAFF_ROLES:
         raise Invalid("role", "Недопустимая роль")
-    if len(password) < 8:
-        raise Invalid("password", "Пароль должен быть не короче 8 символов")
+    check_password(password)
     if db.query(models.User).filter(models.User.email == email).first():
         raise Invalid("exists", "Пользователь с таким email уже существует")
     user = models.User(email=email, password_hash=hash_password(password), role=role,
@@ -110,3 +130,15 @@ def ensure_admin(db: Session):
         if owner.role == "admin" and not owner.is_superadmin:
             owner.is_superadmin = True
             db.commit()
+
+
+def change_password(db: Session, user: models.User, current: str, new: str, repeat: str):
+    if not verify_password(current, user.password_hash):
+        raise Invalid("current", "Текущий пароль указан неверно")
+    if new != repeat:
+        raise Invalid("repeat", "Новый пароль и повтор не совпадают")
+    if new == current:
+        raise Invalid("same", "Новый пароль совпадает с текущим")
+    check_password(new)
+    user.password_hash = hash_password(new)
+    db.commit()

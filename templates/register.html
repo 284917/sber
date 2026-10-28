@@ -57,10 +57,16 @@
                 </div>
                 <div class="field">
                     <label class="f" for="password">Пароль</label>
-                    <input type="password" name="password" id="password" class="input" minlength="8" autocomplete="new-password" required
+                    <input type="password" name="password" id="password" class="input" minlength="10" autocomplete="new-password" required
                            aria-describedby="password-error password-hint" {% if fe.get('password') %}aria-invalid="true"{% endif %}>
                     {{ field_error('password') }}
-                    <div class="hint" id="password-hint">Не короче 8 символов</div>
+                    <ul class="pw-rules" id="password-hint" aria-live="polite">
+                        <li data-rule="len">Не короче 10 символов</li>
+                        <li data-rule="lower">Строчная буква</li>
+                        <li data-rule="upper">Заглавная буква</li>
+                        <li data-rule="digit">Цифра</li>
+                        <li data-rule="special">Спецсимвол, например ! ? # %</li>
+                    </ul>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">Зарегистрироваться</button>
             </form>
@@ -73,6 +79,14 @@
         const form = document.getElementById('register-form');
         const $ = (id) => document.getElementById(id);
         const isCreditor = () => $('role-creditor').checked;
+
+        // Надёжность пароля: те же правила, что на сервере
+        function passwordRules(v) {
+            return [{key: 'len', ok: v.length >= 10}, {key: 'lower', ok: /[a-zа-яё]/.test(v)}, {key: 'upper', ok: /[A-ZА-ЯЁ]/.test(v)},
+                    {key: 'digit', ok: /\d/.test(v)}, {key: 'special', ok: /[^A-Za-zА-Яа-яЁё0-9\s]/.test(v)}];
+        }
+        $('password').addEventListener('input', () => passwordRules($('password').value).forEach((r) =>
+            document.querySelector('.pw-rules [data-rule="' + r.key + '"]').classList.toggle('ok', r.ok)));
 
         // Контрольная цифра ИНН юрлица: веса 2,4,10,3,5,9,4,6,8, сумма по модулю 11, затем 10
         function innValid(inn) {
@@ -94,7 +108,7 @@
             },
             country_code: (v) => !isCreditor() || v ? '' : 'Выберите страну регистрации',
             email: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) ? '' : 'Введите email в формате name@company.ru',
-            password: (v) => v.length >= 8 ? '' : 'Пароль должен быть не короче 8 символов, сейчас ' + v.length,
+            password: (v) => passwordRules(v).every((r) => r.ok) ? '' : 'Пароль слишком простой: выполните все пункты списка ниже',
         };
 
         function check(name, show) {

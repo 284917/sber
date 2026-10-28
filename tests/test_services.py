@@ -86,7 +86,7 @@ def test_parse_number():
     ({"role": "creditor", "country_code": "RU"}, "country"),
 ])
 def test_register_validation(data, code):
-    form = {"email": "v@x.ru", "password": "password123", "role": "borrower", "company_name": "ООО «Тест»",
+    form = {"email": "v@x.ru", "password": "Str0ng!Pass1", "role": "borrower", "company_name": "ООО «Тест»",
             "registration_number": "7700000009", "country_code": "", **data}
     with SessionLocal() as db, pytest.raises(Invalid) as err:
         accounts.register_company(db, **form)

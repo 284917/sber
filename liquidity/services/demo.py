@@ -186,4 +186,17 @@ def seed(db: Session):
     event(a6, "rongtong", "Получено новое предложение, ждёт проверки оператором", 1)
     event(a6, "beta", "Получено новое предложение, ждёт проверки оператором", 1)
 
+    # Договоры в демо — настоящие PDF с условиями сделки: их можно открыть и просмотреть у оператора
+    from liquidity.services.deals import accepted_offer
+    from liquidity.services.documents import contract_draft_pdf
+
+    db.flush()
+    for app in (a2, a3):
+        deal_offer = accepted_offer(db, app.id)
+        if deal_offer:
+            content = contract_draft_pdf(app, deal_offer, None)
+            for stored in db.query(models.StoredFile).filter(
+                    models.StoredFile.path.like(f"{config.UPLOAD_DIR}/demo_{app.id}_%dogovor%")):
+                stored.content = content
+
     db.commit()

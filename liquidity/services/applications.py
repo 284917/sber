@@ -60,7 +60,8 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
         application.moderation_comment = comment
         record(db, admin, f"Отклонил заявку №{app_id}: {comment}", f"/operator/deal/{app_id}")
         log_event(db, app_id, admin, f"Заявка отклонена модератором: {comment}")
-        notify(db, application.user_id, f"Заявка №{app_id} отклонена: {comment}", f"/applications/{app_id}/offers", "bad")
+        notify(db, application.user_id, f"Заявка №{app_id} отклонена. Исправьте и подайте новую. Причина: {comment}",
+               f"/applications/{app_id}/offers", "bad")
     else:
         raise Invalid("decision")
     db.commit()

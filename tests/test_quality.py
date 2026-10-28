@@ -25,19 +25,19 @@ def test_inn_checksum(inn, ok):
 
 
 def test_register_shows_error_next_to_field():
-    page = Browser().post("/register", data={"email": "inn@test.ru", "password": "password123", "role": "borrower",
+    page = Browser().post("/register", data={"email": "inn@test.ru", "password": "Str0ng!Pass1", "role": "borrower",
                                              "company_name": "ООО «Опечатка»", "registration_number": "7707083894"})
     assert page.status_code == 400
     assert 'id="registration_number-error" >Контрольная цифра' in page.text or "контрольной цифры" in page.text
     assert 'aria-invalid="true"' in page.text and 'value="7707083894"' in page.text  # введённое не теряется
-    ok = Browser().post("/register", data={"email": "inn-ok@test.ru", "password": "password123", "role": "borrower",
+    ok = Browser().post("/register", data={"email": "inn-ok@test.ru", "password": "Str0ng!Pass1", "role": "borrower",
                                            "company_name": "ООО «Сбер»", "registration_number": "7707083893"})
     assert ok.status_code == 303
 
 
 def test_login_lockout_after_five_failures():
     with SessionLocal() as db:
-        db.add(models.User(email="brute@test.ru", password_hash=hash_password("password123"), role="borrower"))
+        db.add(models.User(email="brute@test.ru", password_hash=hash_password("Str0ng!Pass1"), role="borrower"))
         db.commit()
     browser = Browser()
     for attempt in range(1, 6):
@@ -45,7 +45,7 @@ def test_login_lockout_after_five_failures():
         assert r.status_code == 400
     assert "Вход заблокирован на 15 минут" in r.text
     # даже верный пароль не пускает, пока действует блокировка
-    blocked = browser.post("/login", data={"email": "Brute@Test.ru", "password": "password123"})
+    blocked = browser.post("/login", data={"email": "Brute@Test.ru", "password": "Str0ng!Pass1"})
     assert blocked.status_code == 429 and "повторите через 15 мин" in blocked.text
 
     # через 15 минут блокировка снимается; успешный вход сбрасывает счётчик
@@ -54,7 +54,7 @@ def test_login_lockout_after_five_failures():
         row.locked_until = datetime.utcnow() - timedelta(seconds=1)
         row.window_start = datetime.utcnow() - timedelta(minutes=16)
         db.commit()
-    assert browser.post("/login", data={"email": "brute@test.ru", "password": "password123"}).status_code == 303
+    assert browser.post("/login", data={"email": "brute@test.ru", "password": "Str0ng!Pass1"}).status_code == 303
     with SessionLocal() as db:
         assert db.get(models.LoginAttempt, "email:brute@test.ru") is None
 
@@ -71,7 +71,7 @@ def test_ip_limit_and_window():
 
 def company(email, role, name, regnum, country):
     with SessionLocal() as db:
-        user = models.User(email=email, password_hash=hash_password("password123"), role=role, company_name=name,
+        user = models.User(email=email, password_hash=hash_password("Str0ng!Pass1"), role=role, company_name=name,
                            registration_number=regnum, country_code=country)
         db.add(user)
         db.flush()

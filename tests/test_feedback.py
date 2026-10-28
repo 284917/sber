@@ -12,7 +12,7 @@ JSON = {"Accept": "application/json"}
 
 def make_user(email, role, **extra):
     with SessionLocal() as db:
-        user = models.User(email=email, password_hash=hash_password("password123"), role=role,
+        user = models.User(email=email, password_hash=hash_password("Str0ng!Pass1"), role=role,
                            company_name=extra.pop("company_name", email), **extra)
         db.add(user)
         db.commit()
@@ -63,14 +63,14 @@ def test_kyc_upload_is_json_and_keeps_other_files():
 def test_superadmin_manages_staff_and_operator_moderates():
     admin = login("admin@test.local", "admin-password")
     assert "Сотрудники" in admin.get("/admin?tab=staff").text
-    admin.post("/admin/create_user", data={"email": "second-admin@test.local", "password": "password123", "role": "admin"})
-    admin.post("/admin/create_user", data={"email": "op2@test.local", "password": "password123", "role": "operator"})
+    admin.post("/admin/create_user", data={"email": "second-admin@test.local", "password": "Str0ng!Pass1", "role": "admin"})
+    admin.post("/admin/create_user", data={"email": "op2@test.local", "password": "Str0ng!Pass1", "role": "operator"})
 
     # Обычный администратор не видит вкладку и не управляет сотрудниками
     second = login("second-admin@test.local")
     assert 'href="/admin?tab=staff"' not in second.get("/admin").text
     assert "Добавить сотрудника" not in second.get("/admin?tab=staff").text
-    assert second.post("/admin/create_user", data={"email": "x@test.local", "password": "password123",
+    assert second.post("/admin/create_user", data={"email": "x@test.local", "password": "Str0ng!Pass1",
                                                    "role": "admin"}).status_code == 403
 
     # Оператор модерирует и снимает заявки в своём кабинете
@@ -105,7 +105,7 @@ def test_superadmin_manages_staff_and_operator_moderates():
     assert admin.post(f"/admin/staff/{root_id}/remove").headers["location"].endswith("error=self")
     assert admin.post(f"/admin/staff/{op_id}/remove").headers["location"].endswith("removed=1")
     assert operator.get("/operator/moderation").status_code in (303, 401, 403)  # сессия больше не действует
-    assert Browser().post("/login", data={"email": "op2@test.local", "password": "password123"}).status_code != 303
+    assert Browser().post("/login", data={"email": "op2@test.local", "password": "Str0ng!Pass1"}).status_code != 303
 
 
 def test_chat_json_and_contract_delete():

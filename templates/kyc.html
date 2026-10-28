@@ -21,7 +21,16 @@
 {% if qp.get('error') == 'pdf' %}{{ ui.flash('bad', 'Нужен файл в формате PDF.') }}{% endif %}
 {% if qp.get('error') == 'incomplete' %}{{ ui.flash('bad', 'Загрузите все документы из списка, чтобы отправить пакет.') }}{% endif %}
 {% if qp.get('success') %}{{ ui.flash('ok', 'Документы отправлены на проверку. Обычно администратор принимает решение в течение рабочего дня.') }}{% endif %}
-{% if kyc == 'rejected' %}{{ ui.flash('bad', 'Администратор отклонил верификацию: ' ~ user.kyc_reject_reason ~ '. Загрузите документы заново.') }}{% endif %}
+{% if kyc == 'rejected' %}
+<div class="note note-bad reject-note" role="alert">
+    {{ ui.icon('warning-circle') }}
+    <div>
+        <b>Верификация отклонена.</b>
+        <div>Загрузите документы заново и отправьте пакет на проверку.</div>
+        <div class="reject-reason"><span>Причина отказа</span><p>{{ user.kyc_reject_reason }}</p></div>
+    </div>
+</div>
+{% endif %}
 {% if kyc == 'approved' %}{{ ui.flash('ok', 'Компания верифицирована. ' ~ ('Можно создавать заявки.' if user.role == 'borrower' else 'Можно отправлять предложения.')) }}{% endif %}
 
 <div class="grid kyc-grid">

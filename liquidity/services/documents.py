@@ -1,5 +1,6 @@
 """PDF-сводка согласованной сделки: стороны, условия, полная стоимость, график платежей, подтверждение."""
 import os
+from decimal import Decimal
 from datetime import datetime
 
 from fpdf import FPDF
@@ -146,7 +147,7 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
         ("Ставка", f"{format_percent(offer.annual_interest_rate)} годовых"),
         ("Комиссия за организацию", f"{format_percent(offer.total_commission)} (кредитора "
                                     f"{format_percent(offer.lender_commission)} + платформы "
-                                    f"{format_percent(config.PLATFORM_COMMISSION)})"),
+                                    f"{format_percent(Decimal(str(offer.total_commission)) - Decimal(str(offer.lender_commission)))})"),
         ("Срок", f"{application.term_months} мес." if application.term_months else "—"),
         ("Страна получения", config.COUNTRY_NAMES.get(application.target_jurisdiction, "—")),
         ("Способ передачи", config.TRANSFER_METHODS.get(application.transfer_method, "—")),
@@ -269,7 +270,7 @@ def contract_draft_pdf(application, offer, fx) -> bytes:
         f"годовых, начисляемые на Сумму займа и уплачиваемые ежемесячно.",
         f"Комиссия за организацию составляет {format_percent(offer.total_commission)} от Суммы займа "
         f"({format_money(cost['commission'])} {cur}), в том числе комиссия Займодавца "
-        f"{format_percent(offer.lender_commission)} и комиссия платформы {format_percent(config.PLATFORM_COMMISSION)}. "
+        f"{format_percent(offer.lender_commission)} и комиссия платформы {format_percent(Decimal(str(offer.total_commission)) - Decimal(str(offer.lender_commission)))}. "
         f"Комиссия удерживается при выдаче.",
         (f"Полная стоимость займа: {format_percent(round(cost['effective_rate'], 2))} годовых, переплата за весь срок "
          f"{format_money(cost['overpayment'])} {cur}." if cost["effective_rate"] is not None else

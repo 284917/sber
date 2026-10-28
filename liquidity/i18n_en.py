@@ -126,8 +126,8 @@ EN = {
     "Сумма займа и переплата в валюте по курсу ЦБ сегодня и при его росте на 10–30%.":
         "Loan amount plus overpayment, at today's Bank of Russia rate and if it rises by 10–30%.",
     "Подать заявку": "Apply",
-    "Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 0,8% платформы. Проценты ежемесячно, основной долг в конце срока.":
-        "Indicative estimate: lenders set the actual terms. The fee includes the platform's 0.8%. Interest monthly, principal at the end of the term.",
+    "Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 3% платформы. Проценты ежемесячно, основной долг в конце срока.":
+        "Indicative estimate: lenders set the actual terms. The fee includes the platform's 3%. Interest monthly, principal at the end of the term.",
     "Валюта": "Currency",
     "Ставку и комиссию предложат кредиторы; для оценки подставлены типичные значения.":
         "Lenders will propose the rate and fee; typical values are used for the estimate.",
@@ -179,8 +179,8 @@ EN = {
     # --- FAQ ---
     "Что спрашивают перед первой заявкой": "What people ask before their first application",
     "Сколько стоит пользоваться платформой?": "How much does the platform cost?",
-    "Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
-        "Registration, verification and publishing are free. The platform fee of 0.8% of the amount is included in the offer's total fee and is charged only on a closed deal.",
+    "Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 3% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
+        "Registration, verification and publishing are free. The platform fee of 3% of the amount is included in the offer's total fee and is charged only on a closed deal.",
     "Как считается полная стоимость?": "How is the total cost calculated?",
     "Ставка плюс комиссия за организацию, разнесённая на срок заявки: комиссия × 12 / срок в месяцах. Так предложение с низкой ставкой и высокой комиссией честно сравнивается с остальными.":
         "Rate plus the arrangement fee spread over the term: fee × 12 / term in months. This way an offer with a low rate and a high fee is compared fairly.",
@@ -203,8 +203,8 @@ EN = {
     "Заявка остаётся опубликованной, пока вы её не закроете. Можно изменить срок или сумму и подать новую заявку, чтобы она подошла большему числу кредиторов.":
         "The application stays published until it expires or you withdraw it. You can submit a new one with a different term or amount to reach more lenders.",
     "Опубликуйте первую заявку сегодня": "Publish your first application today",
-    "Регистрация и заявка бесплатны. Комиссия 0,8% только если сделка согласована.":
-        "Registration and applications are free. The 0.8% fee applies only to closed deals.",
+    "Регистрация и заявка бесплатны. Комиссия 3% только если сделка согласована.":
+        "Registration and applications are free. The 3% fee applies only to closed deals.",
 
     # --- Вход и регистрация ---
     "Вход | Платформа ликвидности Сбер": "Sign in | Sber Liquidity Platform",
@@ -354,8 +354,8 @@ EN = {
     "Заявки и предложения": "Applications and offers",
     "Заявка публикуется после модерации. Предложение кредитора становится видно заёмщику после проверки оператором. Заёмщик вправе принять или отклонить любое предложение.":
         "Applications are published after moderation. A lender's offer becomes visible to the borrower after operator review. The borrower may accept or decline any offer.",
-    "Регистрация и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
-        "Registration and publishing are free. The platform fee of 0.8% of the amount is included in the offer's total fee and charged only on a closed deal.",
+    "Регистрация и публикация заявки бесплатны. Комиссия платформы 3% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
+        "Registration and publishing are free. The platform fee of 3% of the amount is included in the offer's total fee and charged only on a closed deal.",
     "Ответственность": "Liability",
     "Условия займа согласуются сторонами напрямую и фиксируются в договоре, который стороны загружают в комнату сделки.":
         "Loan terms are agreed by the parties directly and recorded in the contract they upload to the deal room.",
@@ -605,6 +605,43 @@ EN = {
         "Deals: 0.5 points each, up to 2. Responding within 24 hours gives 1.5 points, within 3 days or no data — 1, slower — 0.5. Minimum score is 1.",
     "Профиль и рейтинг кредитора": "Lender profile and rating",
     "меньше часа": "under an hour",
+    # --- Пароль и «Мой аккаунт» ---
+    "Не короче 10 символов": "At least 10 characters",
+    "Строчная буква": "A lowercase letter",
+    "Заглавная буква": "An uppercase letter",
+    "Цифра": "A digit",
+    "Спецсимвол, например ! ? # %": "A special character, e.g. ! ? # %",
+    "Пароль слишком простой: выполните все пункты списка ниже": "The password is too weak: meet every rule in the list below",
+    "Профиль": "Profile",
+    "Мой аккаунт": "My account",
+    "Мой аккаунт · Sber": "My account · Sber",
+    "Мой аккаунт · Сбер": "My account · Sber",
+    "Роль": "Role",
+    "На платформе с": "Member since",
+    "Название и реквизиты компании проверены при верификации. Чтобы их изменить, напишите оператору: после изменения нужна повторная проверка.":
+        "Company name and details were checked during verification. To change them, contact an operator: changes require a new review.",
+    "Смена пароля": "Change password",
+    "Текущий пароль": "Current password",
+    "Новый пароль": "New password",
+    "Повторите новый пароль": "Repeat the new password",
+    "Пароли не совпадают": "Passwords do not match",
+    "Сменить пароль": "Change password",
+    "Настройки": "Settings",
+    "Тема оформления": "Theme",
+    "Сменить": "Switch",
+    "Язык интерфейса": "Interface language",
+    "Приложение на телефоне": "Mobile app",
+    "через меню браузера «Установить»": "via the browser's “Install” menu",
+    "Пароль хранится только в виде хеша, сотрудники его не видят.": "Your password is stored only as a hash; staff never see it.",
+    "После пяти неверных паролей вход блокируется на 15 минут.": "After five wrong passwords sign-in is locked for 15 minutes.",
+    "Выйти из аккаунта": "Sign out",
+    "Пароль изменён. Используйте новый пароль при следующем входе.": "Password changed. Use the new password next time you sign in.",
+    "Текущий пароль указан неверно.": "The current password is incorrect.",
+    "Новый пароль и повтор не совпадают.": "The new password and its repeat do not match.",
+    "Новый пароль совпадает с текущим — придумайте другой.": "The new password is the same as the current one — choose another.",
+    "Уведомления о новых заявках ": "New application alerts",
+    "Сумма предложения слишком мала: минимум 10% от суммы заявки (или весь остаток, если он меньше). Иначе заёмщику пришлось бы собирать заявку из десятков мелких предложений.":
+        "The offer amount is too small: the minimum is 10% of the application (or the whole remainder if smaller). Otherwise borrowers would have to assemble an application from dozens of tiny offers.",
     # Демо-компании на витрине главной
     "ООО «Альфа Технологии»": "Alfa Technologies LLC",
     "ООО «Северный терминал»": "Severny Terminal LLC",
@@ -644,6 +681,13 @@ PATTERNS = [
     (r"Отозвать предложение по заявке №(\d+)\?", r"Withdraw your offer on application #\1?"),
     (r"Кредитор · (.+) · на платформе с (\S+)", lambda m: f"Lender · {_country(m.group(1))} · on the platform since {m.group(2)}"),
     (r"на платформе с (\S+)", r"on the platform since \1"),
+    (r"Мой аккаунт: (.+)", r"My account: \1"),
+    (r"· документы (\d+) из (\d+)", r"· documents \1 of \2"),
+    (r"Сессия завершается автоматически через (\d+) ч\.", r"Your session ends automatically after \1 h."),
+    (r"Заёмщик увидит его после проверки оператором, обычно до (\d+) ч",
+     r"The borrower will see it after operator review, usually within \1 h"),
+    (r"От (.+) до (.+): заявку можно собрать из нескольких предложений",
+     r"From \1 to \2: an application can be funded by several offers"),
     (r"ещё в работе: (\d+)", r"in progress: \1"),
     (r"комиссия в среднем (.+)", r"average fee \1"),
     (r"Работает с валютами: (.+) · всего предложений: (\d+)", r"Currencies: \1 · offers in total: \2"),

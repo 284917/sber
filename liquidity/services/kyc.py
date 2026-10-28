@@ -101,5 +101,5 @@ def reject(db: Session, target_user_id: int, reason: str, actor=None):
         db.delete(doc)
     target.kyc_reject_reason = reason
     record(db, actor, f"Отклонил верификацию {target.display_name}: {reason}")
-    notify(db, target.id, f"Верификация отклонена: {reason}. Загрузите документы заново", "/kyc", "bad")
+    notify(db, target.id, f"Верификация отклонена. Загрузите документы заново. Причина: {reason}", "/kyc", "bad")
     db.commit()

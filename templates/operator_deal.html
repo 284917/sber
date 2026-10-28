@@ -43,6 +43,25 @@
                 {% if checks[key] %}<span class="pill pill-ok">Да</span>{% else %}<span class="pill pill-bad">Нет</span>{% endif %}
             </div>
             {% endfor %}
+            {% if contract %}
+            <div class="contract-preview">
+                <div class="contract-preview-head">
+                    <div class="doc-info">
+                        <b class="doc-name">{{ contract.file_path|filename }}</b>
+                        <div class="small muted">Загрузил: {{ contract.sender.display_name if contract.sender else '—' }}{% if contract.created_at %} · {{ contract.created_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}</div>
+                        {% if contract.sha256 %}<div class="small muted">SHA-256: <code>{{ contract.sha256[:16] }}…{{ contract.sha256[-8:] }}</code></div>{% endif %}
+                    </div>
+                    <a href="/{{ contract.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть в новой вкладке</a>
+                </div>
+                <object data="/{{ contract.file_path }}#view=FitH" type="application/pdf" class="pdf-frame" aria-label="Договор займа по сделке №{{ app.id }}">
+                    <div class="pdf-fallback">
+                        {{ ui.icon('file-text') }}
+                        <p>Этот браузер не показывает PDF внутри страницы.</p>
+                        <a href="/{{ contract.file_path }}" target="_blank" class="btn btn-primary btn-sm">Открыть договор</a>
+                    </div>
+                </object>
+            </div>
+            {% endif %}
             <div style="margin-top: 16px;">
             {% if app.status == 'agreed' %}
                 {{ ui.flash('ok', 'Сделка согласована ' ~ (app.confirmed_at.strftime('%d.%m.%Y %H:%M') if app.confirmed_at else '') ~ ' и перенесена в архив.') }}

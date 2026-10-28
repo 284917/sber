@@ -136,7 +136,7 @@ def test_expiry_closes_offers_and_applications():
     creditor.post(f"/create_offer/{app_id}", data={"amount": "300000", "rate": "9", "lender_comm": "1", "valid_days": "7"})
     oid = offer_of(app_id, "exp-c@test.cy")
     admin.post(f"/operator/offer/{oid}/show")
-    assert creditor.post(f"/create_offer/{app_id}", data={"amount": "1", "rate": "9", "lender_comm": "1",
+    assert creditor.post(f"/create_offer/{app_id}", data={"amount": "300000", "rate": "9", "lender_comm": "1",
                                                           "valid_days": "7"}).headers["location"].endswith("error=duplicate")
 
     with SessionLocal() as db:
@@ -151,7 +151,7 @@ def test_expiry_closes_offers_and_applications():
 
 def test_audit_journal_onboarding_and_charts():
     admin = login("admin@test.local", "admin-password")
-    admin.post("/admin/create_user", data={"email": "audit-admin@test.local", "password": "password123", "role": "admin"})
+    admin.post("/admin/create_user", data={"email": "audit-admin@test.local", "password": "Str0ng!Pass1", "role": "admin"})
     journal = admin.get("/admin?tab=journal").text
     assert "Журнал действий" in journal and "Создал сотрудника audit-admin@test.local" in journal
     plain = login("audit-admin@test.local")
@@ -167,7 +167,7 @@ def test_audit_journal_onboarding_and_charts():
         assert stats["published"] >= 1 and len(stats["demand"]) == 3
 
     with SessionLocal() as db:
-        db.add(models.User(email="new-b@test.ru", password_hash=__import__("liquidity.security", fromlist=["x"]).hash_password("password123"),
+        db.add(models.User(email="new-b@test.ru", password_hash=__import__("liquidity.security", fromlist=["x"]).hash_password("Str0ng!Pass1"),
                            role="borrower", company_name="ООО «Новичок»", country_code="RU", registration_number="7710030411"))
         db.commit()
     page = login("new-b@test.ru").get("/dashboard").text
@@ -215,7 +215,7 @@ def test_english_version_for_guests_and_lenders():
         assert '<html lang="en">' in page, url
         assert set(i18n.untranslated(page)) <= allowed, (url, set(i18n.untranslated(page)) - allowed)
     landing = guest.get("/").text
-    assert "How much will the financing cost" in landing and "'en-US'" in landing and "11.6%" in landing
+    assert "How much will the financing cost" in landing and "'en-US'" in landing and "16.4%" in landing
 
     make_company("en-c@test.cy", "creditor", "English Lender", "CY", "HE 61")
     lender = login("en-c@test.cy")

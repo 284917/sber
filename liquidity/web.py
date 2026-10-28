@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from liquidity import config, i18n
 from liquidity.security import csrf_field
 from liquidity.services import sla
-from liquidity.services.files import display_name
+from liquidity.services.files import MAX_FILE_BYTES, display_name
 
 
 def format_money(value):
@@ -83,7 +83,7 @@ templates.env.globals.update(
     APPLICATION_STATUSES=config.APPLICATION_STATUSES, OFFER_STATUSES=config.OFFER_STATUSES,
     COUNTRY_NAMES=config.COUNTRY_NAMES, TRANSFER_METHODS=config.TRANSFER_METHODS, ROLE_NAMES=config.ROLE_NAMES,
     KYC_STATUSES=config.KYC_STATUSES, PLATFORM_COMMISSION=config.PLATFORM_COMMISSION, DEMO_MODE=config.DEMO_MODE, SITE_URL=config.SITE_URL,
-    csrf_field=csrf_field, sla_status=sla.status, SLA_HOURS=config.SLA_HOURS,
+    csrf_field=csrf_field, sla_status=sla.status, SLA_HOURS=config.SLA_HOURS, MAX_UPLOAD_BYTES=MAX_FILE_BYTES,
 )
 
 

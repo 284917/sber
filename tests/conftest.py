@@ -42,7 +42,7 @@ class Browser(TestClient):
         return super().post(url, data=data, **kwargs)
 
 
-def login(email, password="password123") -> Browser:
+def login(email, password="Str0ng!Pass1") -> Browser:
     browser = Browser()
     response = browser.post("/login", data={"email": email, "password": password})
     assert response.status_code == 303 and response.headers["location"] == "/dashboard", response.text

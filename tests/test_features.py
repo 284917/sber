@@ -71,7 +71,7 @@ def test_funnel_and_weekly():
 
 def make_company(email, role, name, country, regnum):
     with SessionLocal() as db:
-        user = models.User(email=email, password_hash=hash_password("password123"), role=role, company_name=name,
+        user = models.User(email=email, password_hash=hash_password("Str0ng!Pass1"), role=role, company_name=name,
                            country_code=country, registration_number=regnum)
         db.add(user)
         db.flush()

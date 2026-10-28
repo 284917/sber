@@ -40,12 +40,14 @@
             <a href="{{ href }}" class="{{ 'active' if active == key }}" {% if active == key %}aria-current="page"{% endif %}>{{ base_ui.icon(icon_name) }}<span>{{ label }}</span>{% if count %}<span class="count">{{ count }}</span>{% endif %}</a>
             {% endfor %}
             {% endfor %}
+            <div class="nav-label">Профиль</div>
+            <a href="/account" class="{{ 'active' if active == 'account' }}" {% if active == 'account' %}aria-current="page"{% endif %}>{{ base_ui.icon('identification-card') }}<span>Мой аккаунт</span></a>
         </nav>
         <div class="sidebar-foot">
             <div class="who-row">
                 <span class="avatar" aria-hidden="true">{{ (user.display_name or '?')|replace('ООО «', '')|replace('ооо "', '')|replace('ООО "', '')|first|upper }}</span>
                 <div class="who-wrap">
-                    <div class="who" title="{{ user.display_name }}">{{ user.display_name }}</div>
+                    <a href="/account" class="who" title="Мой аккаунт: {{ user.display_name }}">{{ user.display_name }}</a>
                     <div class="who-role">{{ ROLE_NAMES.get(role, role) }}</div>
                     {% if role in ('borrower', 'creditor') %}<a href="/kyc" class="who-kyc kyc-{{ user.kyc_status }}">{{ KYC_STATUSES[user.kyc_status] }}</a>{% endif %}
                 </div>
@@ -123,6 +125,30 @@
             items.forEach((el, i) => { el.style.transitionDelay = open ? (i * step) + 'ms' : '0ms'; });
         });
     })();
+</script>
+<div class="toast" id="toast" role="alert" hidden></div>
+<script>
+    // Системное уведомление внизу экрана
+    function showToast(text, kind) {
+        const t = document.getElementById('toast');
+        t.textContent = text; t.className = 'toast toast-' + (kind || 'bad'); t.hidden = false;
+        clearTimeout(t._timer); t._timer = setTimeout(() => { t.hidden = true; }, 6000);
+    }
+    // Файл больше лимита отсекаем сразу после выбора: иначе сервер оборвёт загрузку и покажет чужую страницу ошибки
+    const MAX_UPLOAD = {{ MAX_UPLOAD_BYTES }};
+    document.addEventListener('change', (e) => {
+        const input = e.target;
+        if (!(input instanceof HTMLInputElement) || input.type !== 'file') return;
+        const big = [...input.files].find((f) => f.size > MAX_UPLOAD);
+        if (!big) return;
+        e.stopImmediatePropagation();
+        input.value = '';
+        showToast('Файл «' + big.name + '» весит ' + (big.size / 1048576).toFixed(1).replace('.', ',') + ' МБ, а максимум 4 МБ. Сожмите его и загрузите снова.');
+    }, true);
+    document.addEventListener('submit', (e) => {
+        const big = [...e.target.querySelectorAll('input[type=file]')].flatMap((i) => [...i.files]).find((f) => f.size > MAX_UPLOAD);
+        if (big) { e.preventDefault(); e.stopImmediatePropagation(); showToast('Файл «' + big.name + '» больше 4 МБ. Сожмите его и загрузите снова.'); }
+    }, true);
 </script>
 <script>
     // Кнопки «Копировать»: значение из data-copy в буфер обмена

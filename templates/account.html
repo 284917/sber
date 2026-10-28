@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'account' %}
+{% block title %}Мой аккаунт{% endblock %}
+{% block content %}
+{% set qp = request.query_params %}
+{% set company = role in ('borrower', 'creditor') %}
+<div class="page-head">
+    <div>
+        <h1>Мой аккаунт</h1>
+        <div class="sub">{{ user.display_name }} · {{ ROLE_NAMES.get(role, role) }}{% if user.is_superadmin %} · главный администратор{% endif %}</div>
+    </div>
+</div>
+
+{% if qp.get('password_changed') %}{{ ui.flash('ok', 'Пароль изменён. Используйте новый пароль при следующем входе.') }}{% endif %}
+{% set errors = {'current': 'Текущий пароль указан неверно.', 'repeat': 'Новый пароль и повтор не совпадают.',
+                 'same': 'Новый пароль совпадает с текущим — придумайте другой.',
+                 'password': 'Новый пароль слишком простой: нужно не короче ' ~ min_length ~ ' символов, строчные и заглавные буквы, цифра и спецсимвол.'} %}
+{% if qp.get('error') %}{{ ui.flash('bad', errors.get(qp.get('error'), 'Не удалось изменить пароль.')) }}{% endif %}
+
+<div class="grid grid-side">
+    <div>
+        <section class="card account-card">
+            <div class="account-head">
+                <span class="avatar avatar-lg" aria-hidden="true">{{ (user.display_name or '?')|replace('ООО «', '')|replace('ооо "', '')|replace('ООО "', '')|first|upper }}</span>
+                <div>
+                    <h2 class="card-title" style="margin: 0;">{{ user.display_name }}</h2>
+                    <div class="small muted">{{ user.email }}</div>
+                </div>
+            </div>
+            <div class="kv"><span>Роль</span><span>{{ 'Главный администратор' if user.is_superadmin else ROLE_NAMES.get(role, role) }}</span></div>
+            {% if company %}
+            <div class="kv"><span>Страна регистрации</span><span>{{ ui.country(user.country_code) }}</span></div>
+            <div class="kv"><span>{{ 'ИНН' if role == 'borrower' else 'Регистрационный номер' }}</span><span class="num">{{ user.registration_number or '—' }}</span></div>
+            <div class="kv"><span>Верификация</span><span><a href="/kyc" class="who-kyc kyc-{{ user.kyc_status }}">{{ KYC_STATUSES[user.kyc_status] }}</a>{% if kyc_total %} <span class="muted small">· документы {{ kyc_done }} из {{ kyc_total }}</span>{% endif %}</span></div>
+            {% endif %}
+            <div class="kv"><span>На платформе с</span><span>{{ user.created_at.strftime('%d.%m.%Y') if user.created_at else '—' }}</span></div>
+            {% if company %}<p class="hint">Название и реквизиты компании проверены при верификации. Чтобы их изменить, напишите оператору: после изменения нужна повторная проверка.</p>{% endif %}
+        </section>
+
+        <section class="card" id="password">
+            <h2 class="card-title">Смена пароля</h2>
+            <form method="post" action="/account/password" class="password-form" autocomplete="off">{{ csrf_field(request) }}
+                <div class="field"><label class="f" for="cur-pass">Текущий пароль</label>
+                    <input type="password" name="current_password" id="cur-pass" class="input" required autocomplete="current-password"></div>
+                <div class="field"><label class="f" for="new-pass">Новый пароль</label>
+                    <input type="password" name="new_password" id="new-pass" class="input" minlength="{{ min_length }}" required autocomplete="new-password" aria-describedby="new-pass-rules">
+                    <ul class="pw-rules" id="new-pass-rules" aria-live="polite">
+                        <li data-rule="len">Не короче {{ min_length }} символов</li>
+                        <li data-rule="lower">Строчная буква</li>
+                        <li data-rule="upper">Заглавная буква</li>
+                        <li data-rule="digit">Цифра</li>
+                        <li data-rule="special">Спецсимвол, например ! ? # %</li>
+                    </ul>
+                </div>
+                <div class="field"><label class="f" for="rep-pass">Повторите новый пароль</label>
+                    <input type="password" name="repeat_password" id="rep-pass" class="input" required autocomplete="new-password">
+                    <div class="field-error" id="rep-error" hidden>Пароли не совпадают</div></div>
+                <button type="submit" class="btn btn-primary">Сменить пароль</button>
+            </form>
+        </section>
+    </div>
+
+    <aside>
+        <section class="card">
+            <h2 class="card-title">Настройки</h2>
+            <div class="kv"><span>Тема оформления</span><span><button type="button" class="btn btn-secondary btn-sm" onclick="toggleTheme()">{{ ui.icon('moon', 'ic-moon') }}{{ ui.icon('sun', 'ic-sun') }} Сменить</button></span></div>
+            {% if role == 'creditor' %}
+            {% set en = request.cookies.get('lang') == 'en' %}
+            <div class="kv"><span>Язык интерфейса</span><span><a href="/lang/{{ 'ru' if en else 'en' }}?next=/account" class="btn btn-secondary btn-sm">{{ 'Русский' if en else 'English' }}</a></span></div>
+            {% endif %}
+            <div class="kv"><span>Приложение на телефоне</span><span><button type="button" class="btn btn-secondary btn-sm" data-install hidden>Установить</button><span class="small muted" data-install-hint>через меню браузера «Установить»</span></span></div>
+        </section>
+        <section class="card">
+            <h2 class="card-title">Безопасность</h2>
+            <ul class="check-list" style="margin: 0;">
+                <li>{{ ui.icon('lock-key') }}<span class="small">Пароль хранится только в виде хеша, сотрудники его не видят.</span></li>
+                <li>{{ ui.icon('warning-circle') }}<span class="small">После пяти неверных паролей вход блокируется на 15 минут.</span></li>
+                <li>{{ ui.icon('clock') }}<span class="small">Сессия завершается автоматически через {{ session_hours }} ч.</span></li>
+            </ul>
+            <a href="/logout" class="btn btn-secondary btn-block" style="margin-top: 16px;">{{ ui.icon('sign-out') }} Выйти из аккаунта</a>
+        </section>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const $ = (id) => document.getElementById(id);
+        const rules = (v) => [['len', v.length >= {{ min_length }}], ['lower', /[a-zа-яё]/.test(v)], ['upper', /[A-ZА-ЯЁ]/.test(v)],
+                              ['digit', /\d/.test(v)], ['special', /[^A-Za-zА-Яа-яЁё0-9\s]/.test(v)]];
+        $('new-pass').addEventListener('input', () => rules($('new-pass').value).forEach(([k, ok]) =>
+            document.querySelector('#new-pass-rules [data-rule="' + k + '"]').classList.toggle('ok', ok)));
+        const same = () => { const bad = $('rep-pass').value && $('rep-pass').value !== $('new-pass').value; $('rep-error').hidden = !bad; return !bad; };
+        $('rep-pass').addEventListener('input', same);
+        document.querySelector('.password-form').addEventListener('submit', (e) => {
+            if (!same() || !rules($('new-pass').value).every(([, ok]) => ok)) { e.preventDefault(); $('new-pass').focus(); }
+        });
+        // Подсказка нужна, только если браузер не предложил установку сам
+        const hideHint = () => document.querySelectorAll('[data-install-hint]').forEach((h) => { h.hidden = true; });
+        if (document.querySelector('[data-install]:not([hidden])')) hideHint();
+        addEventListener('beforeinstallprompt', hideHint);
+    })();
+</script>
+{% endblock %}

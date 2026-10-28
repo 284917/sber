@@ -26,7 +26,7 @@ def test_landing_calculator_and_security_page():
     page = Browser().get("/")
     assert page.status_code == 200 and 'id="calc"' in page.text and 'id="r-effective"' in page.text
     data = json.loads(re.search(r"const data = (\{.*?\});", page.text).group(1))
-    assert data["platform_commission"] == 0.8 and data["rates"]["EUR"] == 90 and data["rates_date"] == "27.10.2026"
+    assert data["platform_commission"] == 3.0 and data["rates"]["EUR"] == 90 and data["rates_date"] == "27.10.2026"
 
     security = Browser().get("/security")
     assert security.status_code == 200

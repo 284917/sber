@@ -52,16 +52,16 @@
                     <div class="showcase-body">
                         <div class="callout">
                             <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 700;">Beta Capital Ltd</div></div>
-                            <div><div class="small muted">Полная стоимость</div><div class="big">11,6%</div></div>
+                            <div><div class="small muted">Полная стоимость</div><div class="big">16%</div></div>
                             <div><div class="small muted">Экономия против следующего</div><div class="big">1 000 EUR</div></div>
                         </div>
                         <div class="table-wrap" style="border: 1px solid var(--line); border-radius: 12px;">
                             <table class="t compare">
                                 <thead><tr><th>Кредитор</th><th class="num hide-sm">Сумма</th><th class="num">Ставка</th><th class="num hide-sm">Комиссия</th><th class="num hide-sm">Переплата</th><th class="num">Полная стоимость</th></tr></thead>
                                 <tbody>
-                                    <tr class="best-row"><td><b>Beta Capital Ltd</b> <span class="tag tag-best">Лучшее</span><div class="small muted">Кипр</div></td><td class="num hide-sm">500 000</td><td class="num">8%</td><td class="num hide-sm">1,8%</td><td class="num hide-sm"><b>29 000</b> EUR</td><td class="num"><span class="big-num">11,6%</span></td></tr>
-                                    <tr><td><b>Shenzhen Rongtong Capital</b><div class="small muted">Китай</div></td><td class="num hide-sm">450 000</td><td class="num">7,6%</td><td class="num hide-sm">2,2%</td><td class="num hide-sm"><b>27 000</b> EUR</td><td class="num"><span class="big-num">12%</span></td></tr>
-                                    <tr><td><b>Gulf Trade Finance FZE</b><div class="small muted">ОАЭ</div></td><td class="num hide-sm">500 000</td><td class="num">7,2%</td><td class="num hide-sm">3%</td><td class="num hide-sm"><b>33 000</b> EUR</td><td class="num"><span class="big-num">13,2%</span></td></tr>
+                                    <tr class="best-row"><td><b>Beta Capital Ltd</b> <span class="tag tag-best">Лучшее</span><div class="small muted">Кипр</div></td><td class="num hide-sm">500 000</td><td class="num">8%</td><td class="num hide-sm">4%</td><td class="num hide-sm"><b>40 000</b> EUR</td><td class="num"><span class="big-num">16%</span></td></tr>
+                                    <tr><td><b>Shenzhen Rongtong Capital</b><div class="small muted">Китай</div></td><td class="num hide-sm">450 000</td><td class="num">7,6%</td><td class="num hide-sm">4,4%</td><td class="num hide-sm"><b>36 900</b> EUR</td><td class="num"><span class="big-num">16,4%</span></td></tr>
+                                    <tr><td><b>Gulf Trade Finance FZE</b><div class="small muted">ОАЭ</div></td><td class="num hide-sm">500 000</td><td class="num">7,2%</td><td class="num hide-sm">5,2%</td><td class="num hide-sm"><b>44 000</b> EUR</td><td class="num"><span class="big-num">17,6%</span></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -85,7 +85,7 @@
                             <div><span class="small muted">Сумма</span><b>500 000</b></div>
                             <div><span class="small muted">Ставка</span><b>8%</b></div>
                             <div><span class="small muted">Ваша комиссия</span><b>1%</b></div>
-                            <div class="offer-preview-result"><span class="small muted">Заёмщик увидит</span><b>11,6% годовых</b></div>
+                            <div class="offer-preview-result"><span class="small muted">Заёмщик увидит</span><b>16% годовых</b></div>
                         </div>
                         <div class="app-preview muted-preview">
                             <div>
@@ -213,7 +213,7 @@
                         <p class="hint">Сумма займа и переплата в валюте по курсу ЦБ сегодня и при его росте на 10–30%.</p>
                     </details>
                     <a href="/register" class="btn btn-primary btn-block">Подать заявку {{ ui.icon('arrow-right') }}</a>
-                    <p class="small muted" style="margin-top: 12px;">Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 0,8% платформы. Проценты ежемесячно, основной долг в конце срока.</p>
+                    <p class="small muted" style="margin-top: 12px;">Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 3% платформы. Проценты ежемесячно, основной долг в конце срока.</p>
                 </div>
             </form>
         </div>
@@ -328,7 +328,7 @@
             <h2 class="h-section reveal" style="margin-top: 16px;">Что спрашивают перед первой заявкой</h2>
             <div class="faq reveal">
                 {% for q, a in [
-                    ('Сколько стоит пользоваться платформой?', 'Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.'),
+                    ('Сколько стоит пользоваться платформой?', 'Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 3% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.'),
                     ('Как считается полная стоимость?', 'Ставка плюс комиссия за организацию, разнесённая на срок заявки: комиссия × 12 / срок в месяцах. Так предложение с низкой ставкой и высокой комиссией честно сравнивается с остальными.'),
                     ('Какие документы нужны для проверки?', 'Заёмщику: устав, выписка из ЕГРЮЛ, паспорт директора, сведения о бенефициарах и документ о полномочиях директора. Кредитору: свидетельство о регистрации, устав, реестр директоров, бенефициары, налоговое резидентство и подтверждение источника средств.'),
                     ('Сколько длится модерация заявки?', 'Администратор проверяет заявку вручную, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.'),
@@ -350,7 +350,7 @@
     <section class="section section-tint">
         <div class="wrap final-cta reveal">
             <h2 class="h-section" style="text-align: center;">Опубликуйте первую заявку сегодня</h2>
-            <p class="lead-lg" style="text-align: center;">Регистрация и заявка бесплатны. Комиссия 0,8% только если сделка согласована.</p>
+            <p class="lead-lg" style="text-align: center;">Регистрация и заявка бесплатны. Комиссия 3% только если сделка согласована.</p>
             <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
         </div>
     </section>

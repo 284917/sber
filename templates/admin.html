@@ -35,7 +35,7 @@
 {% if qp.get('removed') %}{{ ui.flash('ok', 'Сотрудник отключён: войти он больше не сможет, история его действий сохранена.') }}{% endif %}
 {% if qp.get('error') == 'exists' %}{{ ui.flash('bad', 'Пользователь с таким email уже существует.') }}{% endif %}
 {% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину, её увидит компания.') }}{% endif %}
-{% if qp.get('error') == 'password' %}{{ ui.flash('bad', 'Пароль сотрудника должен быть не короче 8 символов.') }}{% endif %}
+{% if qp.get('error') == 'password' %}{{ ui.flash('bad', 'Пароль сотрудника слишком простой: нужно не короче 10 символов, строчные и заглавные буквы, цифра и спецсимвол.') }}{% endif %}
 {% if qp.get('error') == 'self' %}{{ ui.flash('bad', 'Главного администратора отключить нельзя.') }}{% endif %}
 {% if qp.get('kyc_approved') %}{{ ui.flash('ok', 'Верификация компании одобрена.') }}{% endif %}
 {% if qp.get('kyc_rejected') %}{{ ui.flash('warn', 'Верификация отклонена, компания увидит причину.') }}{% endif %}
@@ -201,8 +201,8 @@
                         <button type="submit" class="btn btn-primary btn-sm btn-block">Одобрить</button>
                     </form>
                     <form method="post" action="/admin/kyc/reject_user/{{ company.id }}" class="decision-reject" data-confirm="Отклонить верификацию {{ company.display_name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить" data-confirm-text="Загруженные документы будут удалены, компания увидит причину и загрузит пакет заново.">{{ csrf_field(request) }}
-                        <input type="text" name="reason" class="input input-sm" placeholder="Причина отказа" maxlength="500" required aria-label="Причина отказа для {{ company.display_name }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
+                        <textarea name="reason" class="input reason-input" rows="3" placeholder="Причина отказа: что не так и что загрузить заново" maxlength="500" required aria-label="Причина отказа для {{ company.display_name }}"></textarea>
+                        <button type="submit" class="btn btn-danger btn-sm btn-block">Отклонить</button>
                     </form>
                 </div>
             </td>
@@ -305,7 +305,8 @@
         <h2 class="card-title">Добавить сотрудника</h2>
         <form method="post" action="/admin/create_user">{{ csrf_field(request) }}
             <div class="field"><label class="f" for="s-email">Email</label><input type="email" name="email" id="s-email" class="input" required></div>
-            <div class="field"><label class="f" for="s-pass">Пароль</label><input type="password" name="password" id="s-pass" class="input" minlength="8" required autocomplete="new-password"></div>
+            <div class="field"><label class="f" for="s-pass">Пароль</label><input type="password" name="password" id="s-pass" class="input" minlength="10" required autocomplete="new-password">
+                <div class="hint">Не короче 10 символов: строчные и заглавные буквы, цифра и спецсимвол</div></div>
             <div class="field"><label class="f" for="s-role">Роль</label>
                 <select name="role" id="s-role" class="input" required>
                     <option value="operator">Оператор</option>

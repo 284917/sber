@@ -14,7 +14,7 @@
     {% if deals %}
     <div class="table-wrap">
     <table class="t">
-        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Назначение</th><th></th></tr></thead>
+        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Назначение</th><th>Договор</th><th></th></tr></thead>
         <tbody>
         {% for app in deals %}
         <tr>
@@ -23,6 +23,7 @@
             <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
             <td>{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}</td>
             <td class="small" style="max-width: 280px;">{{ app.purpose }}</td>
+            <td>{% set c = contracts.get(app.id) %}{% if c %}<a href="/{{ c.file_path }}" target="_blank" class="btn btn-secondary btn-sm">{{ ui.icon('file-text', 'ic-sm') }} Открыть PDF</a>{% else %}<span class="pill pill-bad">Не загружен</span>{% endif %}</td>
             <td class="r">
                 <div class="actions" style="justify-content: flex-end;">
                     <a href="/deal/{{ app.id }}" class="btn btn-secondary btn-sm">Чат</a>

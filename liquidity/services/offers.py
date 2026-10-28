@@ -36,6 +36,12 @@ def remaining(db: Session, application: models.Application) -> Decimal:
     return max(Decimal(0), Decimal(application.funding_amount) - funded(db, application.id))
 
 
+def min_offer(application: models.Application, left: Decimal) -> Decimal:
+    """Минимальная сумма предложения: MIN_OFFER_SHARE% заявки, но не больше несобранного остатка."""
+    share = (Decimal(application.funding_amount) * config.MIN_OFFER_SHARE / 100).quantize(Decimal("0.01"))
+    return min(share, left)
+
+
 def create(db: Session, creditor: models.User, app_id: int, *, amount: float, rate: float, lender_comm: float,
            extra_terms: str = "", valid_days: int = config.OFFER_VALID_DEFAULT) -> models.Offer:
     if not kyc.is_approved(db, creditor.id):
@@ -45,7 +51,10 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
         raise NotFound()
     extra_terms = extra_terms.strip()
     # Проверки из макета: сумма не больше ещё не собранной части заявки, ставка больше 0
-    if (not (0 < amount <= float(remaining(db, application))) or not (0 < rate < 100)
+    left = remaining(db, application)
+    if 0 < amount < float(min_offer(application, left)):
+        raise Invalid("offer_min", f"Минимальное предложение — {config.MIN_OFFER_SHARE}% суммы заявки")
+    if (not (0 < amount <= float(left)) or not (0 < rate < 100)
             or not (0 <= lender_comm < 100) or len(extra_terms) > 1000
             or valid_days not in config.OFFER_VALID_CHOICES):
         raise Invalid("offer")
@@ -55,6 +64,7 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
 
     offer = models.Offer(application_id=app_id, user_id=creditor.id, funding_amount=amount,
                          annual_interest_rate=rate, lender_commission=lender_comm,
+                         platform_commission=config.PLATFORM_COMMISSION,
                          total_commission=lender_comm + config.PLATFORM_COMMISSION,
                          extra_terms=extra_terms or None, status="pending",
                          valid_until=date.today() + timedelta(days=valid_days))

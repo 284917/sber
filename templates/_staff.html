@@ -24,8 +24,8 @@
                 <form method="post" action="/admin/application/{{ app.id }}/moderate" class="decision-reject" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
                       data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя.">{{ csrf_field(request) }}
                     <input type="hidden" name="decision" value="reject">
-                    <input type="text" name="comment" class="input input-sm" placeholder="Причина отказа" maxlength="500" required aria-label="Причина отказа по заявке №{{ app.id }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
+                    <textarea name="comment" class="input reason-input" rows="3" placeholder="Причина отказа: заёмщик увидит этот текст" maxlength="500" required aria-label="Причина отказа по заявке №{{ app.id }}"></textarea>
+                    <button type="submit" class="btn btn-danger btn-sm btn-block">Отклонить</button>
                 </form>
             </div>
         </td>
@@ -40,7 +40,7 @@
 {% macro unpublish_form(app, request) -%}
 <form method="post" action="/admin/application/{{ app.id }}/unpublish" class="decision-reject" data-confirm="Снять заявку №{{ app.id }} с публикации?" data-confirm-kind="danger" data-confirm-ok="Снять"
       data-confirm-text="Кредиторы перестанут её видеть, открытые предложения закроются. Заёмщик увидит причину.">{{ csrf_field(request) }}
-    <input type="text" name="reason" class="input input-sm" placeholder="Причина" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}">
-    <button type="submit" class="btn btn-danger btn-sm">Снять</button>
+    <textarea name="reason" class="input reason-input" rows="2" placeholder="Причина снятия" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}"></textarea>
+    <button type="submit" class="btn btn-danger btn-sm btn-block">Снять с публикации</button>
 </form>
 {%- endmacro %}
