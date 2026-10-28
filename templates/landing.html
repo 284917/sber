@@ -100,6 +100,17 @@
         </div>
     </section>
 
+    <!-- Живые цифры из базы платформы -->
+    <section class="live" aria-label="Платформа в цифрах">
+        <div class="wrap live-grid">
+            <div class="live-item"><b data-count="{{ stats.published }}">{{ stats.published }}</b><span>заявок опубликовано</span></div>
+            <div class="live-item"><b data-count="{{ stats.offers }}">{{ stats.offers }}</b><span>предложений кредиторов</span></div>
+            <div class="live-item"><b {% if stats.avg_effective %}data-count="{{ stats.avg_effective }}" data-decimals="1" data-suffix="%"{% endif %}>{{ (stats.avg_effective|string|replace('.', ',') ~ '%') if stats.avg_effective else '—' }}</b><span>средняя полная стоимость</span></div>
+            <div class="live-item"><b data-count="{{ stats.agreed }}">{{ stats.agreed }}</b><span>сделок согласовано</span></div>
+        </div>
+        <p class="wrap live-note"><span class="live-dot" aria-hidden="true"></span> Данные платформы в реальном времени</p>
+    </section>
+
     <!-- Слоган: слова проявляются по одному при прокрутке -->
     <section class="section section-dark">
         <div class="wrap">
@@ -193,10 +204,60 @@
                         <div><dt>Проценты в месяц</dt><dd id="r-monthly">—</dd></div>
                         <div class="calc-total"><dt>Переплата</dt><dd><b id="r-overpay">—</b><span class="rub" id="r-rub"></span></dd></div>
                     </dl>
+                    <details class="stress calc-stress" id="calc-stress" hidden>
+                        <summary>{{ ui.icon('trend-up', 'ic-sm') }} Если рубль ослабнет</summary>
+                        <table class="t">
+                            <thead><tr><th>Курс</th><th class="num">Вернуть в рублях</th><th class="num">Дороже на</th></tr></thead>
+                            <tbody id="stress-body"></tbody>
+                        </table>
+                        <p class="hint">Сумма займа и переплата в валюте по курсу ЦБ сегодня и при его росте на 10–30%.</p>
+                    </details>
                     <a href="/register" class="btn btn-primary btn-block">Подать заявку {{ ui.icon('arrow-right') }}</a>
                     <p class="small muted" style="margin-top: 12px;">Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 0,8% платформы. Проценты ежемесячно, основной долг в конце срока.</p>
                 </div>
             </form>
+        </div>
+    </section>
+
+    <!-- Потоки ликвидности: страны кредиторов → российские компании → страны получения -->
+    <section class="section" id="flows">
+        <div class="wrap">
+            <span class="eyebrow reveal">География</span>
+            <h2 class="h-section reveal" style="margin-top: 16px;">Как ликвидность движется через платформу</h2>
+            <p class="lead-lg reveal" style="margin-top: 16px;">Слева — откуда кредиторы делают предложения, справа — куда российские компании получают средства. Толщина линии — число предложений и заявок.</p>
+            {% set supply = stats.supply if stats.supply else [('AE', 'ОАЭ', 0), ('CY', 'Кипр', 0), ('CN', 'Китай', 0), ('TR', 'Турция', 0)] %}
+            {% set smax = (supply|map(attribute=2)|max) or 1 %}
+            {% set dmax = (stats.demand|map(attribute=2)|max) or 1 %}
+            {% set left_step = 300 / (supply|length - 1) if supply|length > 1 else 0 %}
+            <figure class="flow reveal" aria-label="Потоки: {% for c, n, v in supply %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %} → Россия → {% for c, n, v in stats.demand %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}">
+                <svg viewBox="0 0 960 400" class="flow-svg" aria-hidden="true">
+                    {% for code, name, value in supply %}
+                    {% set y = 50 + loop.index0 * left_step if supply|length > 1 else 200 %}
+                    <path d="M 190 {{ y }} C 330 {{ y }}, 340 200, 440 200" class="flow-line in" style="stroke-width: {{ (3 + 12 * value / smax)|round(1) }}px"/>
+                    <path d="M 190 {{ y }} C 330 {{ y }}, 340 200, 440 200" class="flow-pulse in" style="animation-delay: -{{ loop.index0 * 0.4 }}s"/>
+                    <circle cx="180" cy="{{ y }}" r="7" class="flow-node"/>
+                    <text x="164" y="{{ y + 5 }}" text-anchor="end" class="flow-label">{{ name }}<tspan class="flow-value"> {{ value }}</tspan></text>
+                    {% endfor %}
+                    {% for code, name, value in stats.demand %}
+                    {% set y = 90 + loop.index0 * 110 %}
+                    <path d="M 520 200 C 620 200, 630 {{ y }}, 770 {{ y }}" class="flow-line out" style="stroke-width: {{ (3 + 12 * value / dmax)|round(1) }}px"/>
+                    <path d="M 520 200 C 620 200, 630 {{ y }}, 770 {{ y }}" class="flow-pulse out" style="animation-delay: -{{ loop.index0 * 0.4 }}s"/>
+                    <circle cx="780" cy="{{ y }}" r="7" class="flow-node out"/>
+                    <text x="796" y="{{ y + 5 }}" class="flow-label">{{ name }}<tspan class="flow-value"> {{ value }}</tspan></text>
+                    {% endfor %}
+                    <rect x="430" y="160" width="100" height="80" rx="20" class="flow-hub"/>
+                    <text x="480" y="196" text-anchor="middle" class="flow-hub-title">Россия</text>
+                    <text x="480" y="216" text-anchor="middle" class="flow-hub-sub">заёмщики</text>
+                    <text x="180" y="20" text-anchor="middle" class="flow-head">Кредиторы</text>
+                    <text x="780" y="20" text-anchor="middle" class="flow-head">Получение средств</text>
+                </svg>
+                <div class="flow-list">
+                    <div><h3>Кредиторы</h3><ul>{% for code, name, value in supply %}<li><span>{{ name }}</span><b>{{ value }}</b></li>{% endfor %}</ul></div>
+                    <div class="flow-hub-mobile">{{ ui.icon('arrow-right') }} Российские компании {{ ui.icon('arrow-right') }}</div>
+                    <div><h3>Получение средств</h3><ul>{% for code, name, value in stats.demand %}<li><span>{{ name }}</span><b>{{ value }}</b></li>{% endfor %}</ul></div>
+                </div>
+                <figcaption class="small muted">{% if stats.supply %}По предложениям, которые оператор показал заёмщикам, и опубликованным заявкам.{% else %}Пока на платформе нет показанных предложений: слева показаны страны, откуда регистрируются кредиторы.{% endif %}</figcaption>
+            </figure>
         </div>
     </section>
 
@@ -301,6 +362,7 @@
     // Калькулятор: формула совпадает с offer_cost на сервере
     (function () {
         const data = {{ calc|tojson }};
+        const en = data.lang === 'en';
         const $ = (id) => document.getElementById(id);
         const num = (v) => parseFloat(String(v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
         const money = (v, d = 2) => v.toLocaleString('ru-RU', {minimumFractionDigits: d, maximumFractionDigits: d});
@@ -309,14 +371,17 @@
         function market() {
             const m = data.market[currency()];
             if (m && !rateTouched) { $('c-rate').value = String(m.rate).replace('.', ','); $('c-comm').value = String(m.lender_commission).replace('.', ','); }
-            $('c-market').textContent = m ? `Средние условия предложений в ${currency()} на платформе: ${String(m.rate).replace('.', ',')}% и комиссия ${String(m.lender_commission).replace('.', ',')}% (по ${m.count} предл.).`
+            const dec = (v) => en ? String(v) : String(v).replace('.', ',');
+            $('c-market').textContent = m ? (en ? `Average ${currency()} offer terms on the platform: ${dec(m.rate)}% rate and ${dec(m.lender_commission)}% fee (${m.count} offers).`
+                                                : `Средние условия предложений в ${currency()} на платформе: ${dec(m.rate)}% и комиссия ${dec(m.lender_commission)}% (по ${m.count} предл.).`)
                                           : 'Ставку и комиссию предложат кредиторы; для оценки подставлены типичные значения.';
         }
         function calc() {
             const amount = num($('c-amount').value), term = +$('c-term').value;
             const rate = num($('c-rate').value), comm = num($('c-comm').value);
             const cur = currency();
-            $('c-term-out').textContent = term < 12 || term % 12 ? term + ' мес.' : term / 12 + (term === 12 ? ' год' : term < 60 ? ' года' : ' лет');
+            $('c-term-out').textContent = en ? (term < 12 || term % 12 ? term + ' mo.' : term / 12 + (term === 12 ? ' year' : ' years'))
+                                             : (term < 12 || term % 12 ? term + ' мес.' : term / 12 + (term === 12 ? ' год' : term < 60 ? ' года' : ' лет'));
             const ok = amount > 0 && rate >= 0 && rate <= 100 && comm >= 0 && comm <= 100;
             [['c-amount', amount > 0], ['c-rate', rate >= 0 && rate <= 100], ['c-comm', comm >= 0 && comm <= 100]]
                 .forEach(([id, good]) => $(id).setAttribute('aria-invalid', !good));
@@ -331,13 +396,40 @@
             $('r-monthly').textContent = money(amount * rate / 100 / 12) + ' ' + cur;
             $('r-overpay').textContent = money(overpay) + ' ' + cur;
             const r = data.rates[cur];
-            $('r-rub').textContent = r ? `≈ ${money(Math.round(overpay * r), 0)} ₽ по курсу ЦБ РФ на ${data.rates_date}: 1 ${cur} = ${money(r, 4)} ₽` : '';
+            $('r-rub').textContent = !r ? '' : en ? `≈ ₽${money(Math.round(overpay * r), 0)} at the Bank of Russia rate on ${data.rates_date}: 1 ${cur} = ₽${money(r, 4)}`
+                                                  : `≈ ${money(Math.round(overpay * r), 0)} ₽ по курсу ЦБ РФ на ${data.rates_date}: 1 ${cur} = ${money(r, 4)} ₽`;
+            // Валютный риск: сколько рублей вернуть при ослаблении рубля
+            $('calc-stress').hidden = !r;
+            if (r) {
+                const total = (amount + overpay) * r;
+                $('stress-body').innerHTML = [0, 10, 20, 30].map(s => `<tr class="${s ? '' : 'is-base'}"><td>${s ? '+' + s + '%' : (en ? 'Today' : 'Сегодня')}</td>` +
+                    `<td class="num"><b>${money(Math.round(total * (1 + s / 100)), 0)} ₽</b></td><td class="num">${s ? '+' + money(Math.round(total * s / 100), 0) + ' ₽' : '—'}</td></tr>`).join('');
+            }
         }
         $('c-amount').addEventListener('blur', () => { const v = num($('c-amount').value); if (v > 0) $('c-amount').value = money(v, v % 1 ? 2 : 0); });
         ['c-rate', 'c-comm'].forEach(id => $(id).addEventListener('input', () => { rateTouched = true; }));
         document.querySelectorAll('#calc-form [name=currency]').forEach(r => r.addEventListener('change', () => { market(); calc(); }));
         $('calc-form').addEventListener('input', calc);
         market(); calc();
+    })();
+</script>
+<script>
+    // Живые цифры: плавный счёт от нуля, когда блок появляется на экране
+    (function () {
+        const items = document.querySelectorAll('[data-count]');
+        if (!items.length || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const run = (el) => {
+            const target = parseFloat(el.dataset.count), dec = +(el.dataset.decimals || 0), suffix = el.dataset.suffix || '';
+            const start = performance.now(), dur = 1200;
+            const step = (t) => {
+                const k = Math.min(1, (t - start) / dur), eased = 1 - Math.pow(1 - k, 3);
+                el.textContent = (target * eased).toLocaleString('ru-RU', {minimumFractionDigits: dec, maximumFractionDigits: dec}) + suffix;
+                if (k < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        };
+        const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { run(e.target); io.unobserve(e.target); } }), {threshold: 0.6});
+        items.forEach((el) => io.observe(el));
     })();
 </script>
 <script>

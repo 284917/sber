@@ -8,8 +8,7 @@
     <div>
         <a href="/dashboard" class="back" onclick="if (document.referrer.startsWith(location.origin)) { history.back(); return false; }">← Назад</a>
         <h1>{{ creditor.display_name }}</h1>
-        <div class="sub">Кредитор · {{ ui.country(creditor.country_code) }}{% if creditor.created_at %} · на платформе с {{ creditor.created_at.strftime('%m.%Y') }}{% endif %}
-            {% if creditor.kyc_status == 'approved' %} · <span class="yes-inline">{{ ui.icon('seal-check', 'ic-sm') }} KYC пройден</span>{% endif %}</div>
+        <div class="sub">Кредитор · {{ ui.country(creditor.country_code) }}{% if creditor.created_at %} · на платформе с {{ creditor.created_at.strftime('%m.%Y') }}{% endif %}{% if creditor.kyc_status == 'approved' %}<span class="sep"> · </span><span class="yes-inline">{{ ui.icon('seal-check', 'ic-sm') }} KYC пройден</span>{% endif %}</div>
     </div>
 </div>
 

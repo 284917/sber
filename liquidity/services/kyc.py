@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.services import Invalid, NotFound
+from liquidity.services.audit import record
 from liquidity.services.files import save_upload
 from liquidity.services.notifications import notify, notify_staff
 
@@ -72,7 +73,7 @@ def review_queue(db: Session):
     return list(queue.items())
 
 
-def approve(db: Session, target_user_id: int):
+def approve(db: Session, target_user_id: int, actor=None):
     target = db.get(models.User, target_user_id)
     if not target:
         raise NotFound()
@@ -80,12 +81,13 @@ def approve(db: Session, target_user_id: int):
                                                 models.Document.status == "pending"):
         doc.status = "approved"
     target.kyc_reject_reason = None
+    record(db, actor, f"Одобрил верификацию {target.display_name}")
     notify(db, target.id, "Верификация пройдена. " + ("Можно создавать заявки" if target.role == "borrower"
                                                       else "Можно отправлять предложения"), "/dashboard", "ok")
     db.commit()
 
 
-def reject(db: Session, target_user_id: int, reason: str):
+def reject(db: Session, target_user_id: int, reason: str, actor=None):
     """Отклонённый пакет удаляется: компания видит причину и загружает документы заново."""
     target = db.get(models.User, target_user_id)
     if not target:
@@ -98,5 +100,6 @@ def reject(db: Session, target_user_id: int, reason: str):
         db.query(models.StoredFile).filter(models.StoredFile.path == doc.file_path).delete()
         db.delete(doc)
     target.kyc_reject_reason = reason
+    record(db, actor, f"Отклонил верификацию {target.display_name}: {reason}")
     notify(db, target.id, f"Верификация отклонена: {reason}. Загрузите документы заново", "/kyc", "bad")
     db.commit()

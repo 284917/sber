@@ -19,6 +19,9 @@
 {% if qp.get('offer_sent') %}{{ ui.flash('ok', 'Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.') }}{% endif %}
 
 {% include "_inbox.html" %}
+{{ ui.onboarding(onboarding) }}
+{% if qp.get('counter_agree') %}{{ ui.flash('ok', 'Вы согласились на встречную ставку. Заёмщик получил уведомление.') }}{% endif %}
+{% if qp.get('counter_decline') %}{{ ui.flash('ok', 'Ставка оставлена прежней. Заёмщик получил уведомление.') }}{% endif %}
 {% if kyc == 'none' %}
 <div class="note note-info">Чтобы отправлять предложения, пройдите верификацию компании. <a href="/kyc"><b>Перейти к верификации</b></a></div>
 {% elif kyc == 'pending' %}
@@ -46,7 +49,7 @@
 </section>
 {% endif %}
 
-<form method="get" action="/dashboard" class="card" style="padding: 16px;">
+<form method="get" action="/dashboard" class="card" style="padding: 16px;" id="market">
     <div class="form-row" style="grid-template-columns: repeat(5, minmax(0, 1fr)) auto; align-items: end;">
         <div>
             <label class="f" for="f-country">Страна получения</label>
@@ -120,10 +123,15 @@
 <p class="muted" style="margin: 0 0 12px;">Найдено заявок: {{ available_apps|length }}</p>
 
 {% for app in available_apps %}
+{% set got = funded.get(app.id, 0) %}
+{% set left = app.funding_amount - got %}
 <section class="card" id="app-{{ app.id }}">
     <div class="actions" style="justify-content: space-between; align-items: flex-start;">
         <div>
             <div class="big-num" style="font-size: 24px; line-height: 32px;">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
+            {% if got %}
+            <div class="small" style="margin-top: 4px;"><span class="pill pill-in_work">Собрано {{ (100 * got / app.funding_amount)|round|int }}%</span> <span class="muted">осталось {{ left|money }} {{ app.currency_code }} — можно предложить часть суммы</span></div>
+            {% endif %}
             <div style="margin-top: 2px;"><b>{{ app.borrower.display_name if app.borrower else '' }}</b> <span class="muted">· заявка №{{ app.id }}</span></div>
             <div class="muted" style="margin-top: 8px;">{{ app.purpose }}</div>
         </div>
@@ -131,6 +139,7 @@
             <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>
             <span class="tag">{{ app.term_months ~ ' мес.' if app.term_months else 'срок не указан' }}</span>
             <span class="tag">{{ TRANSFER_METHODS.get(app.transfer_method, 'способ не указан')|terms }}</span>
+            {% if app.valid_until %}<span class="tag" title="Заявка открыта для предложений до этой даты">{{ ui.icon('clock', 'ic-sm') }} до {{ app.valid_until.strftime('%d.%m') }}</span>{% endif %}
         </div>
     </div>
 
@@ -140,10 +149,11 @@
     {% else %}
     <form method="post" action="/create_offer/{{ app.id }}" class="offer-form" data-term="{{ app.term_months or '' }}" data-currency="{{ app.currency_code }}">{{ csrf_field(request) }}
         <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">
-        <div class="form-row" style="grid-template-columns: 1.2fr 1fr 1fr 2fr;">
+        <div class="form-row offer-grid">
             <div>
                 <label class="f">Сумма к выдаче, {{ app.currency_code }}</label>
-                <input type="number" step="0.01" min="0.01" max="{{ app.funding_amount }}" name="amount" class="input" value="{{ app.funding_amount|int if app.funding_amount == app.funding_amount|int else app.funding_amount }}" required>
+                <input type="number" step="0.01" min="0.01" max="{{ left }}" name="amount" class="input" value="{{ left|int if left == left|int else left }}" required>
+                <div class="hint" style="margin-top: 4px;">Можно меньше: заявку собирают из нескольких предложений</div>
             </div>
             <div>
                 <label class="f">Ставка, % годовых</label>
@@ -156,6 +166,12 @@
             <div>
                 <label class="f">Дополнительные условия</label>
                 <input type="text" name="extra_terms" maxlength="1000" class="input" placeholder="Льготный период, график погашения, обеспечение">
+            </div>
+            <div>
+                <label class="f">Действует</label>
+                <select name="valid_days" class="input">
+                    {% for d in valid_choices %}<option value="{{ d }}" {% if d == valid_default %}selected{% endif %}>{{ d }} дней</option>{% endfor %}
+                </select>
             </div>
         </div>
         <div class="actions" style="justify-content: space-between; margin-top: 12px;">
@@ -187,8 +203,22 @@
             <td>
                 {{ ui.offer_status(offer.status) }}
                 {% if offer.status == 'hidden' and offer.hide_reason %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ offer.hide_reason }}</div>{% endif %}
+                {% if offer.status == 'accepted' and offer.application and offer.application.status == 'published' %}<div class="small muted" style="margin-top: 4px;">Заёмщик собирает остальную сумму, сделка начнётся после этого</div>{% endif %}
+                {% if offer.status in ('pending', 'shown') and offer.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ offer.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
+                {% if offer.counter_status == 'accepted' %}<div class="small muted" style="margin-top: 4px;">Ставка снижена по встречному предложению</div>{% endif %}
             </td>
             <td class="r">
+                {% if offer.counter_status == 'pending' and offer.status == 'shown' %}
+                <div class="counter-box">
+                    <div class="small"><b>Заёмщик предлагает {{ offer.counter_rate|percent }}</b> вместо {{ offer.annual_interest_rate|percent }}</div>
+                    {% if offer.counter_comment %}<div class="small muted">«{{ offer.counter_comment }}»</div>{% endif %}
+                    <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
+                        <form method="post" action="/offers/{{ offer.id }}/counter/decline">{{ csrf_field(request) }}<button type="submit" class="btn btn-secondary btn-sm">Оставить {{ offer.annual_interest_rate|percent }}</button></form>
+                        <form method="post" action="/offers/{{ offer.id }}/counter/agree" data-confirm="Согласиться на ставку {{ offer.counter_rate|percent }}?" data-confirm-ok="Согласиться"
+                              data-confirm-text="Ставка в предложении изменится, заёмщик сможет его принять.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Согласиться</button></form>
+                    </div>
+                </div>
+                {% endif %}
                 {% if offer.status in ('pending', 'shown') %}
                 <form method="post" action="/offers/{{ offer.id }}/withdraw" data-confirm="Отозвать предложение по заявке №{{ offer.application_id }}?" data-confirm-kind="danger" data-confirm-ok="Отозвать"
                       data-confirm-text="{{ 'Заёмщик больше не увидит это предложение.' if offer.status == 'shown' else 'Оператор не будет его проверять.' }} Потом по этой заявке можно отправить новое.">{{ csrf_field(request) }}

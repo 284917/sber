@@ -17,6 +17,7 @@
 {% if qp.get('created') %}{{ ui.flash('ok', 'Заявка отправлена на модерацию. Кредиторы увидят её после проверки администратором.') }}{% endif %}
 
 {% include "_inbox.html" %}
+{{ ui.onboarding(onboarding) }}
 {% if kyc == 'none' %}
 <div class="note note-info">Чтобы создавать заявки, пройдите верификацию: загрузите документы компании. <a href="/kyc"><b>Перейти к верификации</b></a></div>
 {% elif kyc == 'pending' %}
@@ -34,7 +35,7 @@
 </div>
 
 <div class="grid grid-side-left">
-    <section class="card">
+    <section class="card" id="new-app">
         <h2 class="card-title">Новая заявка</h2>
         <form method="post" action="/create_application">{{ csrf_field(request) }}
             <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">

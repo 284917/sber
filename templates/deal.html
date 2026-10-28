@@ -54,6 +54,7 @@
         {% if offer %}
         <section class="card">
             <h2 class="card-title">Условия сделки</h2>
+            {{ ui.lenders_list(lenders, cur) }}
             <div class="kv"><span>Сумма</span><span class="num">{{ offer.funding_amount|money }} {{ cur }}</span></div>
             {% if cost and cost.effective_rate is not none %}<div class="kv"><span>Полная стоимость</span><span>{{ cost.effective_rate|round(2)|percent }} годовых</span></div>
             <div class="kv"><span>Переплата</span><span class="num">{{ cost.overpayment|money }} {{ cur }}{% if overpayment_rub %}<span class="rub">{{ overpayment_rub|rub }} по курсу ЦБ на {{ fx.date.strftime('%d.%m') }}</span>{% endif %}</span></div>{% endif %}
@@ -62,6 +63,7 @@
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>
             <div class="kv"><span>Передача</span><span>{{ ui.country(application.target_jurisdiction) }} · {{ TRANSFER_METHODS.get(application.transfer_method, '—') }}</span></div>
             {% if offer.extra_terms %}<div class="kv"><span>Доп. условия</span><span>{{ offer.extra_terms }}</span></div>{% endif %}
+            {{ ui.stress_table(stress, cur) }}
         </section>
         {% endif %}
 
@@ -78,6 +80,14 @@
                     <div class="doc-info">
                         <a href="/{{ main_contract.file_path }}" target="_blank" class="doc-name">{{ main_contract.file_path|filename }}</a>
                         <div class="small muted">Загрузил: {{ main_contract.sender.display_name if main_contract.sender else '' }}</div>
+                        {% if main_contract.sha256 %}
+                        <div class="hash" title="SHA-256 отпечаток файла: если файл подменят, отпечаток изменится">
+                            <span class="small muted">Отпечаток SHA-256</span>
+                            <code>{{ main_contract.sha256[:16] }}…{{ main_contract.sha256[-8:] }}</code>
+                            <button type="button" class="btn btn-ghost btn-sm" data-copy="{{ main_contract.sha256 }}" aria-label="Скопировать отпечаток целиком">Копировать</button>
+                        </div>
+                        <div class="small muted">Все стороны видят этот же отпечаток — значит, у всех один и тот же файл.</div>
+                        {% endif %}
                     </div>
                     <div class="doc-buttons">
                         <a href="/{{ main_contract.file_path }}" target="_blank" class="btn btn-secondary btn-sm">Открыть</a>

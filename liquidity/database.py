@@ -53,6 +53,11 @@ MIGRATIONS = [
     "ALTER TABLE applications ADD COLUMN IF NOT EXISTS moderation_comment VARCHAR(500)",
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS extra_terms VARCHAR(1000)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE applications ADD COLUMN IF NOT EXISTS valid_until DATE",
+    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS valid_until DATE",
+    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_rate NUMERIC(5, 2)",
+    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_comment VARCHAR(500)",
+    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_status VARCHAR(20)",
 ]
 
 

@@ -71,6 +71,16 @@ class DealPDF(FPDF):
             self.multi_cell(0, 6, _plain(value), new_x="LMARGIN", new_y="NEXT")
 
 
+def _lender_parts(offer):
+    """[(кредитор, сумма)]: один займодавец или участники синдиката."""
+    return [(o.sender, o.funding_amount) for o in getattr(offer, "parts", [offer])]
+
+
+def _lender_line(sender) -> str:
+    return (f"{sender.display_name} ({config.COUNTRY_NAMES.get(sender.country_code, '—')}, "
+            f"регистрационный номер {sender.registration_number or '—'})")
+
+
 def new_pdf(cls, title: str):
     pdf = cls(format="A4")
     pdf.add_font("Manrope", "", os.path.join(FONT_DIR, "manrope-400.ttf"))
@@ -108,7 +118,7 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
     cur = application.currency_code
     cost = offer_cost(offer, application)
     schedule = payment_schedule(offer, application)
-    borrower, creditor = application.borrower, offer.sender
+    borrower = application.borrower
 
     pdf = new_pdf(DealPDF, f"Сводка сделки №{application.id}")
 
@@ -122,11 +132,13 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
                    f"подтверждена {confirmed}", new_x="LMARGIN", new_y="NEXT")
 
     pdf.section("Стороны")
-    pdf.kv([
-        ("Заёмщик", f"{borrower.display_name} · ИНН {borrower.registration_number or '—'} · Россия"),
-        ("Кредитор", f"{creditor.display_name} · {config.COUNTRY_NAMES.get(creditor.country_code, '—')} · "
-                     f"рег. номер {creditor.registration_number or '—'}"),
-    ])
+    parts = _lender_parts(offer)
+    pdf.kv([("Заёмщик", f"{borrower.display_name} · ИНН {borrower.registration_number or '—'} · Россия")] + [
+        ("Кредитор" if len(parts) == 1 else f"Кредитор {i}",
+         f"{lender.display_name} · {config.COUNTRY_NAMES.get(lender.country_code, '—')} · "
+         f"рег. номер {lender.registration_number or '—'}"
+         + ("" if len(parts) == 1 else f" · доля {format_money(amount)} {cur}"))
+        for i, (lender, amount) in enumerate(parts, 1)])
 
     pdf.section("Условия")
     pdf.kv([
@@ -174,6 +186,26 @@ def deal_summary_pdf(application, offer, events, confirmed_by, fx) -> bytes:
     return bytes(pdf.output())
 
 
+def _signature_row(pdf, signers):
+    if pdf.get_y() + 44 > pdf.h - pdf.b_margin:
+        pdf.add_page()
+    y = pdf.get_y() + 2
+    for x, (role, company) in zip((15, 110), signers):
+        pdf.set_text_color(*INK)
+        pdf.set_xy(x, y)
+        pdf.set_font("Manrope", "B", 9)
+        pdf.cell(85, 5, role)
+        pdf.set_xy(x, y + 6)
+        pdf.set_font("Manrope", "", 9)
+        pdf.multi_cell(85, 5, _plain(company))
+        pdf.set_xy(x, y + 26)
+        pdf.cell(85, 5, "__________________ / __________________")
+        pdf.set_xy(x, y + 32)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(85, 5, "подпись / ФИО, должность")
+    pdf.set_xy(15, y + 42)
+
+
 class ContractPDF(DealPDF):
     footer_note = ("Проект сформирован {now:%d.%m.%Y %H:%M} UTC по условиям сделки на платформе. "
                    "Перед подписанием проверьте текст с юристами сторон.")
@@ -192,7 +224,7 @@ def contract_draft_pdf(application, offer, fx) -> bytes:
     cur = application.currency_code
     cost = offer_cost(offer, application)
     schedule = payment_schedule(offer, application)
-    borrower, creditor = application.borrower, offer.sender
+    borrower = application.borrower
     term = application.term_months
     amount = f"{format_money(offer.funding_amount)} {cur}"
 
@@ -207,17 +239,25 @@ def contract_draft_pdf(application, offer, fx) -> bytes:
     pdf.ln(2)
     pdf.set_font("Manrope", "", 9)
     pdf.set_text_color(*INK)
+    parts = _lender_parts(offer)
+    if len(parts) == 1:
+        lenders_text = f"{_lender_line(parts[0][0])}, далее «Займодавец»"
+    else:
+        lenders_text = "; ".join(_lender_line(lender) for lender, _ in parts) + \
+                       ", совместно далее «Займодавец» (синдикат кредиторов)"
     pdf.multi_cell(0, 5, _plain(
-        f"{creditor.display_name} ({config.COUNTRY_NAMES.get(creditor.country_code, '—')}, регистрационный номер "
-        f"{creditor.registration_number or '—'}), далее «Займодавец», и {borrower.display_name} (Россия, ИНН "
-        f"{borrower.registration_number or '—'}), далее «Заёмщик», совместно «Стороны», заключили настоящий "
-        f"договор о нижеследующем."), new_x="LMARGIN", new_y="NEXT")
+        f"{lenders_text}, и {borrower.display_name} (Россия, ИНН {borrower.registration_number or '—'}), "
+        f"далее «Заёмщик», совместно «Стороны», заключили настоящий договор о нижеследующем."),
+        new_x="LMARGIN", new_y="NEXT")
 
     pdf.clause("1", "Предмет договора", [
         f"Займодавец передаёт Заёмщику денежные средства в размере {amount} (далее «Сумма займа»), "
         f"а Заёмщик обязуется вернуть Сумму займа и уплатить проценты в порядке и сроки, установленные договором.",
         f"Целевое назначение займа: {application.purpose}.",
-    ])
+    ] + ([("Сумма займа предоставляется синдикатом в долях: " + "; ".join(
+        f"{lender.display_name} — {format_money(amount)} {cur} ({round(100 * amount / offer.funding_amount)}%)"
+        for lender, amount in parts) + ". Проценты и возврат распределяются пропорционально долям, "
+        "ставка и комиссия указаны средневзвешенными.")] if len(parts) > 1 else []))
     pdf.clause("2", "Предоставление займа", [
         f"Сумма займа перечисляется в валюте {cur} на счёт Заёмщика или указанного им получателя в стране: "
         f"{config.COUNTRY_NAMES.get(application.target_jurisdiction, '—')}.",
@@ -256,21 +296,10 @@ def contract_draft_pdf(application, offer, fx) -> bytes:
     ])
 
     pdf.section("Подписи сторон", keep=50)
-    y = pdf.get_y() + 2
-    for x, role, company in ((15, "Займодавец", creditor.display_name), (110, "Заёмщик", borrower.display_name)):
-        pdf.set_text_color(*INK)
-        pdf.set_xy(x, y)
-        pdf.set_font("Manrope", "B", 9)
-        pdf.cell(85, 5, role)
-        pdf.set_xy(x, y + 6)
-        pdf.set_font("Manrope", "", 9)
-        pdf.multi_cell(85, 5, _plain(company))
-        pdf.set_xy(x, y + 26)
-        pdf.cell(85, 5, "__________________ / __________________")
-        pdf.set_xy(x, y + 32)
-        pdf.set_text_color(*MUTED)
-        pdf.cell(85, 5, "подпись / ФИО, должность")
-    pdf.set_xy(15, y + 40)
+    signers = [("Займодавец" if len(parts) == 1 else f"Займодавец {i}", lender.display_name)
+               for i, (lender, _) in enumerate(parts, 1)] + [("Заёмщик", borrower.display_name)]
+    for row_start in range(0, len(signers), 2):
+        _signature_row(pdf, signers[row_start:row_start + 2])
 
     if schedule:
         pdf.ln(8)

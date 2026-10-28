@@ -254,7 +254,7 @@ table.t { width: 100%; border-collapse: collapse; }
 .pill-warn, .pill-in_work, .pill-pending, .pill-accepted { background: var(--warn-soft); color: var(--warn); }
 .pill-bad, .pill-rejected, .pill-hidden { background: var(--danger-soft); color: var(--danger); }
 .pill-info, .pill-moderation { background: var(--info-soft); color: var(--info); }
-.pill-none, .pill-withdrawn { background: var(--neutral-soft); color: var(--ink-2); }
+.pill-none, .pill-withdrawn, .pill-expired { background: var(--neutral-soft); color: var(--ink-2); }
 .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: var(--neutral-soft); color: var(--ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
 .tag-best { background: var(--brand); color: #fff; }
 
@@ -751,3 +751,160 @@ abbr.term:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; 
 .draft-link > span { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .h-page { font-size: 44px; line-height: 48px; }
 @media (max-width: 640px) { .h-page { font-size: 32px; line-height: 38px; } }
+
+/* Сбор суммы по заявке (частичное финансирование) */
+.funding-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.funding-bar { height: 10px; border-radius: 9999px; background: var(--neutral-soft); overflow: hidden; margin-top: 16px; }
+.funding-bar i { display: block; height: 100%; background: var(--brand); border-radius: 9999px; transition: width 600ms var(--ease); }
+
+/* Действия по офферу и встречная ставка */
+.offer-actions { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+.counter > summary { list-style: none; cursor: pointer; }
+.counter > summary::-webkit-details-marker { display: none; }
+.counter[open] > summary { background: var(--neutral-soft); }
+.counter-form { display: grid; gap: 8px; width: 260px; margin-top: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+/* Переплата по предложениям: горизонтальные полосы */
+.over-chart { margin: 0 24px 16px; padding: 16px; border: 1px solid var(--line-2); border-radius: 12px; display: grid; gap: 10px; }
+.over-row { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: 14px; line-height: 20px; }
+.over-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.over-track { height: 12px; border-radius: 4px; background: var(--neutral-soft); overflow: hidden; }
+.over-track i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--muted); opacity: .45; transform-origin: left; animation: bar-in 700ms var(--ease) both; }
+.over-row.is-best .over-track i { background: var(--brand); opacity: 1; }
+.over-row.is-best .over-name { color: var(--ink); font-weight: 700; }
+.over-value { font-weight: 600; min-width: 96px; text-align: right; }
+@keyframes bar-in { from { transform: scaleX(0); } }
+@media (max-width: 640px) { .over-row { grid-template-columns: minmax(0, 1fr) auto; } .over-track { grid-column: 1 / -1; grid-row: 2; } }
+@media (prefers-reduced-motion: reduce) { .over-track i, .funding-bar i { animation: none; transition: none; } }
+
+/* Форма предложения кредитора */
+.offer-grid { grid-template-columns: 1.3fr 1fr 1fr 2fr 0.9fr; align-items: start; }
+@media (max-width: 1100px) { .offer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .offer-grid { grid-template-columns: minmax(0, 1fr); } }
+.counter-box { display: inline-grid; gap: 2px; text-align: left; padding: 12px; border-radius: 12px; background: var(--warn-soft); border: 1px solid var(--warn-line); max-width: 320px; }
+
+/* Чек-лист первых шагов */
+.onboarding-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.onboarding-ring { --p: 0; width: 56px; height: 56px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: conic-gradient(var(--brand) calc(var(--p) * 1%), var(--neutral-soft) 0); }
+.onboarding-ring span { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.onboarding-steps { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.onboarding-steps li { display: flex; gap: 8px; align-items: flex-start; padding: 12px; border-radius: 12px; border: 1px solid var(--line-2); font-size: 14px; line-height: 20px; color: var(--muted); }
+.onboarding-steps .dot { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--neutral-soft); color: var(--ink-2); }
+.onboarding-steps li.done { color: var(--ink-2); }
+.onboarding-steps li.done .dot { background: var(--brand); color: #fff; }
+.onboarding-steps li.next { border-color: var(--brand-line); background: var(--brand-soft); color: var(--ink); font-weight: 600; }
+.onboarding-steps li.next .dot { background: var(--surface); color: var(--brand-ink); }
+.onboarding-steps a { color: inherit; display: inline-flex; gap: 4px; align-items: center; }
+@media (max-width: 900px) { .onboarding-steps { grid-template-columns: minmax(0, 1fr); } }
+
+/* Синдикат кредиторов */
+.syndicate { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-2); }
+.syndicate-bar { display: flex; gap: 2px; height: 10px; border-radius: 9999px; overflow: hidden; }
+.syndicate-bar i { display: block; background: var(--brand); }
+.syndicate-bar i:nth-child(2n) { background: #6BBF7B; }
+.syndicate-bar i:nth-child(3n) { background: #A8D9B2; }
+.syndicate ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.syndicate li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 40px; gap: 8px; align-items: center; font-size: 14px; }
+.syndicate li .sw { width: 10px; height: 10px; border-radius: 3px; background: var(--brand); }
+.syndicate li:nth-child(2n) .sw { background: #6BBF7B; }
+.syndicate li:nth-child(3n) .sw { background: #A8D9B2; }
+.syndicate li span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.syndicate li .muted { text-align: right; }
+
+/* Валютный риск */
+.stress { margin-top: 12px; border-top: 1px solid var(--line-2); padding-top: 12px; }
+.stress > summary { cursor: pointer; font-weight: 600; display: flex; gap: 6px; align-items: center; list-style: none; }
+.stress > summary::-webkit-details-marker { display: none; }
+.stress .t { margin-top: 8px; font-size: 13px; }
+.stress .t td, .stress .t th { padding: 8px; }
+.stress .is-base td { background: var(--surface-2); }
+
+/* Отпечаток договора */
+.hash { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.hash code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 2px 6px; border-radius: 6px; background: var(--neutral-soft); }
+
+/* Палитра серий графиков (проверена на различимость, в т.ч. при дальтонизме) */
+:root { --s1: #21A038; --s2: #2F6FDB; --s3: #C46F1C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #2FA84A; --s2: #5B8FF0; --s3: #C47530; } }
+:root[data-theme="dark"] { --s1: #2FA84A; --s2: #5B8FF0; --s3: #C47530; }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend .sw { width: 12px; height: 4px; border-radius: 2px; display: inline-block; }
+.sw.s1, .dot.s1 { background: var(--s1); fill: var(--s1); } .sw.s2, .dot.s2 { background: var(--s2); fill: var(--s2); } .sw.s3, .dot.s3 { background: var(--s3); fill: var(--s3); }
+.trend { width: 100%; height: auto; display: block; }
+.trend .grid-line { stroke: var(--line-2); stroke-width: 1; }
+.trend .tick { fill: var(--muted); font-size: 11px; font-family: inherit; }
+.trend .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.trend .line.s1 { stroke: var(--s1); } .trend .line.s2 { stroke: var(--s2); } .trend .line.s3 { stroke: var(--s3); }
+.trend .dot { stroke: var(--surface); stroke-width: 2; }
+.trend .hit { fill: transparent; }
+.trend .pt:hover .dot { r: 6; }
+
+/* Тепловая карта */
+.heat { width: 100%; border-collapse: separate; border-spacing: 4px; }
+.heat th { font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; padding: 4px; }
+.heat th[scope="row"] { text-align: left; color: var(--ink-2); white-space: nowrap; }
+.heat td { padding: 0; }
+.heat-cell { display: grid; place-items: center; min-height: 56px; border-radius: 10px; font-weight: 700; font-size: 18px; line-height: 22px;
+  background: color-mix(in srgb, var(--brand) var(--a), var(--surface)); color: var(--ink); font-variant-numeric: tabular-nums; }
+.heat-cell.strong { color: #fff; }
+.heat-cell small { display: block; font-size: 11px; font-weight: 600; opacity: .8; }
+
+/* Время этапов */
+.stage-bars { display: grid; gap: 12px; }
+.stage-bar { display: grid; grid-template-columns: minmax(160px, 260px) minmax(0, 1fr) 80px; gap: 16px; align-items: center; }
+.stage-track { height: 12px; border-radius: 4px; background: var(--neutral-soft); overflow: hidden; }
+.stage-track i { display: block; height: 100%; background: var(--brand); border-radius: 0 4px 4px 0; animation: bar-in 700ms var(--ease) both; transform-origin: left; }
+.stage-value { text-align: right; font-weight: 700; }
+@media (max-width: 640px) { .stage-bar { grid-template-columns: minmax(0, 1fr) auto; } .stage-track { grid-column: 1 / -1; } }
+
+/* Живые цифры на главной */
+.live { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); padding: 32px 0 20px; }
+.live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.live-item { display: grid; gap: 4px; }
+.live-item b { font-size: 40px; line-height: 44px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.live-item span { color: var(--muted); }
+.live-note { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 12px; color: var(--muted); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 0 rgba(33, 160, 56, .5); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(33, 160, 56, 0); } 100% { box-shadow: 0 0 0 0 rgba(33, 160, 56, 0); } }
+@media (max-width: 760px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-item b { font-size: 32px; line-height: 36px; } }
+
+/* Схема потоков ликвидности */
+.flow { margin: 48px 0 0; padding: 24px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+.flow-svg { width: 100%; height: auto; display: block; }
+.flow-line { fill: none; stroke: var(--brand); stroke-linecap: round; opacity: .28; }
+.flow-line.out { stroke: var(--s2); }
+.flow-pulse { fill: none; stroke: var(--brand); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 3 21; animation: flow 1.4s linear infinite; }
+.flow-pulse.out { stroke: var(--s2); }
+@keyframes flow { to { stroke-dashoffset: -24; } }
+.flow-node { fill: var(--brand); stroke: var(--surface); stroke-width: 3; }
+.flow-node.out { fill: var(--s2); }
+.flow-hub { fill: var(--ink); }
+.flow-hub-title { fill: var(--surface); font-weight: 700; font-size: 17px; font-family: inherit; }
+.flow-hub-sub { fill: var(--surface); opacity: .7; font-size: 12px; font-family: inherit; }
+.flow-label { fill: var(--ink); font-size: 15px; font-weight: 600; font-family: inherit; }
+.flow-value { fill: var(--muted); font-weight: 700; }
+.flow-head { fill: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-family: inherit; }
+.flow-list { display: none; }
+.flow figcaption { margin-top: 12px; }
+@media (max-width: 700px) {
+  .flow { padding: 16px; }
+  .flow-svg { display: none; }
+  .flow-list { display: grid; gap: 12px; }
+  .flow-list h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .flow-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .flow-list li { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--neutral-soft); }
+  .flow-hub-mobile { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; background: var(--ink); color: var(--surface); font-weight: 700; }
+}
+@media (prefers-reduced-motion: reduce) { .flow-pulse { animation: none; } .live-dot { animation: none; } }
+.calc-stress { margin: 0 0 16px; }
+.egrul-card { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--neutral-soft); font-size: 14px; line-height: 20px; display: grid; gap: 2px; }
+.egrul-card.ok { background: var(--brand-soft); border: 1px solid var(--brand-line); }
+.egrul-card.warn { background: var(--warn-soft); border: 1px solid var(--warn-line); }
+
+.lang-btn { display: inline-grid; place-items: center; height: 32px; min-width: 40px; padding: 0 10px; border-radius: 9999px; border: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ink-2); }
+.lang-btn:hover { color: var(--ink); border-color: var(--ink-2); }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+.foot-actions .foot-btn[hidden] { display: none; }

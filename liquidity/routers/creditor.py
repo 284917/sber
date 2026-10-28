@@ -5,20 +5,33 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import get_current_user, require_role
-from liquidity.services import Invalid, applications, creditors, offers, saved_searches
+from liquidity.services import Invalid, applications, creditors, expiry, kyc, offers, saved_searches
 from liquidity.web import redirect, render
 
 router = APIRouter(tags=["Кредитор"])
 FILTER_KEYS = ("country", "currency", "amount_min", "amount_max", "term_max")
 
 
+def onboarding(user: models.User, my_offers, my_deals):
+    steps = [("Компания зарегистрирована", True, None),
+             ("Документы KYC загружены и отправлены", user.kyc_status in ("pending", "approved"), "/kyc"),
+             ("Верификация пройдена", user.kyc_status == "approved", "/kyc"),
+             ("Первое предложение отправлено", bool(my_offers), "#market"),
+             ("Первая сделка", bool(my_deals), None)]
+    return None if all(ok for _, ok, _ in steps) else steps
+
+
 def dashboard(request: Request, user: models.User, db: Session):
+    expiry.run(db)
     filters = {key: request.query_params.get(key, "") for key in FILTER_KEYS}
     my_offers = offers.for_creditor(db, user)
     my_deals = [o.application for o in my_offers
                 if o.status == "accepted" and o.application and o.application.status in ("in_work", "agreed")]
-    return render(request, "creditor.html", user=user, filters=filters,
-                  available_apps=applications.search_published(db, filters), my_offers=my_offers, my_deals=my_deals,
+    available_apps = applications.search_published(db, filters)
+    return render(request, "creditor.html", user=user, filters=filters, onboarding=onboarding(user, my_offers, my_deals),
+                  available_apps=available_apps, my_offers=my_offers, my_deals=my_deals,
+                  funded=offers.funded_map(db, [a.id for a in available_apps]),
+                  valid_choices=config.OFFER_VALID_CHOICES, valid_default=config.OFFER_VALID_DEFAULT,
                   offered_app_ids={o.application_id for o in my_offers if o.status in offers.ACTIVE_STATUSES},
                   saved=[(s, saved_searches.describe(s), saved_searches.as_query(s))
                          for s in saved_searches.for_user(db, user)],
@@ -28,10 +41,11 @@ def dashboard(request: Request, user: models.User, db: Session):
 
 @router.post("/create_offer/{app_id}", summary="Отправить предложение по опубликованной заявке")
 def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...), lender_comm: float = Form(...),
-                 extra_terms: str = Form(""), user: models.User = Depends(require_role("creditor")),
-                 db: Session = Depends(get_db)):
+                 extra_terms: str = Form(""), valid_days: int = Form(config.OFFER_VALID_DEFAULT),
+                 user: models.User = Depends(require_role("creditor")), db: Session = Depends(get_db)):
     try:
-        offers.create(db, user, app_id, amount=amount, rate=rate, lender_comm=lender_comm, extra_terms=extra_terms)
+        offers.create(db, user, app_id, amount=amount, rate=rate, lender_comm=lender_comm, extra_terms=extra_terms,
+                      valid_days=valid_days)
     except Invalid as e:
         return redirect(f"/dashboard?error={e.code}")
     return redirect("/dashboard?offer_sent=1")
@@ -68,3 +82,15 @@ def save_search(country: str = Form(""), currency: str = Form(""), amount_min: s
 def delete_search(search_id: int, user: models.User = Depends(require_role("creditor")), db: Session = Depends(get_db)):
     saved_searches.delete(db, user, search_id)
     return redirect("/dashboard?search_deleted=1#saved")
+
+
+@router.post("/offers/{offer_id}/counter/{answer}", summary="Ответ кредитора на встречную ставку: agree или decline")
+def answer_counter(offer_id: int, answer: str, user: models.User = Depends(require_role("creditor")),
+                   db: Session = Depends(get_db)):
+    if answer not in ("agree", "decline"):
+        return redirect("/dashboard#my-offers")
+    try:
+        offers.answer_counter(db, user, offer_id, answer == "agree")
+    except Invalid as e:
+        return redirect(f"/dashboard?error={e.code}#my-offers")
+    return redirect(f"/dashboard?counter_{answer}=1#my-offers")

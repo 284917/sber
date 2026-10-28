@@ -32,6 +32,40 @@
     {{ ui.flash('info', 'Заявка отозвана. Кредиторы её не видят, открытые предложения закрыты.') }}
 {% elif application.status == 'moderation' %}
     {{ ui.flash('info', 'Заявка на модерации. Кредиторы увидят её после проверки администратором.') }}
+{% elif application.status == 'expired' %}
+    {{ ui.flash('warn', 'Срок публикации заявки истёк, открытые предложения закрыты. Если финансирование ещё нужно, подайте новую заявку.') }}
+{% endif %}
+{% set qp = request.query_params %}
+{% set errors = {'exceeds': 'Сумма этого предложения больше несобранной части заявки. Выберите предложение меньше или начните сделку с уже собранной суммой.',
+                 'counter_pending': 'Сначала дождитесь ответа кредитора на встречную ставку.',
+                 'counter_used': 'Встречное предложение по этому офферу уже отправлялось.',
+                 'counter_rate': 'Встречная ставка должна быть больше 0 и ниже текущей ставки кредитора.',
+                 'nothing': 'Сначала примите хотя бы одно предложение.', 'decided': 'По этому предложению решение уже принято.'} %}
+{% if qp.get('error') %}{{ ui.flash('bad', errors.get(qp.get('error'), 'Не удалось выполнить действие.')) }}{% endif %}
+{% if qp.get('partial') %}{{ ui.flash('ok', 'Предложение принято. Заявка остаётся открытой: примите ещё предложения на оставшуюся сумму или начните сделку с уже собранной.') }}{% endif %}
+{% if qp.get('countered') %}{{ ui.flash('ok', 'Встречная ставка отправлена кредитору. Когда он ответит, придёт уведомление.') }}{% endif %}
+
+{% if application.status == 'published' %}
+{% set pct = (100 * funded / application.funding_amount)|round|int %}
+<section class="card funding">
+    <div class="funding-head">
+        <div>
+            <div class="small muted">Собрано по заявке</div>
+            <div class="big-num" style="font-size: 24px; line-height: 32px;">{{ funded|money }} <span class="muted" style="font-weight: 600;">из {{ application.funding_amount|money }} {{ cur }}</span></div>
+        </div>
+        <div class="actions">
+            {% if days_left is not none %}<span class="tag" title="Заявка открыта для предложений до {{ application.valid_until.strftime('%d.%m.%Y') }}">{{ ui.icon('clock', 'ic-sm') }} {{ 'Открыта ещё ' ~ days_left ~ ' дн.' if days_left > 0 else 'Последний день публикации' }}</span>{% endif %}
+            {% if funded > 0 %}
+            <form method="post" action="/applications/{{ application.id }}/start_deal" data-confirm="Начать сделку с собранной суммой?" data-confirm-ok="Начать сделку"
+                  data-confirm-text="Сделка пойдёт на {{ funded|money }} {{ cur }} ({{ pct }}% заявки). Остальные открытые предложения будут отклонены.">{{ csrf_field(request) }}
+                <button type="submit" class="btn btn-primary btn-sm">Начать сделку с {{ pct }}%</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <div class="funding-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}" aria-label="Собрано {{ pct }}% суммы"><i style="width: {{ pct }}%"></i></div>
+    <p class="small muted" style="margin: 8px 0 0;">Заявку можно собрать из нескольких предложений: примите оффер на часть суммы, и заявка останется открытой для остальной. Когда сумма покрыта, сделка начинается автоматически.</p>
+</section>
 {% endif %}
 
 <div>
@@ -50,6 +84,21 @@
                 <div><div class="small muted">Полная стоимость</div><div class="big">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
                 <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub" title="{{ rate_note }}">{{ rub(savings)|rub }}</span>{% endif %}</div>
             </div>
+            {% endif %}
+
+            {% set chart_rows = rows|rejectattr('cost.effective_rate', 'none')|list %}
+            {% if chart_rows|length > 1 %}
+            {% set max_rate = chart_rows|map(attribute='cost.effective_rate')|max %}
+            <figure class="over-chart" aria-label="Полная стоимость предложений">
+                <figcaption class="small muted">Полная стоимость, % годовых — чем короче полоса, тем дешевле</figcaption>
+                {% for row in chart_rows %}
+                <div class="over-row {{ 'is-best' if row.offer.id == best_id }}" title="{{ row.offer.sender.display_name if row.offer.sender else 'Кредитор' }}: полная стоимость {{ row.cost.effective_rate|round(2)|percent }}, переплата {{ row.cost.overpayment|money }} {{ cur }}">
+                    <span class="over-name">{{ row.offer.sender.display_name if row.offer.sender else 'Кредитор' }}</span>
+                    <span class="over-track"><i style="width: {{ (100 * row.cost.effective_rate / max_rate)|round(1) if max_rate else 0 }}%"></i></span>
+                    <span class="over-value num">{{ row.cost.effective_rate|round(2)|percent }}</span>
+                </div>
+                {% endfor %}
+            </figure>
             {% endif %}
 
             {% if rows %}
@@ -76,6 +125,10 @@
                         <b>{% if o.sender %}<a href="/creditors/{{ o.user_id }}" class="creditor-link" title="Профиль и рейтинг кредитора">{{ o.sender.display_name }}</a>{% else %}Кредитор{% endif %}</b> {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
                         <div class="small muted">{{ ui.country(o.sender.country_code) if o.sender else '' }}{% if cs %} · сделок: {{ cs.deals_done }}{% endif %}</div>
                         <div style="margin-top: 4px;">{{ ui.rating_badge(cs) }}</div>
+                        {% if o.status == 'shown' and o.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ o.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
+                        {% if o.counter_status == 'pending' %}<div style="margin-top: 4px;"><span class="pill pill-pending">Ждём ответа на {{ o.counter_rate|percent }}</span></div>
+                        {% elif o.counter_status == 'accepted' %}<div style="margin-top: 4px;"><span class="pill pill-ok">Ставка снижена по вашей просьбе</span></div>
+                        {% elif o.counter_status == 'declined' %}<div class="small muted" style="margin-top: 4px;">Кредитор оставил исходную ставку</div>{% endif %}
                         {% if o.status != 'shown' %}<div style="margin-top: 4px;">{{ ui.offer_status(o.status) }}</div>{% endif %}
                     </td>
                     <td class="num"><b>{{ c.amount|money }}</b><div class="small muted">{{ c.coverage }}% запрошенного</div></td>
@@ -116,12 +169,33 @@
                                 {% endif %}
                             </div>
                             {% if o.status == 'shown' and application.status == 'published' %}
+                            {% set covers = o.funding_amount >= remaining %}
+                            {% set too_big = o.funding_amount > remaining %}
                             {% set others_text = '' if others < 1 else ('Остальное предложение будет отклонено, ' if others == 1 else 'Остальные ' ~ others ~ ' предложения будут отклонены, ') %}
+                            {% set accept_text = (others_text ~ 'заявка перейдёт в работу.') if covers else ('Это ' ~ (100 * o.funding_amount / application.funding_amount)|round|int ~ '% суммы. Заявка останется открытой, чтобы собрать остальное.') %}
+                            <div class="offer-actions">
+                            {% if o.counter_status is none %}
+                            <details class="counter">
+                                <summary class="btn btn-ghost btn-sm">Предложить ставку</summary>
+                                <form method="post" action="/offers/{{ o.id }}/counter" class="counter-form">{{ csrf_field(request) }}
+                                    <label class="f" for="cr-{{ o.id }}">Ваша ставка, % годовых</label>
+                                    <input type="text" inputmode="decimal" name="rate" id="cr-{{ o.id }}" class="input input-sm" placeholder="ниже {{ o.annual_interest_rate|percent }}" required>
+                                    <input type="text" name="comment" class="input input-sm" maxlength="500" placeholder="Комментарий кредитору (необязательно)" aria-label="Комментарий кредитору">
+                                    <button type="submit" class="btn btn-secondary btn-sm">Отправить кредитору</button>
+                                    <p class="hint" style="margin: 0;">Одно встречное предложение на каждый оффер. Пока кредитор не ответил, принять оффер нельзя.</p>
+                                </form>
+                            </details>
+                            {% endif %}
                             <div class="actions">
                                 <form method="post" action="/reject_offer/{{ o.id }}" data-confirm="Отклонить предложение {{ name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
                                       data-confirm-text="Кредитор увидит, что предложение отклонено. Вернуть его нельзя.">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
+                                {% if too_big %}<span class="small muted" title="Несобранная часть заявки: {{ remaining|money }} {{ cur }}">Больше остатка {{ remaining|money }} {{ cur }}</span>
+                                {% elif o.counter_status == 'pending' %}<button type="button" class="btn btn-primary btn-sm" disabled>Ждём ответа кредитора</button>
+                                {% else %}
                                 <form method="post" action="/accept_offer/{{ o.id }}" data-confirm="Принять предложение {{ name }}?" data-confirm-ok="Принять предложение"
-                                      data-confirm-text="{{ others_text }}заявка перейдёт в работу. Сумма {{ c.amount|money }} {{ cur }}, полная стоимость {{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }} годовых.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Принять предложение</button></form>
+                                      data-confirm-text="{{ accept_text }} Сумма {{ c.amount|money }} {{ cur }}, полная стоимость {{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }} годовых.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">{{ 'Принять предложение' if covers else 'Принять на часть суммы' }}</button></form>
+                                {% endif %}
+                            </div>
                             </div>
                             {% endif %}
                         </div>

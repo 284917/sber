@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.security import hash_password, verify_password
-
 from liquidity.services import Forbidden, Invalid, NotFound
+from liquidity.services.audit import record
 
 
 INN_WEIGHTS = (2, 4, 10, 3, 5, 9, 4, 6, 8)
@@ -74,6 +74,7 @@ def remove_staff(db: Session, actor: models.User, staff_id: int):
         raise NotFound()
     if target.id == actor.id or target.is_superadmin:
         raise Invalid("self", "Главного администратора отключить нельзя")
+    record(db, actor, f"Отключил сотрудника {target.email}")
     target.role = "removed"
     target.email = f"removed-{target.id}-{target.email}"[:255]
     target.password_hash = hash_password(secrets.token_urlsafe(24))
@@ -81,7 +82,7 @@ def remove_staff(db: Session, actor: models.User, staff_id: int):
     return target
 
 
-def create_staff(db: Session, *, email: str, password: str, role: str) -> models.User:
+def create_staff(db: Session, *, email: str, password: str, role: str, actor=None) -> models.User:
     if role not in config.STAFF_ROLES:
         raise Invalid("role", "Недопустимая роль")
     if len(password) < 8:
@@ -91,6 +92,7 @@ def create_staff(db: Session, *, email: str, password: str, role: str) -> models
     user = models.User(email=email, password_hash=hash_password(password), role=role,
                        company_name="Администрация платформы")
     db.add(user)
+    record(db, actor, f"Создал сотрудника {email} ({config.ROLE_NAMES.get(role, role)})")
     db.commit()
     return user
 

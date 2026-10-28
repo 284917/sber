@@ -25,10 +25,13 @@ def deal_room(app_id: int, request: Request, user: models.User = Depends(get_cur
     offer = deals.accepted_offer(db, app_id)
     cost = offer_cost(offer, application) if offer else None
     rates = fx.current_rates(db) if offer else None
+    lenders = deals.lenders(offer)
     return render(request, "deal.html", user=user, application=application, messages=messages,
                   main_contract=main_contract, other_documents=other_documents, offer=offer, cost=cost,
                   overpayment_rub=fx.to_rub(cost["overpayment"], application.currency_code, rates) if cost else None,
-                  fx=rates, stages=applications.stages(db, application))
+                  fx=rates, stages=applications.stages(db, application), lenders=lenders,
+                  stress=fx.stress(offer.funding_amount, cost["overpayment"], application.currency_code, rates)
+                  if cost else None)
 
 
 @router.get("/deal/{app_id}/summary.pdf", summary="PDF-сводка согласованной сделки")

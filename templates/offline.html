@@ -1,0 +1,18 @@
+{% import "_ui.html" as ui %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% include "_head.html" %}
+    <title>Нет соединения · Платформа ликвидности</title>
+</head>
+<body class="site">
+<main id="main" class="section" style="min-height: 100vh; display: grid; place-items: center;">
+    <div class="wrap final-cta">
+        {{ ui.brand_mark() }}
+        <h1 class="h-section" style="text-align: center;">Нет соединения с интернетом</h1>
+        <p class="lead-lg" style="text-align: center;">Статусы заявок, предложения и чат загружаются только из сети, чтобы вы всегда видели актуальные условия. Проверьте подключение и повторите.</p>
+        <button type="button" class="btn btn-primary btn-lg" onclick="location.reload()">Повторить</button>
+    </div>
+</main>
+</body>
+</html>

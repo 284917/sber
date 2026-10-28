@@ -11,13 +11,13 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, accounts, analytics, applications, export, kyc, sla
+from liquidity.services import Invalid, accounts, analytics, applications, audit, expiry, export, kyc, sla
 from liquidity.web import redirect, render
 
 router = APIRouter(prefix="/admin", tags=["Администратор"])
 admin_only = require_role("admin")
 staff = require_role(*config.STAFF_ROLES)
-TABS = ("overview", "kyc", "moderation", "archive", "history", "staff")
+TABS = ("overview", "kyc", "moderation", "archive", "history", "staff", "journal")
 
 
 def back_to(user: models.User, tab: str, **params) -> str:
@@ -31,12 +31,15 @@ def back_to(user: models.User, tab: str, **params) -> str:
 @router.get("", summary="Кабинет администратора (вкладки)")
 def admin_page(request: Request, tab: str = "overview", user: models.User = Depends(admin_only),
                db: Session = Depends(get_db)):
-    if tab not in TABS or (tab == "staff" and not user.is_superadmin):
+    if tab not in TABS or (tab in ("staff", "journal") and not user.is_superadmin):
         tab = "overview"
+    expiry.run(db)
     data = analytics.overview(db)
     kyc_queue = kyc.review_queue(db)
     return render(request, "admin.html", user=user, tab=tab, kyc_queue=kyc_queue, **data,
                   staff_members=accounts.staff_list(db) if tab == "staff" else [],
+                  journal=audit.latest(db) if tab == "journal" else [],
+                  charts=analytics.charts(db) if tab == "overview" else None,
                   doc_names={k: v for docs in config.KYC_DOCS.values() for k, v in docs},
                   nav_counts={"kyc": len(kyc_queue), "moderation": len(data["moderation_apps"])})
 
@@ -70,7 +73,7 @@ def unpublish(app_id: int, reason: str = Form(""), user: models.User = Depends(s
 
 @router.post("/kyc/approve_user/{target_user_id}", summary="Одобрить пакет KYC компании")
 def approve_kyc(target_user_id: int, user: models.User = Depends(admin_only), db: Session = Depends(get_db)):
-    kyc.approve(db, target_user_id)
+    kyc.approve(db, target_user_id, actor=user)
     return redirect("/admin?tab=kyc&kyc_approved=1")
 
 
@@ -78,7 +81,7 @@ def approve_kyc(target_user_id: int, user: models.User = Depends(admin_only), db
 def reject_kyc(target_user_id: int, reason: str = Form(""), user: models.User = Depends(admin_only),
                db: Session = Depends(get_db)):
     try:
-        kyc.reject(db, target_user_id, reason)
+        kyc.reject(db, target_user_id, reason, actor=user)
     except Invalid as e:
         return redirect(f"/admin?tab=kyc&error={e.code}")
     return redirect("/admin?tab=kyc&kyc_rejected=1")
@@ -94,7 +97,7 @@ def superadmin(user: models.User = Depends(admin_only)) -> models.User:
 def create_staff(email: str = Form(...), password: str = Form(...), role: str = Form(...),
                  user: models.User = Depends(superadmin), db: Session = Depends(get_db)):
     try:
-        accounts.create_staff(db, email=email, password=password, role=role)
+        accounts.create_staff(db, email=email, password=password, role=role, actor=user)
     except Invalid as e:
         return redirect(f"/admin?tab=staff&error={e.code}")
     return redirect("/admin?tab=staff&success=created")

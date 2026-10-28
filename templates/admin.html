@@ -2,7 +2,7 @@
 {% import "_ui.html" as ui %}
 {% import "_staff.html" as staff_ui %}
 {% set active = {'overview': 'analytics'}.get(tab, tab) %}
-{% set titles = {'overview': 'Обзор и аналитика', 'kyc': 'Очередь KYC', 'moderation': 'Модерация заявок', 'archive': 'Архив сделок', 'history': 'Все заявки', 'staff': 'Сотрудники'} %}
+{% set titles = {'overview': 'Обзор и аналитика', 'kyc': 'Очередь KYC', 'moderation': 'Модерация заявок', 'archive': 'Архив сделок', 'history': 'Все заявки', 'staff': 'Сотрудники', 'journal': 'Журнал действий'} %}
 {% block title %}{{ titles[tab] }}{% endblock %}
 {% block content %}
 {% set qp = request.query_params %}
@@ -24,7 +24,8 @@
 
 <nav class="tabs" aria-label="Разделы администрирования">
     {% for key, label, count in [('overview', 'Обзор', None), ('kyc', 'Очередь KYC', kyc_queue|length), ('moderation', 'Модерация', moderation_apps|length),
-                                 ('archive', 'Архив', archive|length), ('history', 'Все заявки', None), ('staff', 'Сотрудники', None)] if key != 'staff' or user.is_superadmin %}
+                                 ('archive', 'Архив', archive|length), ('history', 'Все заявки', None), ('staff', 'Сотрудники', None),
+                                 ('journal', 'Журнал', None)] if key not in ('staff', 'journal') or user.is_superadmin %}
     <a href="/admin{{ '?tab=' ~ key if key != 'overview' }}" class="{{ 'active' if tab == key }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}{% if count %}<span class="count-pill">{{ count }}</span>{% endif %}</a>
     {% endfor %}
 </nav>
@@ -110,6 +111,72 @@
         </table>
     </section>
 </div>
+
+{% set ch = charts %}
+<div class="grid grid-2">
+    <section class="card">
+        <h2 class="card-title">Спрос: страна × валюта <span class="muted">число заявок</span></h2>
+        <div class="table-wrap">
+        <table class="heat" aria-label="Заявки по стране получения и валюте">
+            <thead><tr><th></th>{% for cur in ch.currencies %}<th scope="col">{{ cur }}</th>{% endfor %}</tr></thead>
+            <tbody>
+            {% for code, name in ch.countries.items() %}
+            <tr>
+                <th scope="row">{{ name }}</th>
+                {% for cur in ch.currencies %}
+                {% set cell = ch.heat[(code, cur)] %}
+                {% set level = (cell.count / ch.heat_max) if ch.heat_max else 0 %}
+                <td title="{{ name }}, {{ cur }}: {{ cell.count }} заявок на {{ cell.volume|money }} {{ cur }}">
+                    <span class="heat-cell {{ 'strong' if level > 0.55 }}" style="--a: {{ (8 + 82 * level)|round|int }}%">{{ cell.count }}<small>{% if cell.count %}{{ (cell.volume / 1000000)|round(1)|string|replace('.', ',') }} млн{% else %}—{% endif %}</small></span>
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="hint">Чем насыщеннее цвет, тем больше заявок. Под числом — объём в миллионах единиц валюты.</p>
+    </section>
+    <section class="card">
+        <h2 class="card-title">Средняя ставка по неделям <span class="muted">предложения, показанные заёмщикам</span></h2>
+        {% set L = ch.lines %}
+        {% if ch.trend_max %}
+        <div class="legend">{% for s in L.series %}<span><i class="sw s{{ s.n }}"></i>{{ s.currency }}</span>{% endfor %}</div>
+        <svg class="trend" viewBox="0 0 {{ L.w }} {{ L.h + 20 }}" role="img" aria-label="Средняя ставка по неделям для EUR, USD и CNY">
+            {% for value, y in L.ticks %}
+            <line x1="24" x2="{{ L.w - 24 }}" y1="{{ y }}" y2="{{ y }}" class="grid-line"/>
+            <text x="{{ L.w - 22 }}" y="{{ y + 4 }}" class="tick">{{ value|string|replace('.', ',') }}%</text>
+            {% endfor %}
+            {% for s in L.series %}
+            {% for seg in s.segments %}<polyline points="{{ seg }}" class="line s{{ s.n }}"/>{% endfor %}
+            {% for i, x, y, v in s.points %}
+            <g class="pt"><circle cx="{{ x }}" cy="{{ y }}" r="10" class="hit"/><circle cx="{{ x }}" cy="{{ y }}" r="4" class="dot s{{ s.n }}"/><title>{{ s.currency }}, неделя с {{ ch.trend_weeks[i].strftime('%d.%m') }}: {{ v|string|replace('.', ',') }}%</title></g>
+            {% endfor %}
+            {% endfor %}
+            {% for w in ch.trend_weeks %}<text x="{{ 24 + loop.index0 * (L.w - 48) / (ch.trend_weeks|length - 1) }}" y="{{ L.h + 14 }}" class="tick" text-anchor="middle">{{ w.strftime('%d.%m') }}</text>{% endfor %}
+        </svg>
+        <table class="visually-hidden">
+            <caption>Средняя ставка по неделям</caption>
+            <tr><th>Неделя с</th>{% for s in L.series %}<th>{{ s.currency }}</th>{% endfor %}</tr>
+            {% for w in ch.trend_weeks %}{% set wi = loop.index0 %}<tr><td>{{ w.strftime('%d.%m.%Y') }}</td>{% for s in L.series %}{% set v = ch.trend[s.currency][wi] %}<td>{{ v ~ '%' if v is not none else '—' }}</td>{% endfor %}</tr>{% endfor %}
+        </table>
+        {% else %}{{ ui.empty('trend-up', 'Пока нет данных', 'Линии появятся, когда оператор покажет заёмщикам первые предложения.') }}{% endif %}
+    </section>
+</div>
+
+<section class="card">
+    <h2 class="card-title">Сколько длится каждый этап <span class="muted">в среднем по журналу заявок</span></h2>
+    <div class="stage-bars">
+        {% for label, note, hours in ch.stages %}
+        <div class="stage-bar" title="{{ label }}: {{ note }}">
+            <div><b>{{ label }}</b><div class="small muted">{{ note }}</div></div>
+            <div class="stage-track"><i style="width: {{ (100 * hours / ch.stage_max)|round(1) if hours and ch.stage_max else 0 }}%"></i></div>
+            <div class="stage-value num">{% if hours is none %}—{% elif hours < 48 %}{{ hours|round(1)|string|replace('.', ',') }} ч{% else %}{{ (hours / 24)|round(1)|string|replace('.', ',') }} дн.{% endif %}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="hint">Помогает увидеть, где заявки застревают: на модерации, в ожидании кредиторов или на согласовании договора.</p>
+</section>
 {% elif tab == 'kyc' %}
 <section class="card card-tight">
     <div class="card-head"><h2 class="card-title">Компании ждут проверки <span class="muted">{{ kyc_queue|length }}</span></h2></div>
@@ -250,5 +317,27 @@
         </form>
     </section>
 </div>
+{% elif tab == 'journal' %}
+<section class="card card-tight">
+    <div class="card-head"><h2 class="card-title">Действия сотрудников <span class="muted">последние {{ journal|length }}</span></h2></div>
+    {% if journal %}
+    <div class="table-wrap">
+    <table class="t t-top">
+        <thead><tr><th style="width: 150px;">Когда</th><th>Сотрудник</th><th>Действие</th><th></th></tr></thead>
+        <tbody>
+        {% for entry in journal %}
+        <tr>
+            <td class="small num">{{ entry.created_at.strftime('%d.%m.%Y %H:%M') if entry.created_at else '—' }}</td>
+            <td class="cell-wrap">{{ entry.actor.email if entry.actor else '—' }}<div class="small muted">{{ ROLE_NAMES.get(entry.actor.role, 'Отключён') if entry.actor else '' }}</div></td>
+            <td class="cell-wrap" style="max-width: 520px;">{{ entry.action }}</td>
+            <td class="r">{% if entry.link %}<a href="{{ entry.link }}" class="btn btn-ghost btn-sm">Открыть</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}{{ ui.empty('clipboard-text', 'Журнал пуст', 'Сюда попадают модерация, решения по KYC, проверка предложений, подтверждение сделок и изменения в составе сотрудников.') }}{% endif %}
+</section>
+<p class="hint">Журнал видит только главный администратор. Время — UTC.</p>
 {% endif %}
 {% endblock %}

@@ -1,8 +1,11 @@
 """Заявки на ликвидность: создание, модерация, поиск для кредиторов и этапы."""
+from datetime import date, timedelta
+
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.services import Invalid, NotFound, kyc
+from liquidity.services.audit import record
 from liquidity.services.events import log_event
 from liquidity.services.notifications import notify, notify_staff
 
@@ -43,6 +46,8 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
     if decision == "approve":
         application.status = "published"
         application.moderation_comment = None
+        application.valid_until = date.today() + timedelta(days=config.APP_VALID_DAYS)
+        record(db, admin, f"Опубликовал заявку №{app_id}", f"/operator/deal/{app_id}")
         log_event(db, app_id, admin, "Заявка прошла модерацию и опубликована для кредиторов")
         notify(db, application.user_id, f"Заявка №{app_id} опубликована, кредиторы её видят",
                f"/applications/{app_id}/offers", "ok")
@@ -53,6 +58,7 @@ def moderate(db: Session, admin: models.User, app_id: int, decision: str, commen
             raise Invalid("reason")
         application.status = "rejected"
         application.moderation_comment = comment
+        record(db, admin, f"Отклонил заявку №{app_id}: {comment}", f"/operator/deal/{app_id}")
         log_event(db, app_id, admin, f"Заявка отклонена модератором: {comment}")
         notify(db, application.user_id, f"Заявка №{app_id} отклонена: {comment}", f"/applications/{app_id}/offers", "bad")
     else:
@@ -67,7 +73,7 @@ def withdraw(db: Session, borrower: models.User, app_id: int) -> models.Applicat
         raise Invalid("withdraw", "Заявку в работе или согласованную отозвать нельзя")
     application.status = "withdrawn"
     for offer in db.query(models.Offer).filter(models.Offer.application_id == app_id,
-                                               models.Offer.status.in_(["pending", "shown"])).all():
+                                               models.Offer.status.in_(["pending", "shown", "accepted"])).all():
         offer.status = "rejected"
         notify(db, offer.user_id, f"Заёмщик отозвал заявку №{app_id}, ваше предложение закрыто",
                "/dashboard#my-offers", "warn")
@@ -88,9 +94,10 @@ def unpublish(db: Session, staff: models.User, app_id: int, reason: str):
     application.status = "rejected"
     application.moderation_comment = reason
     for offer in db.query(models.Offer).filter(models.Offer.application_id == app_id,
-                                               models.Offer.status.in_(["pending", "shown"])).all():
+                                               models.Offer.status.in_(["pending", "shown", "accepted"])).all():
         offer.status = "rejected"
         notify(db, offer.user_id, f"Заявка №{app_id} снята с публикации, ваше предложение закрыто", "/dashboard#my-offers", "warn")
+    record(db, staff, f"Снял с публикации заявку №{app_id}: {reason}", f"/operator/deal/{app_id}")
     log_event(db, app_id, staff, f"Заявка снята с публикации: {reason}")
     notify(db, application.user_id, f"Заявка №{app_id} снята с публикации: {reason}", f"/applications/{app_id}/offers", "bad")
     db.commit()
@@ -142,8 +149,9 @@ def stages(db: Session, application: models.Application, shown_offers: int = 0):
     from liquidity.services.deals import contract_uploaded
 
     status = application.status
-    failed = status in ("rejected", "withdrawn")
-    current = {"rejected": 0, "moderation": 0, "published": 2, "withdrawn": 2, "agreed": len(STAGES)}.get(status)
+    failed = status in ("rejected", "withdrawn", "expired")
+    current = {"rejected": 0, "moderation": 0, "published": 2, "withdrawn": 2, "expired": 2,
+               "agreed": len(STAGES)}.get(status)
     if status == "in_work":
         current = 5 if contract_uploaded(db, application.id) else 3
 
@@ -152,7 +160,14 @@ def stages(db: Session, application: models.Application, shown_offers: int = 0):
         state = "done" if i < current else ("failed" if failed else "current") if i == current else "todo"
         result.append({"label": label, "note": note, "state": state})
     if status == "published":
-        result[2]["note"] = f"Получено предложений: {shown_offers}" if shown_offers else "Ждём предложений кредиторов"
+        from liquidity.services.offers import funded  # здесь, чтобы не было циклического импорта
+        collected = funded(db, application.id)
+        if collected:
+            result[2]["note"] = f"Собрано {round(100 * collected / application.funding_amount)}% суммы"
+        else:
+            result[2]["note"] = f"Получено предложений: {shown_offers}" if shown_offers else "Ждём предложений кредиторов"
+    if status == "expired":
+        result[2]["note"] = "Срок публикации истёк"
     if status == "rejected":
         result[0]["note"] = "Отклонена: " + (application.moderation_comment or "без комментария")
     if status == "withdrawn":

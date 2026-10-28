@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, NotFound, applications, deals, offers
+from liquidity.services import Invalid, NotFound, applications, deals, expiry, offers
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
 
@@ -15,6 +15,7 @@ staff = require_role(*config.STAFF_ROLES)
 
 @router.get("/moderation", summary="Заявки на модерации и опубликованные заявки")
 def moderation_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
+    expiry.run(db)
     apps = db.query(models.Application).filter(models.Application.status.in_(["moderation", "published"])).order_by(
         models.Application.created_at, models.Application.id).all()
     return render(request, "operator_moderation.html", user=user,
@@ -24,6 +25,7 @@ def moderation_page(request: Request, user: models.User = Depends(staff), db: Se
 
 @router.get("/offers", summary="Предложения на проверке")
 def offers_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
+    expiry.run(db)
     return render(request, "operator_offers.html", user=user, offers_data=offers.review_list(db))
 
 
@@ -53,6 +55,7 @@ def deal_page(app_id: int, request: Request, user: models.User = Depends(staff),
     offer = deals.accepted_offer(db, app_id)
     checks = deals.checks(db, application, offer)
     return render(request, "operator_deal.html", user=user, app=application, offer=offer, checks=checks,
+                  lenders=deals.lenders(offer),
                   stages=applications.stages(db, application), events=get_events(db, app_id),
                   can_confirm=application.status == "in_work" and all(checks.values()))
 

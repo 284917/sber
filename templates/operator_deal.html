@@ -26,7 +26,8 @@
         <section class="card">
             <h2 class="card-title">Условия</h2>
             <div class="kv"><span>Заёмщик</span><span>{{ app.borrower.display_name if app.borrower else '—' }}{% if app.borrower and app.borrower.registration_number %} <span class="muted">· ИНН {{ app.borrower.registration_number }}</span>{% endif %}</span></div>
-            <div class="kv"><span>Кредитор</span><span>{{ offer.sender.display_name if offer and offer.sender else '—' }}{% if offer and offer.sender and offer.sender.country_code %} <span class="muted">· {{ ui.country(offer.sender.country_code) }}</span>{% endif %}</span></div>
+            {% if lenders|length > 1 %}{{ ui.lenders_list(lenders, cur) }}{% else %}
+            <div class="kv"><span>Кредитор</span><span>{{ offer.sender.display_name if offer and offer.sender else '—' }}{% if offer and offer.sender and offer.sender.country_code %} <span class="muted">· {{ ui.country(offer.sender.country_code) }}</span>{% endif %}</span></div>{% endif %}
             <div class="kv"><span>Сумма</span><span class="num">{{ (offer.funding_amount if offer else app.funding_amount)|money }} {{ cur }}</span></div>
             <div class="kv"><span>Ставка · комиссия итого</span><span>{% if offer %}{{ offer.annual_interest_rate|percent }} · {{ offer.total_commission|percent }}{% else %}—{% endif %}</span></div>
             <div class="kv"><span>Срок</span><span>{{ app.term_months ~ ' мес.' if app.term_months else '—' }}</span></div>

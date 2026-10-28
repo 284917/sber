@@ -26,5 +26,27 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{{ SITE_URL }}/static/og.png">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/pwa/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ликвидность">
+<script>
+    // PWA: регистрируем service worker и показываем кнопки «Установить», когда браузер готов предложить установку
+    if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    let installPrompt = null;
+    addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); installPrompt = e;
+        document.querySelectorAll('[data-install]').forEach((b) => { b.hidden = false; });
+    });
+    addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-install]');
+        if (!btn || !installPrompt) return;
+        installPrompt.prompt();
+        await installPrompt.userChoice;
+        installPrompt = null;
+        document.querySelectorAll('[data-install]').forEach((b) => { b.hidden = true; });
+    });
+    addEventListener('appinstalled', () => document.querySelectorAll('[data-install]').forEach((b) => { b.hidden = true; }));
+</script>
 <link rel="preload" href="/static/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link href="/static/css/app.css" rel="stylesheet">

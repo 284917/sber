@@ -1,0 +1,667 @@
+"""Словарь английской версии: русская строка -> английская.
+
+Покрывает публичные страницы и кабинет кредитора. Строки с числами и датами — в PATTERNS.
+"""
+from liquidity import config
+
+EN = {
+    # --- Общее, шапка, подвал, меню ---
+    "Платформа ликвидности": "Liquidity Platform",
+    "Платформа ликвидности · Сбер": "Liquidity Platform · Sber",
+    "Сбер": "Sber",
+    "Ликвидность": "Liquidity",
+    "Перейти к содержимому": "Skip to content",
+    "Главное меню": "Main menu",
+    "Как это работает": "How it works",
+    "Калькулятор": "Calculator",
+    "Кредиторам": "For lenders",
+    "Безопасность": "Security",
+    "Вопросы": "FAQ",
+    "Войти": "Sign in",
+    "Вход": "Sign in",
+    "Зарегистрировать компанию": "Register your company",
+    "Перейти в кабинет": "Go to dashboard",
+    "Русская версия": "Русская версия",
+    "Светлая или тёмная тема": "Light or dark theme",
+    "Переключить тему": "Toggle theme",
+    "Меню": "Menu",
+    "MVP для SBER HACK, 2026": "MVP for SBER HACK, 2026",
+    "Безопасность и документы": "Security and documents",
+    "Установить приложение": "Install the app",
+    "Установить": "Install",
+    "Политика конфиденциальности": "Privacy policy",
+    "Условия использования": "Terms of use",
+    "Документы": "Documents",
+    "Платформа ликвидности: российские компании получают предложения зарубежных кредиторов и сравнивают их по полной стоимости. Проверка KYC, модерация заявок и сделка до согласования.":
+        "Liquidity Platform: Russian companies receive offers from international lenders and compare them by total cost. KYC checks, moderated applications and deals managed through to signing.",
+    "Трансграничное финансирование между юрлицами: заявка, предложения кредиторов, сравнение по полной стоимости и сделка под контролем оператора.":
+        "Cross-border corporate financing: one application, lender offers, total-cost comparison and an operator-supervised deal.",
+    "Платформа ликвидности: сравнение предложений по полной стоимости": "Liquidity Platform: offers compared by total cost",
+    "Платформа ликвидности · Валютное финансирование для российских компаний": "Liquidity Platform · FX financing for Russian companies",
+
+    # --- Главная: первый экран ---
+    "Для кого": "Audience",
+    "Для заёмщиков": "For borrowers",
+    "Для кредиторов": "For lenders",
+    "Валютное финансирование": "FX financing",
+    "от проверенных кредиторов": "from verified lenders",
+    "Опубликуйте заявку один раз. Кредиторы из ОАЭ, Кипра, Китая и Турции пришлют предложения, а платформа сведёт ставку и комиссии в одну цифру и проведёт сделку до подписания договора.":
+        "Publish your application once. Lenders from the UAE, Cyprus, China and Turkey send offers; the platform turns rate and fees into one number and takes the deal all the way to signing.",
+    "Регистрация и заявка бесплатно": "Free registration and application",
+    "SWIFT, СПФС, CIPS или платёжный агент": "SWIFT, SPFS, CIPS or a payment agent",
+    "Каждый участник проходит KYC": "Every participant passes KYC",
+    "Заявки проверенных": "Applications from verified",
+    "российских компаний": "Russian companies",
+    "Каждый заёмщик прошёл KYC, каждая заявка прошла модерацию. Фильтруйте по стране, валюте, сумме и сроку и отправляйте условия, сразу видя полную стоимость, с которой заёмщик сравнит ваше предложение.":
+        "Every borrower has passed KYC and every application has been moderated. Filter by country, currency, amount and term, and send terms while seeing the total cost the borrower will compare your offer by.",
+    "Зарегистрироваться как кредитор": "Register as a lender",
+    "Заёмщики проверены по ЕГРЮЛ и UBO": "Borrowers checked against the state register and UBO",
+    "EUR, USD и CNY": "EUR, USD and CNY",
+    "Сделка под контролем оператора": "Operator-supervised deals",
+    "Пример экрана сравнения предложений": "Example of the offer comparison screen",
+    "Пример ленты заявок для кредитора": "Example of the lender's application feed",
+    "Лучшее предложение": "Best offer",
+    "Полная стоимость": "Total cost",
+    "Экономия против следующего": "Savings vs. next best",
+    "Кредитор": "Lender",
+    "Сумма": "Amount",
+    "Ставка": "Rate",
+    "Комиссия": "Fee",
+    "Переплата": "Overpayment",
+    "Лучшее": "Best",
+    "Заявки на финансирование": "Financing applications",
+    "Ваша комиссия": "Your fee",
+    "Заёмщик увидит": "Borrower will see",
+    "Закупка станков с ЧПУ у поставщика в Германии": "Purchase of CNC machines from a supplier in Germany",
+
+    # --- Главная: живые цифры, шаги ---
+    "Платформа в цифрах": "Platform in numbers",
+    "заявок опубликовано": "applications published",
+    "предложений кредиторов": "lender offers",
+    "средняя полная стоимость": "average total cost",
+    "сделок согласовано": "deals closed",
+    "Данные платформы в реальном времени": "Live platform data",
+    "Самая низкая ставка ещё не значит | самый дешёвый кредит. | Мы показываем полную стоимость | до подписания договора.":
+        "The lowest rate is not always | the cheapest loan. | We show the total cost | before you sign.",
+    "полную стоимость": "total cost",
+    "От заявки до согласованной сделки в три шага": "From application to closed deal in three steps",
+    "От заявки заёмщика до вашей сделки в три шага": "From a borrower's application to your deal in three steps",
+    "Пройдите проверку компании": "Get your company verified",
+    "Загрузите устав, выписку из ЕГРЮЛ и сведения о бенефициарах. Администратор проверяет пакет целиком, а при отказе пишет причину.":
+        "Upload the charter, state register extract and beneficial owners. An administrator reviews the whole package and explains any rejection.",
+    "Опубликуйте заявку": "Publish an application",
+    "Сумма, валюта, страна получения, срок и способ передачи. После модерации заявку видят только верифицированные кредиторы.":
+        "Amount, currency, destination country, term and transfer method. After moderation only verified lenders can see it.",
+    "Выберите предложение": "Choose an offer",
+    "Сравните офферы по полной стоимости, примите лучший, согласуйте детали в чате и загрузите договор. Оператор подтверждает сделку.":
+        "Compare offers by total cost, accept the best one, agree details in chat and upload the contract. The operator confirms the deal.",
+    "Свидетельство о регистрации, устав, реестр директоров, UBO, налоговое резидентство и подтверждение источника средств.":
+        "Certificate of incorporation, articles, register of directors, UBO, tax residency and proof of source of funds.",
+    "Найдите подходящую заявку": "Find a suitable application",
+    "Фильтры по стране получения, валюте, сумме и сроку. Видны назначение средств, срок и способ передачи.":
+        "Filter by destination country, currency, amount and term. Purpose, term and transfer method are visible.",
+    "Отправьте условия": "Send your terms",
+    "Сумма, ставка, комиссия и дополнительные условия. Оператор проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.":
+        "Amount, rate, fee and additional terms. The operator checks them, the borrower compares, and once chosen a deal room with chat opens.",
+
+    # --- Калькулятор ---
+    "Сколько будет стоить финансирование": "How much will the financing cost",
+    "Введите сумму, валюту и срок. Покажем полную стоимость, переплату и её размер в рублях по курсу ЦБ РФ.":
+        "Enter the amount, currency and term. We show the total cost, the overpayment and its rouble value at the Bank of Russia rate.",
+    "Срок": "Term",
+    "1 мес.": "1 mo.",
+    "5 лет": "5 years",
+    "1 год": "1 year",
+    "Ставка, % годовых": "Rate, % p.a.",
+    "Комиссия кредитора, %": "Lender fee, %",
+    "% годовых": "% p.a.",
+    "Проценты за срок": "Interest for the term",
+    "Комиссия за организацию": "Arrangement fee",
+    "Проценты в месяц": "Monthly interest",
+    "Если рубль ослабнет": "If the rouble weakens",
+    "Курс": "Rate",
+    "Вернуть в рублях": "To repay in roubles",
+    "Дороже на": "Extra cost",
+    "Сегодня": "Today",
+    "Сумма займа и переплата в валюте по курсу ЦБ сегодня и при его росте на 10–30%.":
+        "Loan amount plus overpayment, at today's Bank of Russia rate and if it rises by 10–30%.",
+    "Подать заявку": "Apply",
+    "Расчёт ориентировочный: точные условия предлагают кредиторы. Комиссия включает 0,8% платформы. Проценты ежемесячно, основной долг в конце срока.":
+        "Indicative estimate: lenders set the actual terms. The fee includes the platform's 0.8%. Interest monthly, principal at the end of the term.",
+    "Валюта": "Currency",
+    "Ставку и комиссию предложат кредиторы; для оценки подставлены типичные значения.":
+        "Lenders will propose the rate and fee; typical values are used for the estimate.",
+
+    # --- Потоки ---
+    "География": "Geography",
+    "Как ликвидность движется через платформу": "How liquidity flows through the platform",
+    "Слева — откуда кредиторы делают предложения, справа — куда российские компании получают средства. Толщина линии — число предложений и заявок.":
+        "On the left — where lenders make offers from; on the right — where Russian companies receive funds. Line thickness is the number of offers and applications.",
+    "Россия": "Russia",
+    "заёмщики": "borrowers",
+    "Кредиторы": "Lenders",
+    "Получение средств": "Funds received in",
+    "Российские компании": "Russian companies",
+    "По предложениям, которые оператор показал заёмщикам, и опубликованным заявкам.":
+        "Based on offers the operator showed to borrowers and on published applications.",
+    "Пока на платформе нет показанных предложений: слева показаны страны, откуда регистрируются кредиторы.":
+        "No offers have been shown yet: the left side lists countries lenders register from.",
+
+    # --- Преимущества, роли ---
+    "Почему платформа": "Why the platform",
+    "Прозрачные условия вместо переписки с десятком банков": "Transparent terms instead of emailing a dozen banks",
+    "Полная стоимость одной цифрой": "Total cost as one number",
+    "Ставка и комиссии кредитора и платформы пересчитываются в процент годовых на срок вашей заявки. Предложения сортируются от самого выгодного.":
+        "The rate and the lender and platform fees are converted into an annual percentage over your term. Offers are sorted from the cheapest.",
+    "Только проверенные участники": "Verified participants only",
+    "Заёмщики и кредиторы проходят KYC и AML у администратора. Предложение попадает к вам только после проверки оператором.":
+        "Borrowers and lenders pass KYC and AML with an administrator. Offers reach you only after an operator review.",
+    "Ваш маршрут платежа": "Your payment route",
+    "EUR, USD или CNY с получением в Германии, Турции или Китае. Передача через SWIFT, СПФС, CIPS или платёжного агента.":
+        "EUR, USD or CNY received in Germany, Turkey or China. Transfer via SWIFT, SPFS, CIPS or a payment agent.",
+    "Сделка под контролем": "A supervised deal",
+    "Чат с кредитором, договор и история каждого шага в одном месте. Оператор подтверждает сделку, только когда договор загружен и обе стороны проверены.":
+        "Chat, contract and the history of every step in one place. The operator confirms the deal only once the contract is uploaded and both sides are verified.",
+    "Две стороны сделки": "Two sides of the deal",
+    "Платформа работает для обеих сторон": "The platform works for both sides",
+    "Российским компаниям": "For Russian companies",
+    "Привлечь валютное финансирование": "Raise FX financing",
+    "Одна заявка вместо поиска кредиторов по одному": "One application instead of approaching lenders one by one",
+    "Сравнение предложений по полной стоимости": "Offers compared by total cost",
+    "Отказ от любого предложения без объяснений": "Decline any offer, no explanation needed",
+    "Зарегистрироваться как заёмщик": "Register as a borrower",
+    "Зарубежным кредиторам": "For international lenders",
+    "Разместить свободную ликвидность": "Deploy spare liquidity",
+    "Заявки проверенных российских компаний": "Applications from verified Russian companies",
+    "Фильтры по стране, валюте, сумме и сроку": "Filters by country, currency, amount and term",
+    "Расчёт полной стоимости прямо в форме предложения": "Total cost calculated right in the offer form",
+
+    # --- FAQ ---
+    "Что спрашивают перед первой заявкой": "What people ask before their first application",
+    "Сколько стоит пользоваться платформой?": "How much does the platform cost?",
+    "Регистрация, проверка компании и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
+        "Registration, verification and publishing are free. The platform fee of 0.8% of the amount is included in the offer's total fee and is charged only on a closed deal.",
+    "Как считается полная стоимость?": "How is the total cost calculated?",
+    "Ставка плюс комиссия за организацию, разнесённая на срок заявки: комиссия × 12 / срок в месяцах. Так предложение с низкой ставкой и высокой комиссией честно сравнивается с остальными.":
+        "Rate plus the arrangement fee spread over the term: fee × 12 / term in months. This way an offer with a low rate and a high fee is compared fairly.",
+    "Какие документы нужны для проверки?": "Which documents are needed for verification?",
+    "Заёмщику: устав, выписка из ЕГРЮЛ, паспорт директора, сведения о бенефициарах и документ о полномочиях директора. Кредитору: свидетельство о регистрации, устав, реестр директоров, бенефициары, налоговое резидентство и подтверждение источника средств.":
+        "Borrowers: charter, state register extract, director's passport, beneficial owners and the director's authority. Lenders: certificate of incorporation, articles, register of directors, beneficial owners, tax residency and proof of source of funds.",
+    "Сколько длится модерация заявки?": "How long does moderation take?",
+    "Администратор проверяет заявку вручную, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.":
+        "Applications are reviewed manually, usually within a business day. If rejected, you will see the reason and can resubmit.",
+    "Кто видит мою заявку?": "Who can see my application?",
+    "Только кредиторы, прошедшие KYC. Название кредитора вы видите после того, как оператор проверит его предложение.":
+        "Only KYC-verified lenders. You see a lender's name after the operator has reviewed their offer.",
+    "Можно ли отказаться от предложения?": "Can I decline an offer?",
+    "Да. Любое предложение можно отклонить. Когда вы принимаете одно, остальные по заявке отклоняются автоматически.":
+        "Yes. Any offer can be declined. Once the amount is covered, the remaining offers are declined automatically.",
+    "В каких валютах и куда можно получить средства?": "Which currencies and destinations are supported?",
+    "EUR, USD и CNY с получением в Германии, Турции или Китае. Способ передачи вы выбираете в заявке: SWIFT, СПФС, CIPS или платёжный агент.":
+        "EUR, USD and CNY received in Germany, Turkey or China. You choose the transfer method in the application: SWIFT, SPFS, CIPS or a payment agent.",
+    "Что если предложений нет?": "What if there are no offers?",
+    "Заявка остаётся опубликованной, пока вы её не закроете. Можно изменить срок или сумму и подать новую заявку, чтобы она подошла большему числу кредиторов.":
+        "The application stays published until it expires or you withdraw it. You can submit a new one with a different term or amount to reach more lenders.",
+    "Опубликуйте первую заявку сегодня": "Publish your first application today",
+    "Регистрация и заявка бесплатны. Комиссия 0,8% только если сделка согласована.":
+        "Registration and applications are free. The 0.8% fee applies only to closed deals.",
+
+    # --- Вход и регистрация ---
+    "Вход | Платформа ликвидности Сбер": "Sign in | Sber Liquidity Platform",
+    "Регистрация | Платформа ликвидности Сбер": "Registration | Sber Liquidity Platform",
+    "Валютное финансирование от проверенных кредиторов": "FX financing from verified lenders",
+    "Одна заявка, несколько предложений и честное сравнение по полной стоимости. Сделка ведётся до подписания договора.":
+        "One application, several offers and a fair total-cost comparison. The deal is managed all the way to signing.",
+    "Проверенные участники.": "Verified participants.",
+    "Каждая компания проходит KYC и AML у администратора.": "Every company passes KYC and AML with an administrator.",
+    "Честное сравнение.": "Fair comparison.",
+    "Ставка и комиссии сводятся в одну цифру.": "Rate and fees become one number.",
+    "Сделка под контролем.": "Supervised deal.",
+    "Чат, договор и подтверждение оператором.": "Chat, contract and operator confirmation.",
+    "На главную": "Home",
+    "Для заёмщиков, кредиторов и сотрудников платформы": "For borrowers, lenders and platform staff",
+    "Пароль": "Password",
+    "Нет аккаунта?": "No account?",
+    "Демо: войти в роль одной кнопкой": "Demo: sign in to a role with one click",
+    "Оператор платформы": "Platform operator",
+    "Администратор": "Administrator",
+    "Компании, заявки во всех статусах, предложения и сделки уже созданы.": "Companies, applications in every status, offers and deals are already created.",
+    "Регистрация компании": "Company registration",
+    "Роль выбирается один раз. После регистрации нужно пройти верификацию (KYC).": "The role is chosen once. After registration your company must pass verification (KYC).",
+    "Заёмщик (РФ)": "Borrower (Russia)",
+    "Кредитор (зарубежье)": "Lender (international)",
+    "Название компании": "Company name",
+    "Страна регистрации": "Country of registration",
+    "Выберите": "Select",
+    "ИНН": "Tax ID (INN)",
+    "Не короче 8 символов": "At least 8 characters",
+    "Зарегистрироваться": "Register",
+    "Уже есть аккаунт?": "Already have an account?",
+    "ООО «Альфа»": "Alpha LLC",
+    "Регистрационный номер": "Registration number",
+    "ИНН (10 цифр)": "Tax ID (10 digits)",
+    "Укажите название компании": "Enter the company name",
+    "Неверный email или пароль.": "Invalid email or password.",
+
+    # --- Безопасность ---
+    "Безопасность и документы · Платформа ликвидности": "Security and documents · Liquidity Platform",
+    "Как платформа проверяет компании, кто видит ваши данные и какие документы нужны для KYC.":
+        "How the platform verifies companies, who sees your data and which documents KYC requires.",
+    "Каждый участник проверен, каждый шаг виден": "Every participant verified, every step visible",
+    "Как мы проверяем компании и сделки, кто видит ваши данные и что подготовить до регистрации.":
+        "How we verify companies and deals, who sees your data and what to prepare before registering.",
+    "Проверка компании": "Company verification",
+    "KYC проходят все заёмщики и кредиторы. Администратор проверяет пакет документов целиком и при отказе называет причину.":
+        "All borrowers and lenders pass KYC. An administrator reviews the whole package and states the reason for any rejection.",
+    "Модерация заявок": "Application moderation",
+    "Каждую заявку до публикации проверяет сотрудник. Кредиторы видят только одобренные заявки верифицированных компаний.":
+        "Staff review every application before publication. Lenders see only approved applications from verified companies.",
+    "Проверка предложений": "Offer review",
+    "Оператор сверяет условия кредитора с заявкой до того, как их увидит заёмщик. Условия он не меняет.":
+        "The operator checks a lender's terms against the application before the borrower sees them. The terms are never changed.",
+    "Подтверждение сделки": "Deal confirmation",
+    "Сделка получает статус «Согласовано», только когда загружен подписанный договор и обе стороны проверены.":
+        "A deal becomes “Closed” only once the signed contract is uploaded and both sides are verified.",
+    "Документы для KYC": "KYC documents",
+    "Что подготовить до регистрации": "What to prepare before registering",
+    "Все документы загружаются в PDF, до 4 МБ каждый. Пока пакет не отправлен на проверку, любой файл можно заменить.":
+        "All documents are uploaded as PDF, up to 4 MB each. Any file can be replaced until the package is submitted.",
+    "Заёмщику (российская компания)": "Borrower (Russian company)",
+    "Кредитору (зарубежная компания)": "Lender (international company)",
+    "Зарубежье": "International",
+    "Доступ к данным": "Data access",
+    "Кто что видит": "Who sees what",
+    "Данные": "Data",
+    "Ваша компания": "Your company",
+    "Другая сторона сделки": "The other party",
+    "Остальные участники": "Other participants",
+    "Сотрудники платформы": "Platform staff",
+    "Документы KYC": "KYC documents",
+    "Да": "Yes",
+    "Нет": "No",
+    "Заявка: сумма, валюта, срок, назначение": "Application: amount, currency, term, purpose",
+    "Только верифицированные кредиторы, после модерации": "Verified lenders only, after moderation",
+    "Название заёмщика": "Borrower's name",
+    "Верифицированные кредиторы": "Verified lenders",
+    "Предложение кредитора": "Lender's offer",
+    "Заёмщик — после проверки оператором": "Borrower — after operator review",
+    "Чат сделки и файлы": "Deal chat and files",
+    "Только принятый кредитор": "Accepted lender only",
+    "Договор": "Contract",
+    "Сроки": "Timelines",
+    "Сколько ждать ответа платформы": "How long the platform takes to respond",
+    "проверка документов KYC": "KYC document review",
+    "модерация заявки": "application moderation",
+    "проверка предложения кредитора": "lender offer review",
+    "Сроки считаются с момента отправки. Если срок вышел, задача подсвечивается у сотрудника как просроченная.":
+        "Timelines run from submission. Once exceeded, the task is flagged as overdue for staff.",
+    "Защита данных": "Data protection",
+    "Как устроена защита": "How protection works",
+    "Пароли": "Passwords",
+    "хранятся только в виде хеша bcrypt. Сотрудники платформы их не видят.": "are stored only as bcrypt hashes. Staff never see them.",
+    "Сессия": "The session",
+    "хранится в защищённой cookie, недоступной скриптам страницы, и истекает автоматически.": "lives in a protected cookie inaccessible to page scripts and expires automatically.",
+    "Формы": "Forms",
+    "защищены от подделки запросов с чужих сайтов (CSRF-токен в каждой форме).": "are protected against cross-site request forgery (a CSRF token in every form).",
+    "блокируется на 15 минут после пяти неверных паролей подряд.": "is locked for 15 minutes after five wrong passwords in a row.",
+    "Файлы": "Files",
+    "отдаются только тем, у кого есть доступ к сделке или к пакету KYC. Прямых публичных ссылок нет.": "are served only to those with access to the deal or KYC package. There are no public links.",
+    "История": "The history",
+    "каждого действия по заявке сохраняется: кто и когда опубликовал, показал, принял или подтвердил.": "of every action is kept: who published, showed, accepted or confirmed, and when.",
+    "Платформа является MVP для хакатона SBER HACK и не является финансовой организацией. Подробнее в":
+        "The platform is an MVP for the SBER HACK hackathon and is not a financial institution. See the",
+    "политике конфиденциальности": "privacy policy",
+    "и": "and",
+    "условиях использования": "terms of use",
+    "Документы готовы?": "Documents ready?",
+    "Я кредитор": "I'm a lender",
+
+    # --- Документы KYC ---
+    **{name: en for name, en in (
+        ("Устав компании", "Company charter"), ("Выписка из ЕГРЮЛ", "State register (EGRUL) extract"),
+        ("Паспорт директора", "Director's passport"), ("Сведения о бенефициарах (UBO)", "Beneficial owners (UBO)"),
+        ("Документ о полномочиях директора", "Director's authority document"),
+        ("Свидетельство о регистрации (Certificate of Incorporation)", "Certificate of Incorporation"),
+        ("Устав (Memorandum and Articles)", "Memorandum and Articles"),
+        ("Реестр директоров и участников", "Register of directors and shareholders"),
+        ("Сертификат налогового резидентства", "Tax residency certificate"),
+        ("Подтверждение источника средств (отчётность или справка)", "Proof of source of funds (statements or letter)"),
+    )},
+
+    # --- Юридические страницы ---
+    "Политика конфиденциальности · Платформа ликвидности": "Privacy policy · Liquidity Platform",
+    "Условия использования · Платформа ликвидности": "Terms of use · Liquidity Platform",
+    "Платформа ликвидности является MVP, созданным для хакатона SBER HACK. Документ описывает, какие данные мы обрабатываем и зачем.":
+        "The Liquidity Platform is an MVP built for the SBER HACK hackathon. This document describes what data we process and why.",
+    "Какие данные мы собираем": "What data we collect",
+    "Email и пароль для входа (пароль хранится только в виде хеша bcrypt), название компании, страну регистрации, ИНН или регистрационный номер, документы для проверки KYC, заявки, предложения и переписку в сделке.":
+        "Email and password (stored only as a bcrypt hash), company name, country of registration, tax ID or registration number, KYC documents, applications, offers and deal correspondence.",
+    "Зачем": "Why",
+    "Чтобы проверить компанию, показать заявку верифицированным кредиторам, сравнить предложения и провести сделку. Данные не продаются и не передаются третьим лицам.":
+        "To verify the company, show applications to verified lenders, compare offers and run the deal. Data is never sold or shared with third parties.",
+    "Кто видит данные": "Who sees the data",
+    "Документы KYC видят только сама компания и сотрудники платформы. Сделку и её файлы видят заёмщик, принятый кредитор и сотрудники платформы.":
+        "KYC documents are visible only to the company itself and platform staff. A deal and its files are visible to the borrower, the accepted lenders and platform staff.",
+    "Мы используем только технические cookie: cookie сессии после входа и cookie защиты форм. Рекламных и аналитических cookie нет.":
+        "We use technical cookies only: a session cookie after sign-in, a form-protection cookie and your language choice. No advertising or analytics cookies.",
+    "Удаление данных": "Data deletion",
+    "Чтобы удалить аккаунт и данные компании, напишите администратору платформы.": "To delete your account and company data, contact the platform administrator.",
+    "Платформа ликвидности является MVP, созданным для хакатона SBER HACK, и не является финансовой организацией. Сделки на платформе носят демонстрационный характер.":
+        "The Liquidity Platform is an MVP built for the SBER HACK hackathon and is not a financial institution. Deals on the platform are for demonstration.",
+    "Участники": "Participants",
+    "Зарегистрироваться могут юридические лица: заёмщики из России и зарубежные кредиторы. Публиковать заявки и предложения можно только после проверки KYC администратором.":
+        "Legal entities may register: borrowers from Russia and international lenders. Applications and offers can be published only after KYC approval.",
+    "Заявки и предложения": "Applications and offers",
+    "Заявка публикуется после модерации. Предложение кредитора становится видно заёмщику после проверки оператором. Заёмщик вправе принять или отклонить любое предложение.":
+        "Applications are published after moderation. A lender's offer becomes visible to the borrower after operator review. The borrower may accept or decline any offer.",
+    "Регистрация и публикация заявки бесплатны. Комиссия платформы 0,8% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
+        "Registration and publishing are free. The platform fee of 0.8% of the amount is included in the offer's total fee and charged only on a closed deal.",
+    "Ответственность": "Liability",
+    "Условия займа согласуются сторонами напрямую и фиксируются в договоре, который стороны загружают в комнату сделки.":
+        "Loan terms are agreed by the parties directly and recorded in the contract they upload to the deal room.",
+    "Нет соединения · Платформа ликвидности": "Offline · Liquidity Platform",
+    "Нет соединения с интернетом": "No internet connection",
+    "Статусы заявок, предложения и чат загружаются только из сети, чтобы вы всегда видели актуальные условия. Проверьте подключение и повторите.":
+        "Application statuses, offers and chat load only from the network so you always see current terms. Check your connection and try again.",
+    "Повторить": "Try again",
+    "Страница не найдена": "Page not found",
+    "Нет доступа": "Access denied",
+
+    # --- Кабинет кредитора: каркас ---
+    "Уведомления": "Notifications",
+    "Работа": "Work",
+    "Мои предложения": "My offers",
+    "Компания": "Company",
+    "Профиль и рейтинг": "Profile and rating",
+    "Верификация": "Verification",
+    "Тема": "Theme",
+    "Выйти": "Sign out",
+    "Русский": "Русский",
+    "Разделы": "Sections",
+    "Отмена": "Cancel",
+    "Подтвердить": "Confirm",
+    "Новые события": "New events",
+    "Все уведомления": "All notifications",
+    "Не прочитано": "Unread",
+    "Новых уведомлений нет": "No new notifications",
+    "Уведомлений пока нет": "No notifications yet",
+    "Здесь появятся новые предложения, решения по проверке и сообщения в сделках.":
+        "New offers, review decisions and deal messages will appear here.",
+    "Отметить все прочитанными": "Mark all as read",
+
+    # --- Первые шаги ---
+    "Первые шаги": "Getting started",
+    "Первые шаги на платформе": "Getting started on the platform",
+    "Компания зарегистрирована": "Company registered",
+    "Документы KYC загружены и отправлены": "KYC documents uploaded and submitted",
+    "Верификация пройдена": "Verification passed",
+    "Первое предложение отправлено": "First offer sent",
+    "Первая сделка": "First deal",
+
+    # --- Лента заявок и фильтры ---
+    "Страна получения": "Destination country",
+    "Все страны": "All countries",
+    "Все валюты": "All currencies",
+    "Сумма от": "Amount from",
+    "Сумма до": "Amount to",
+    "Срок до, мес.": "Term up to, mo.",
+    "Показать": "Show",
+    "Сбросить": "Reset",
+    "Уведомления о новых заявках": "New application alerts",
+    "Сохраните фильтр — сообщим, когда опубликуют подходящую заявку.": "Save a filter and we'll notify you when a matching application is published.",
+    "Выберите условия в фильтре выше": "Set filter conditions above",
+    "Сообщать по этому фильтру": "Alert me for this filter",
+    "Этот фильтр уже сохранён": "This filter is already saved",
+    "Вы уже отправили предложение по этой заявке. Статус — в разделе": "You have already sent an offer on this application. Track it in",
+    "«Мои предложения»": "“My offers”",
+    "Можно меньше: заявку собирают из нескольких предложений": "Can be less: applications can be funded by several offers",
+    "Сумма к выдаче": "Amount to lend",
+    "Дополнительные условия": "Additional terms",
+    "Льготный период, график погашения, обеспечение": "Grace period, repayment schedule, collateral",
+    "Действует": "Valid for",
+    "Отправить предложение": "Send offer",
+    "Заявка открыта для предложений до этой даты": "The application accepts offers until this date",
+    "Нет заявок по этим условиям": "No applications match these filters",
+    "Сбросьте фильтры или расширьте диапазон суммы и срока.": "Reset the filters or widen the amount and term range.",
+    "срок не указан": "term not set",
+    "способ не указан": "method not set",
+    "Мои сделки": "My deals",
+    "Открыть сделку": "Open deal",
+    "Заявка": "Application",
+    "Комиссия итого": "Total fee",
+    "Статус": "Status",
+    "Отозвать": "Withdraw",
+    "Предложений пока нет": "No offers yet",
+    "Выберите заявку выше и отправьте условия. Статус появится здесь.": "Pick an application above and send your terms. The status will appear here.",
+    "Заёмщик собирает остальную сумму, сделка начнётся после этого": "The borrower is raising the rest of the amount; the deal starts after that",
+    "Ставка снижена по встречному предложению": "Rate lowered after a counter-offer",
+    "Согласиться": "Agree",
+    "Согласиться на ставку": "Agree to the rate",
+    "Ставка в предложении изменится, заёмщик сможет его принять.": "The offer's rate will change and the borrower will be able to accept it.",
+    "Заёмщик больше не увидит это предложение. Потом по этой заявке можно отправить новое.":
+        "The borrower will no longer see this offer. You can send a new one on this application later.",
+    "Оператор не будет его проверять. Потом по этой заявке можно отправить новое.":
+        "The operator will not review it. You can send a new one on this application later.",
+    "Чтобы отправлять предложения, пройдите верификацию компании.": "To send offers, verify your company.",
+    "Перейти к верификации": "Go to verification",
+    "Документы компании на проверке у администратора.": "Your company documents are under review.",
+    "Загрузить документы заново": "Upload documents again",
+    "Отправлять предложения можно после верификации компании (KYC).": "Offers can be sent after company verification (KYC).",
+    "Проверьте предложение: сумма больше 0 и не больше запрошенной, ставка и комиссия от 0 до 100%, дополнительные условия не длиннее 1000 символов.":
+        "Check the offer: amount above 0 and within the remaining amount, rate and fee between 0 and 100%, additional terms up to 1000 characters.",
+    "Вы уже отправили предложение по этой заявке.": "You have already sent an offer on this application.",
+    "Предложение отозвано. По этой заявке можно отправить новое.": "Offer withdrawn. You can send a new one on this application.",
+    "Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.": "Offer sent. The operator will review it, then the borrower will see it.",
+    "Вы согласились на встречную ставку. Заёмщик получил уведомление.": "You accepted the counter rate. The borrower has been notified.",
+    "Ставка оставлена прежней. Заёмщик получил уведомление.": "The rate stays the same. The borrower has been notified.",
+    "Фильтр сохранён. Когда появится подходящая заявка, придёт уведомление.": "Filter saved. You'll be notified when a matching application appears.",
+    "Фильтр удалён.": "Filter deleted.",
+    "Задайте хотя бы одно условие фильтра, чтобы его сохранить.": "Set at least one filter condition to save it.",
+    "Проверьте диапазон суммы: «от» не больше «до».": "Check the amount range: “from” must not exceed “to”.",
+    "Такой фильтр уже сохранён.": "This filter is already saved.",
+    "Не удалось сохранить фильтр.": "Could not save the filter.",
+    "Встречное предложение уже не актуально": "The counter-offer is no longer active",
+
+    # --- Статусы ---
+    **{ru: en for ru, en in (
+        ("На модерации", "In moderation"), ("Отклонена", "Rejected"), ("Опубликована", "Published"),
+        ("В работе", "In progress"), ("Согласовано", "Closed"), ("Отозвана", "Withdrawn"), ("Срок истёк", "Expired"),
+        ("На проверке у оператора", "Under operator review"), ("Получено заёмщиком", "Received by borrower"),
+        ("Скрыто оператором", "Hidden by operator"), ("Принято", "Accepted"), ("Отклонено", "Declined"),
+        ("Отозвано кредитором", "Withdrawn by lender"), ("Истёк срок", "Expired"),
+        ("Верифицирована", "Verified"), ("На проверке", "Under review"), ("Отказ в верификации", "Verification rejected"),
+        ("Не верифицирована", "Not verified"),
+        ("Заёмщик", "Borrower"), ("Оператор", "Operator"),
+    )},
+    **{ru: en for ru, en in (
+        ("Германия", "Germany"), ("Турция", "Turkey"), ("Китай", "China"), ("Кипр", "Cyprus"), ("ОАЭ", "UAE"),
+        ("Казахстан", "Kazakhstan"), ("Гонконг", "Hong Kong"), ("Индия", "India"),
+        ("СПФС", "SPFS"), ("Платёжный агент", "Payment agent"),
+    )},
+
+    # --- KYC ---
+    "Верификация компании": "Company verification",
+    "Верификация компании · Сбер": "Company verification · Sber",
+    "KYC и AML: документы в PDF до 4 МБ, проверку проводит администратор платформы вручную.":
+        "KYC and AML: PDF documents up to 4 MB, reviewed manually by a platform administrator.",
+    "Компания верифицирована. Можно отправлять предложения.": "Company verified. You can send offers.",
+    "Компания верифицирована.": "Company verified.",
+    "Можно отправлять предложения.": "You can send offers.",
+    "Пакет документов": "Document package",
+    "Одобрен": "Approved",
+    "Отправка на проверку": "Submit for review",
+    "Проверка пройдена, отправлять ничего не нужно.": "Verification passed; nothing else to submit.",
+    "Рег. номер": "Reg. number",
+    "Страна": "Country",
+    "Файл больше 4 МБ. Сожмите PDF и загрузите снова.": "The file is larger than 4 MB. Compress the PDF and upload again.",
+    "Нужен файл в формате PDF.": "A PDF file is required.",
+    "Загрузите все документы из списка, чтобы отправить пакет.": "Upload every document on the list to submit the package.",
+    "Документы отправлены на проверку. Обычно администратор принимает решение в течение рабочего дня.":
+        "Documents submitted. An administrator usually decides within a business day.",
+    "Администратор отклонил верификацию:": "Verification was rejected:",
+    ". Загрузите документы заново.": ". Please upload the documents again.",
+    "Заменить": "Replace",
+    "Выбрать PDF": "Choose PDF",
+    "Загружен": "Uploaded",
+    "Загрузить": "Upload",
+    "Все документы загружены. Администратор проверит пакет целиком и одобрит его или вернёт с комментарием.":
+        "All documents uploaded. An administrator will review the package and approve it or return it with a comment.",
+    "Загрузите все документы из списка, и кнопка станет активной.": "Upload all documents on the list and the button will become active.",
+    "Файлы загружаются сразу после выбора, по одному или подряд. До отправки любой можно заменить.":
+        "Files upload as soon as you choose them, one by one or in a row. Any can be replaced before submission.",
+    "Пакет на проверке у администратора. Мы пришлём уведомление, когда будет решение.": "The package is under review. We'll notify you when there is a decision.",
+    "Отправить на проверку": "Submit for review",
+    "Отправить документы на проверку?": "Submit documents for review?",
+    "После отправки заменить файлы будет нельзя, пока администратор не примет решение.": "After submission files cannot be replaced until the administrator decides.",
+    "Отправить": "Submit",
+    "Загружаем…": "Uploading…",
+    "Не удалось загрузить файл. Попробуйте ещё раз.": "Could not upload the file. Please try again.",
+
+    # --- Сделка ---
+    "Файл больше 4 МБ. Сожмите его и загрузите снова.": "The file is larger than 4 MB. Compress it and upload again.",
+    "Договор нужно загрузить в PDF.": "The contract must be a PDF.",
+    "Договор уже загружен. Чтобы заменить его, сначала удалите текущий.": "A contract is already uploaded. Delete it first to replace it.",
+    "Договор удалён. Загрузите новый, и оператор сможет подтвердить сделку.": "Contract deleted. Upload a new one so the operator can confirm the deal.",
+    "Начните обсуждение": "Start the discussion",
+    "Согласуйте здесь график платежей, обеспечение и детали договора.": "Agree the payment schedule, collateral and contract details here.",
+    "Система": "System",
+    "Обсуждение условий": "Terms discussion",
+    "видят участники сделки и оператор": "visible to the deal parties and the operator",
+    "Прикрепить файл": "Attach file",
+    "Прикрепить файл: PDF, документ или фото": "Attach a file: PDF, document or photo",
+    "Сообщение": "Message",
+    "Условия сделки": "Deal terms",
+    "Передача": "Transfer",
+    "Доп. условия": "Additional terms",
+    "Договор займа": "Loan agreement",
+    "Проект договора": "Draft agreement",
+    "Стороны, сумма, ставка, комиссия и график уже подставлены": "Parties, amount, rate, fee and schedule are pre-filled",
+    "Отпечаток SHA-256": "SHA-256 fingerprint",
+    "Копировать": "Copy",
+    "Скопировано": "Copied",
+    "Скопировать отпечаток целиком": "Copy the full fingerprint",
+    "SHA-256 отпечаток файла: если файл подменят, отпечаток изменится": "SHA-256 file fingerprint: if the file is replaced, the fingerprint changes",
+    "Все стороны видят этот же отпечаток — значит, у всех один и тот же файл.": "All parties see the same fingerprint, so everyone has the same file.",
+    "Открыть": "Open",
+    "Удалить": "Delete",
+    "Удалить договор?": "Delete the contract?",
+    "Файл будет удалён, а сделку нельзя будет подтвердить, пока не загружен новый договор.":
+        "The file will be deleted and the deal cannot be confirmed until a new contract is uploaded.",
+    "Загрузите подписанный договор в PDF. После этого оператор сможет подтвердить сделку.":
+        "Upload the signed contract as a PDF. The operator can then confirm the deal.",
+    "Загрузить договор": "Upload contract",
+    "Договор не загружен.": "No contract uploaded.",
+    "Документы из чата": "Documents from chat",
+    "Нужна помощь?": "Need help?",
+    "Оператор подключится к чату и поможет с условиями и документами.": "An operator will join the chat and help with terms and documents.",
+    "Позвать оператора": "Call an operator",
+    "← Назад": "← Back",
+    "Назад": "Back",
+    "Прикреплён документ": "Document attached",
+    "Открыть в полном размере": "Open full size",
+    "Этапы сделки": "Deal stages",
+    "Событий пока нет.": "No events yet.",
+    "Скачать сводку PDF": "Download PDF summary",
+    "Валютный риск: если рубль ослабнет": "FX risk: if the rouble weakens",
+    "Синдикат кредиторов": "Lender syndicate",
+    "Загрузил:": "Uploaded by:",
+    "Модерация": "Moderation",
+    "Публикация": "Publication",
+    "Предложения": "Offers",
+    "Сделка": "Deal",
+    "Проверка заявки администратором": "Application review",
+    "Заявку видят кредиторы": "Visible to lenders",
+    "Выбор лучшего предложения": "Choosing the best offer",
+    "Обсуждение условий в чате": "Discussing terms in chat",
+    "Подписанный договор загружен": "Signed contract uploaded",
+    "Подтверждено оператором": "Confirmed by operator",
+    "Ждёт подтверждения оператором": "Awaiting operator confirmation",
+
+    # --- Профиль кредитора ---
+    "KYC пройден": "KYC passed",
+    "Так ваш профиль видят заёмщики, которым оператор показал ваше предложение. Рейтинг растёт с каждой завершённой сделкой и быстрыми ответами на новые заявки.":
+        "This is how borrowers who were shown your offer see your profile. The rating grows with every closed deal and fast responses to new applications.",
+    "Завершённых сделок": "Closed deals",
+    "Средняя ставка": "Average rate",
+    "Скорость ответа": "Response time",
+    "от публикации заявки до предложения": "from publication to offer",
+    "Принято заёмщиками": "Accepted by borrowers",
+    "из предложений, по которым есть решение": "of offers with a decision",
+    "Последние сделки": "Recent deals",
+    "Сделок пока нет": "No deals yet",
+    "Здесь появятся сделки, в которых заёмщик выбрал предложение этого кредитора.": "Deals where a borrower chose this lender's offer will appear here.",
+    "Рейтинг платформы": "Platform rating",
+    "Рейтинг платформы из 5": "Platform rating out of 5",
+    "Новый кредитор": "New lender",
+    "Рейтинг появится после первой завершённой сделки или трёх решений заёмщиков по предложениям этого кредитора.":
+        "The rating appears after the first closed deal or three borrower decisions on this lender's offers.",
+    "Завершённые сделки": "Closed deals",
+    "Доля принятых предложений": "Share of accepted offers",
+    "Валюта · сумма": "Currency · amount",
+    "Страна · срок": "Country · term",
+    "Названия заёмщиков не раскрываются.": "Borrower names are not disclosed.",
+    "из 5": "out of 5",
+    "Сделки: 0,5 балла за каждую, до 2. Ответ быстрее 24 часов даёт 1,5 балла, до 3 дней или без данных — 1, дольше — 0,5. Минимальная оценка 1.":
+        "Deals: 0.5 points each, up to 2. Responding within 24 hours gives 1.5 points, within 3 days or no data — 1, slower — 0.5. Minimum score is 1.",
+    "Профиль и рейтинг кредитора": "Lender profile and rating",
+    "меньше часа": "under an hour",
+    # Демо-компании на витрине главной
+    "ООО «Альфа Технологии»": "Alfa Technologies LLC",
+    "ООО «Северный терминал»": "Severny Terminal LLC",
+}
+
+# Значения справочников из config тоже переводятся (на случай новых стран и способов)
+EN.setdefault("Россия", "Russia")
+for _code, _name in config.COUNTRY_NAMES.items():
+    EN.setdefault(_name, _code)
+
+
+def _country(name: str) -> str:
+    return EN.get(name, name)
+
+
+def _flows(m):
+    text = m.group(1)
+    for ru in sorted(config.COUNTRY_NAMES.values(), key=len, reverse=True):
+        text = text.replace(ru, EN.get(ru, ru))
+    return "Flows: " + text.replace("Россия", "Russia")
+
+
+PATTERNS = [
+    (r"Заявка №(\d+)", r"Application #\1"),
+    (r"· заявка №(\d+)", r"· application #\1"),
+    (r"(\d+) мес\.", r"\1 mo."),
+    (r"до (\d+) мес\.", r"up to \1 mo."),
+    (r"(\d+) года", r"\1 years"),
+    (r"(\d+) лет", r"\1 years"),
+    (r"(\d+) дней", r"\1 days"),
+    (r"(\d+) дн\.", r"\1 days"),
+    (r"(\d+) ч", r"\1 h"),
+    (r"([\d.,  ]+%) годовых", r"\1 p.a."),
+    (r"Найдено заявок: (\d+)", r"Applications found: \1"),
+    (r"Выполнено (\d+) из (\d+)", r"\1 of \2 done"),
+    (r"(\d+) из (\d+)", r"\1 of \2"),
+    (r"Отозвать предложение по заявке №(\d+)\?", r"Withdraw your offer on application #\1?"),
+    (r"Кредитор · (.+) · на платформе с (\S+)", lambda m: f"Lender · {_country(m.group(1))} · on the platform since {m.group(2)}"),
+    (r"на платформе с (\S+)", r"on the platform since \1"),
+    (r"ещё в работе: (\d+)", r"in progress: \1"),
+    (r"комиссия в среднем (.+)", r"average fee \1"),
+    (r"Работает с валютами: (.+) · всего предложений: (\d+)", r"Currencies: \1 · offers in total: \2"),
+    (r"Действует до (\S+)", r"Valid until \1"),
+    (r"до (\d\d\.\d\d)", r"until \1"),
+    (r"Собрано (\d+)%", r"\1% funded"),
+    (r"осталось (.+) — можно предложить часть суммы", r"\1 left — you can offer part of the amount"),
+    (r"Можно сохранить не больше (\d+) фильтров\. Удалите ненужный\.", r"You can save up to \1 filters. Delete one you no longer need."),
+    (r"Сохранено максимум фильтров: (\d+)", r"Maximum saved filters reached: \1"),
+    (r"Регистрация занимает пару минут, проверка — до (\d+) часов\.", r"Registration takes a couple of minutes, verification up to \1 hours."),
+    (r"Новых: (\d+)", r"New: \1"),
+    (r"Потоки: (.+)", _flows),
+    (r"Согласиться на ставку (.+)\?", r"Agree to the \1 rate?"),
+    (r"Заёмщик предлагает (.+)", r"The borrower proposes \1"),
+    (r"вместо (.+)", r"instead of \1"),
+    (r"Оставить (.+)", r"Keep \1"),
+    (r"Синдикат из (\d+) кредиторов · ставка и комиссия средневзвешенные",
+     r"Syndicate of \1 lenders · rate and fee are weighted averages"),
+    (r"Средние условия предложений в (\w+) на платформе: (.+)", r"Average \1 offer terms on the platform: \2"),
+    (r"Синдикат: (.+)", r"Syndicate: \1"),
+]

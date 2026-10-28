@@ -46,6 +46,7 @@
                         <input type="text" name="registration_number" id="registration_number" class="input" maxlength="50" value="{{ form.registration_number or '' }}" required
                                autocomplete="off" aria-describedby="registration_number-error" {% if fe.get('registration_number') %}aria-invalid="true"{% endif %}>
                         {{ field_error('registration_number') }}
+                        {% if inn_lookup %}<div class="egrul-card" id="egrul" hidden aria-live="polite"></div>{% endif %}
                     </div>
                 </div>
                 <div class="field">
@@ -130,6 +131,31 @@
             if (clearErrors) ['registration_number', 'country_code'].forEach((n) => { $(n + '-error').hidden = true; $(n).removeAttribute('aria-invalid'); });
         }
         document.querySelectorAll('input[name=role]').forEach((r) => r.addEventListener('change', () => syncRole(true)));
+
+        {% if inn_lookup %}
+        // Проверка по ЕГРЮЛ: по правильному ИНН подставляем название и показываем статус компании
+        const egrul = $('egrul');
+        let lastInn = '';
+        $('registration_number').addEventListener('input', async () => {
+            const inn = $('registration_number').value.trim();
+            if (isCreditor() || !innValid(inn)) { egrul.hidden = true; lastInn = ''; return; }
+            if (inn === lastInn) return;
+            lastInn = inn;
+            egrul.hidden = false; egrul.className = 'egrul-card'; egrul.textContent = 'Ищем компанию в ЕГРЮЛ…';
+            try {
+                const data = await (await fetch('/api/company?inn=' + inn)).json();
+                if (!data.found) { egrul.textContent = 'В ЕГРЮЛ не нашли компанию с этим ИНН. Проверьте номер или заполните название вручную.'; egrul.classList.add('warn'); return; }
+                if (!$('company_name').value.trim()) $('company_name').value = data.name;
+                egrul.classList.add(data.active ? 'ok' : 'warn');
+                egrul.innerHTML = '';
+                const title = document.createElement('b'); title.textContent = data.name;
+                const meta = document.createElement('div'); meta.className = 'small';
+                meta.textContent = 'Статус: ' + data.status_name + (data.ogrn ? ' · ОГРН ' + data.ogrn : '');
+                const addr = document.createElement('div'); addr.className = 'small muted'; addr.textContent = data.address || '';
+                egrul.append(title, meta, addr);
+            } catch (e) { egrul.hidden = true; }
+        });
+        {% endif %}
         syncRole(false);
         {% if fe %}const firstBad = document.querySelector('[aria-invalid="true"]'); if (firstBad) firstBad.focus();{% endif %}
     })();

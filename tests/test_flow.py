@@ -120,7 +120,7 @@ def test_full_deal_flow(world):
     assert "Beta Capital" not in alfa.get(f"/applications/{application.id}/offers").text  # до оператора не видно
 
     # Оператор показывает офферы; заёмщик не может решать по чужой заявке и по непоказанным
-    assert alfa.post(f"/accept_offer/{beta_offer.id}").status_code == 400
+    assert alfa.post(f"/accept_offer/{beta_offer.id}").headers["location"].endswith("error=decided")
     assert operator.get("/operator/offers").status_code == 200
     operator.post(f"/operator/offer/{beta_offer.id}/show")
     operator.post(f"/operator/offer/{gamma_offer.id}/show")

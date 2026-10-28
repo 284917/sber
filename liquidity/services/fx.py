@@ -103,3 +103,17 @@ def to_rub(amount, currency: str, fx):
 
 def reset_cache():
     _cache.update(at=None, value=None)
+
+
+STRESS_SHOCKS = (0, 10, 20, 30)
+
+
+def stress(principal, overpayment, currency: str, fx, shocks=STRESS_SHOCKS):
+    """Валютный риск заёмщика: сколько рублей понадобится вернуть, если рубль ослабнет на 10–30%.
+    Возврат = сумма займа + переплата; курс на каждом шаге = курс ЦБ × (1 + сдвиг)."""
+    if not fx or currency not in fx["rates"] or overpayment is None:
+        return None
+    base_rate = float(fx["rates"][currency])
+    total = float(principal) + float(overpayment)
+    return [{"shock": s, "rate": base_rate * (1 + s / 100), "rub": total * base_rate * (1 + s / 100),
+             "extra": total * base_rate * s / 100} for s in shocks]

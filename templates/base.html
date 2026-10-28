@@ -20,7 +20,8 @@
                                     ('moderation', 'Модерация заявок', '/admin?tab=moderation', 'list-checks', nav_counts.moderation if nav_counts is defined else None),
                                     ('archive', 'Архив сделок', '/admin?tab=archive', 'archive', None),
                                     ('history', 'Все заявки', '/admin?tab=history', 'files', None),
-                                    ('staff', 'Сотрудники', '/admin?tab=staff', 'users-three', None)]),
+                                    ('staff', 'Сотрудники', '/admin?tab=staff', 'users-three', None),
+                                    ('journal', 'Журнал действий', '/admin?tab=journal', 'clipboard-text', None)]),
               ('Операции', [('op-offers', 'Предложения на проверке', '/operator/offers', 'clipboard-text', None), ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None)])],
 } %}
 <header class="topbar">
@@ -35,7 +36,7 @@
             <a href="/notifications" class="{{ 'active' if active == 'notifications' }}" {% if active == 'notifications' %}aria-current="page"{% endif %}>{{ base_ui.icon('bell') }}<span>Уведомления</span>{% if unread_n %}<span class="count" aria-label="Новых: {{ unread_n }}">{{ unread_n }}</span>{% endif %}</a>
             {% for group, items in nav.get(role, []) %}
             <div class="nav-label">{{ group }}</div>
-            {% for key, label, href, icon_name, count in items if key != 'staff' or user.is_superadmin %}
+            {% for key, label, href, icon_name, count in items if key not in ('staff', 'journal') or user.is_superadmin %}
             <a href="{{ href }}" class="{{ 'active' if active == key }}" {% if active == key %}aria-current="page"{% endif %}>{{ base_ui.icon(icon_name) }}<span>{{ label }}</span>{% if count %}<span class="count">{{ count }}</span>{% endif %}</a>
             {% endfor %}
             {% endfor %}
@@ -52,6 +53,11 @@
             <div class="foot-actions">
                 <button type="button" class="foot-btn" onclick="toggleTheme()" aria-label="Переключить тему">{{ base_ui.icon('moon', 'ic-moon') }}{{ base_ui.icon('sun', 'ic-sun') }}<span>Тема</span></button>
                 <a href="/logout" class="foot-btn foot-logout">{{ base_ui.icon('sign-out') }}<span>Выйти</span></a>
+                {% if role == 'creditor' %}
+                {% set path = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
+                <a href="/lang/{{ 'ru' if lang == 'en' else 'en' }}?next={{ path|urlencode }}" class="foot-btn" hreflang="{{ 'ru' if lang == 'en' else 'en' }}">{{ base_ui.icon('globe-hemisphere-east') }}<span>{{ 'Русский' if lang == 'en' else 'English' }}</span></a>
+                {% endif %}
+                <button type="button" class="foot-btn" data-install hidden>{{ base_ui.icon('upload-simple') }}<span>Установить</span></button>
             </div>
         </div>
     </aside>
@@ -117,6 +123,14 @@
             items.forEach((el, i) => { el.style.transitionDelay = open ? (i * step) + 'ms' : '0ms'; });
         });
     })();
+</script>
+<script>
+    // Кнопки «Копировать»: значение из data-copy в буфер обмена
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-copy]');
+        if (!btn) return;
+        try { await navigator.clipboard.writeText(btn.dataset.copy); const t = btn.textContent; btn.textContent = 'Скопировано'; setTimeout(() => btn.textContent = t, 1500); } catch (err) {}
+    });
 </script>
 {% block scripts %}{% endblock %}
 </body>

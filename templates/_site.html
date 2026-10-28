@@ -17,6 +17,8 @@
     <a href="/login" class="btn btn-ghost btn-sm">Войти</a>
     <a href="/register" class="btn btn-primary btn-sm">Зарегистрировать компанию</a>
     {% endif %}
+    {% set path = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
+    <a href="/lang/{{ 'ru' if request.cookies.get('lang') == 'en' else 'en' }}?next={{ path|urlencode }}" class="lang-btn" hreflang="{{ 'ru' if request.cookies.get('lang') == 'en' else 'en' }}" title="{{ 'Русская версия' if request.cookies.get('lang') == 'en' else 'English version' }}">{{ 'RU' if request.cookies.get('lang') == 'en' else 'EN' }}</a>
     <button type="button" class="theme-btn" onclick="toggleTheme()" title="Светлая или тёмная тема" aria-label="Переключить тему">{{ ui.icon('moon', 'ic-moon') }}{{ ui.icon('sun', 'ic-sun') }}</button>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-menu" aria-label="Меню" id="site-menu-btn"><span></span><span></span></button>
 </header>
@@ -41,6 +43,7 @@
         <a href="/" class="brand" style="padding: 0;">{{ ui.brand_mark() }}<span class="brand-name">Платформа ликвидности<span>MVP для SBER HACK, 2026</span></span></a>
         <nav aria-label="Документы">
             <a href="/security">Безопасность и документы</a>
+            <button type="button" class="link-btn" data-install hidden>Установить приложение</button>
             <a href="/privacy">Политика конфиденциальности</a>
             <a href="/terms">Условия использования</a>
             <a href="/login">Вход</a>

@@ -58,6 +58,8 @@ class Application(Base):
     # moderation -> published | rejected; published -> in_work -> agreed
     status = Column(String(20), default="moderation")
     moderation_comment = Column(String(500), nullable=True)
+    # До какой даты заявка открыта для предложений (ставится при публикации)
+    valid_until = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     # Подтверждение сделки оператором
@@ -84,6 +86,12 @@ class Offer(Base):
 
     hide_reason = Column(String(255), nullable=True)
     operator_decision_at = Column(DateTime, nullable=True)
+    # Срок действия предложения: после него оффер закрывается автоматически
+    valid_until = Column(Date, nullable=True)
+    # Встречное предложение заёмщика по ставке: pending -> accepted | declined
+    counter_rate = Column(Numeric(5, 2), nullable=True)
+    counter_comment = Column(String(500), nullable=True)
+    counter_status = Column(String(20), nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
 
@@ -177,3 +185,15 @@ class SavedSearch(Base):
     amount_max = Column(Numeric(15, 2), nullable=True)
     term_max = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class AuditEntry(Base):
+    """Журнал действий сотрудников: модерация, KYC, проверка офферов, подтверждения, управление сотрудниками."""
+    __tablename__ = "audit_entries"
+    id = Column(Integer, primary_key=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    action = Column(String(500), nullable=False)
+    link = Column(String(255), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    actor = relationship("User")

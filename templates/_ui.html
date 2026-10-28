@@ -61,6 +61,64 @@
 {% elif stats %}<span class="rating rating-new">Новый кредитор</span>{% endif %}
 {%- endmacro %}
 
+{% macro onboarding(steps) -%}
+{% if steps %}
+{% set done = steps|selectattr(1)|list|length %}
+<section class="card onboarding" aria-label="Первые шаги">
+    <div class="onboarding-head">
+        <div>
+            <h2 class="card-title" style="margin: 0;">Первые шаги на платформе</h2>
+            <p class="small muted" style="margin: 4px 0 0;">Выполнено {{ done }} из {{ steps|length }}</p>
+        </div>
+        <div class="onboarding-ring" style="--p: {{ (100 * done / steps|length)|round|int }}" aria-hidden="true"><span>{{ (100 * done / steps|length)|round|int }}%</span></div>
+    </div>
+    <ol class="onboarding-steps">
+        {% set next_found = namespace(v=false) %}
+        {% for label, ok, link in steps %}
+        {% set is_next = not ok and not next_found.v %}
+        {% if is_next %}{% set next_found.v = true %}{% endif %}
+        <li class="{{ 'done' if ok else 'next' if is_next else '' }}">
+            <span class="dot">{% if ok %}{{ icon('check', 'ic-sm') }}{% else %}{{ loop.index }}{% endif %}</span>
+            {% if is_next and link %}<a href="{{ link }}">{{ label }} {{ icon('arrow-right', 'ic-sm') }}</a>{% else %}<span>{{ label }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}
+{%- endmacro %}
+
+{% macro lenders_list(lenders, cur) -%}
+{% if lenders|length > 1 %}
+{% set total = lenders|sum(attribute=1) %}
+<div class="syndicate">
+    <div class="small muted" style="margin-bottom: 8px;">Синдикат из {{ lenders|length }} кредиторов · ставка и комиссия средневзвешенные</div>
+    <div class="syndicate-bar" aria-hidden="true">{% for sender, amount in lenders %}<i style="flex: {{ amount }}"></i>{% endfor %}</div>
+    <ul>
+        {% for sender, amount in lenders %}
+        <li><span class="sw"></span><span>{{ sender.display_name }}</span><b class="num">{{ amount|money }} {{ cur }}</b><span class="muted num">{{ (100 * amount / total)|round|int }}%</span></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{%- endmacro %}
+
+{% macro stress_table(stress, cur) -%}
+{% if stress %}
+<details class="stress">
+    <summary>{{ icon('trend-up', 'ic-sm') }} Валютный риск: если рубль ослабнет</summary>
+    <table class="t">
+        <thead><tr><th>Курс</th><th class="num">1 {{ cur }}</th><th class="num">Вернуть в рублях</th><th class="num">Дороже на</th></tr></thead>
+        <tbody>
+        {% for row in stress %}
+        <tr class="{{ 'is-base' if row.shock == 0 }}"><td>{{ 'Сегодня' if row.shock == 0 else '+' ~ row.shock ~ '%' }}</td><td class="num">{{ row.rate|money }} ₽</td><td class="num"><b>{{ row.rub|round|money }} ₽</b></td><td class="num">{{ '—' if row.shock == 0 else '+' ~ (row.extra|round|money) ~ ' ₽' }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Сумма займа и переплата в {{ cur }}, пересчитанные по курсу ЦБ и при его росте на 10–30%. Долг в валюте не меняется, растёт его рублёвая цена.</p>
+</details>
+{% endif %}
+{%- endmacro %}
+
 {% macro empty(icon_name, title, text='') -%}
 <div class="empty">{{ icon(icon_name) }}<b>{{ title }}</b>{% if text %}<span>{{ text }}</span>{% endif %}</div>
 {%- endmacro %}

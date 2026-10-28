@@ -41,9 +41,11 @@ PLATFORM_COMMISSION = 0.8  # % от суммы, добавляется к ком
 
 # --- Статусы ---
 APPLICATION_STATUSES = {"moderation": "На модерации", "rejected": "Отклонена", "published": "Опубликована",
-                        "in_work": "В работе", "agreed": "Согласовано", "withdrawn": "Отозвана"}
+                        "in_work": "В работе", "agreed": "Согласовано", "withdrawn": "Отозвана",
+                        "expired": "Срок истёк"}
 OFFER_STATUSES = {"pending": "На проверке у оператора", "shown": "Получено заёмщиком", "hidden": "Скрыто оператором",
-                  "accepted": "Принято", "rejected": "Отклонено", "withdrawn": "Отозвано кредитором"}
+                  "accepted": "Принято", "rejected": "Отклонено", "withdrawn": "Отозвано кредитором",
+                  "expired": "Истёк срок"}
 KYC_STATUSES = {"approved": "Верифицирована", "pending": "На проверке", "rejected": "Отказ в верификации",
                 "none": "Не верифицирована"}
 
@@ -78,3 +80,11 @@ GLOSSARY = {
 # Сроки ответа платформы (часы): после них задача в очереди сотрудника помечается просроченной
 SLA_HOURS = {"offer": 24, "moderation": 24, "kyc": 48}
 MAX_SAVED_SEARCHES = 5
+
+# Сроки действия: заявка открыта для предложений APP_VALID_DAYS дней после публикации,
+# предложение кредитора действует выбранное им число дней
+APP_VALID_DAYS = 30
+OFFER_VALID_CHOICES = (7, 14, 30)
+OFFER_VALID_DEFAULT = 14
+# Проверка компании по ИНН через DaData (бесплатный ключ: dadata.ru). Без ключа автозаполнение выключено
+DADATA_API_KEY = os.getenv("DADATA_API_KEY", "")

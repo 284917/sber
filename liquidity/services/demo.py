@@ -99,6 +99,8 @@ def seed(db: Session):
         app = models.Application(user_id=users[owner].id, funding_amount=amount, currency_code=currency,
                                  target_jurisdiction=country, term_months=term, transfer_method=method,
                                  purpose=purpose, status=status, moderation_comment=comment, created_at=at(days))
+        if status == "published":  # опубликованные демо-заявки открыты ещё на срок публикации
+            app.valid_until = (at(days) + timedelta(days=config.APP_VALID_DAYS)).date()
         db.add(app)
         db.flush()
         return app
