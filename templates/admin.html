@@ -23,7 +23,7 @@
 </div>
 
 <nav class="tabs" aria-label="Разделы администрирования">
-    {% for key, label, count in [('overview', 'Обзор', None), ('kyc', 'Очередь KYC', kyc_queue|length), ('moderation', 'Модерация', moderation_apps|length),
+    {% for key, label, count in [('overview', 'Обзор', None), ('kyc', 'Очередь KYC', kyc_queue|length), ('moderation', 'Проверка заявок', moderation_apps|length),
                                  ('archive', 'Архив', archive|length), ('history', 'Все заявки', None), ('staff', 'Сотрудники', None),
                                  ('journal', 'Журнал', None)] if key not in ('staff', 'journal') or user.is_superadmin %}
     <a href="/admin{{ '?tab=' ~ key if key != 'overview' }}" class="{{ 'active' if tab == key }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}{% if count %}<span class="count-pill">{{ count }}</span>{% endif %}</a>

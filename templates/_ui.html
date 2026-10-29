@@ -64,14 +64,16 @@
 {% macro onboarding(steps) -%}
 {% if steps %}
 {% set done = steps|selectattr(1)|list|length %}
-<section class="card onboarding" aria-label="Первые шаги">
-    <div class="onboarding-head">
-        <div>
-            <h2 class="card-title" style="margin: 0;">Первые шаги на платформе</h2>
-            <p class="small muted" style="margin: 4px 0 0;">Выполнено {{ done }} из {{ steps|length }}</p>
-        </div>
+{% set next_step = steps|rejectattr(1)|first %}
+<details class="card onboarding smooth" aria-label="Первые шаги" {% if done < 3 %}open{% endif %}>
+    <summary class="onboarding-head">
         <div class="onboarding-ring" style="--p: {{ (100 * done / steps|length)|round|int }}" aria-hidden="true"><span>{{ (100 * done / steps|length)|round|int }}%</span></div>
-    </div>
+        <div style="flex: 1; min-width: 0;">
+            <h2 class="card-title" style="margin: 0;">Первые шаги на платформе</h2>
+            <p class="small muted" style="margin: 4px 0 0;"><span>Выполнено {{ done }} из {{ steps|length }}</span>{% if next_step %} · <span>Следующий шаг:</span> <b style="color: var(--ink);">{{ next_step[0] }}</b>{% endif %}</p>
+        </div>
+        <span class="onboarding-toggle">{{ icon('arrow-right', 'ic-sm chev') }}<span class="when-closed">Показать шаги</span><span class="when-open">Свернуть</span></span>
+    </summary>
     <ol class="onboarding-steps">
         {% set next_found = namespace(v=false) %}
         {% for label, ok, link in steps %}
@@ -83,7 +85,7 @@
         </li>
         {% endfor %}
     </ol>
-</section>
+</details>
 {% endif %}
 {%- endmacro %}
 

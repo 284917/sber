@@ -10,6 +10,10 @@
         <h1>Мои заявки</h1>
         <div class="sub">{{ user.display_name }}{% if user.registration_number %} · ИНН {{ user.registration_number }}{% endif %}</div>
     </div>
+    <div class="actions">
+        {% if kyc == 'approved' %}<button type="button" class="btn btn-primary" data-open="new-app">{{ ui.icon('plus') }} Новая заявка</button>
+        {% else %}<a href="/kyc" class="btn btn-secondary">{{ ui.icon('shield-check') }} Пройти верификацию</a>{% endif %}
+    </div>
 </div>
 
 {% if qp.get('error') == 'kyc' %}{{ ui.flash('bad', 'Создавать заявки можно после верификации компании (KYC).') }}{% endif %}
@@ -32,94 +36,95 @@
 
 {% set active_apps = apps|selectattr('status', 'in', ['moderation', 'published', 'in_work'])|list %}
 {% set waiting = namespace(n=0) %}{% for a in apps %}{% if a.status == 'published' %}{% set waiting.n = waiting.n + shown_counts.get(a.id, 0) %}{% endif %}{% endfor %}
-<div class="grid grid-3" style="margin-bottom: 16px;">
-    <div class="card stat" style="margin: 0;"><div class="label">Активные заявки</div><div class="value">{{ active_apps|length }}</div><div class="hint">на проверке, опубликованы или в работе</div></div>
-    <div class="card stat" style="margin: 0;"><div class="label">Предложения ждут решения</div><div class="value">{{ waiting.n }}</div><div class="hint">проверены оператором</div></div>
-    <div class="card stat" style="margin: 0;"><div class="label">Согласованные сделки</div><div class="value">{{ apps|selectattr('status', 'equalto', 'agreed')|list|length }}</div><div class="hint">в архиве</div></div>
+<div class="grid grid-3" style="margin-bottom: 32px;">
+    <div class="card stat"><div class="label">Активные заявки</div><div class="value">{{ active_apps|length }}</div><div class="hint">на проверке, опубликованы или в работе</div></div>
+    <div class="card stat"><div class="label">Предложения ждут решения</div><div class="value">{{ waiting.n }}</div><div class="hint">можно сравнить и принять</div></div>
+    <div class="card stat"><div class="label">Согласованные сделки</div><div class="value">{{ apps|selectattr('status', 'equalto', 'agreed')|list|length }}</div><div class="hint">в архиве</div></div>
 </div>
 
-<div class="grid grid-side-left">
-    <section class="card" id="new-app">
-        <h2 class="card-title">Новая заявка</h2>
-        <form method="post" action="/create_application">{{ csrf_field(request) }}
-            <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">
-            <div class="form-row field">
-                <div>
-                    <label class="f" for="amount">Сумма</label>
-                    <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="input" placeholder="500 000" required>
-                </div>
-                <div>
-                    <label class="f" for="currency">Валюта</label>
-                    <select name="currency" id="currency" class="input" required>
-                        {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
-                    </select>
-                </div>
+<div class="list-bar">
+    <h2>Все заявки {% if apps %}<span class="tab-count">{{ apps|length }}</span>{% endif %}</h2>
+</div>
+<section class="card card-tight">
+    {% if apps %}
+    {% for app in apps %}
+    {% set n_offers = shown_counts.get(app.id, 0) if app.status == 'published' else 0 %}
+    <a class="app-row" href="{{ '/deal/' ~ app.id if app.status in ('in_work', 'agreed') else '/applications/' ~ app.id ~ '/offers' }}">
+        <span class="no">№{{ app.id }}</span>
+        <span style="min-width: 0;">
+            <span class="amt">{{ app.funding_amount|money }} {{ app.currency_code }}</span>
+            <span class="sub" style="display: block;">{{ app.purpose }}</span>
+        </span>
+        <span class="where" style="min-width: 0;">{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %}<span class="sub" style="display: block;">{{ app.term_months }} мес. · {{ TRANSFER_METHODS.get(app.transfer_method, '')|terms }}</span>{% endif %}</span>
+        <span style="min-width: 0;">
+            {{ ui.app_status(app.status) }}
+            {% if app.status == 'rejected' and app.moderation_comment %}<span class="sub" style="display: block; color: var(--danger); margin-top: 4px;">{{ app.moderation_comment }}</span>{% endif %}
+        </span>
+        <span class="go">
+            {% if app.status in ('in_work', 'agreed') %}<span class="small muted">Сделка</span>
+            {% elif n_offers %}<span class="new-badge">Сравнить · {{ n_offers }}</span>
+            {% else %}<span class="small muted">Открыть</span>{% endif %}
+            {{ ui.icon('arrow-right', 'ic-sm') }}
+        </span>
+    </a>
+    {% endfor %}
+    {% else %}
+    {{ ui.empty('files', 'Здесь появятся ваши заявки', 'После автоматической проверки заявку сразу увидят верифицированные кредиторы.') }}
+    {% if kyc == 'approved' %}<div style="display: flex; justify-content: center; padding: 0 24px 40px;"><button type="button" class="btn btn-primary" data-open="new-app">{{ ui.icon('plus') }} Создать первую заявку</button></div>{% endif %}
+    {% endif %}
+</section>
+
+{% set form_error = qp.get('error') in ('form', 'amount', 'purpose', 'stop_word') %}
+<dialog class="drawer" id="new-app" aria-labelledby="new-app-title" {% if form_error and kyc == 'approved' %}data-autoopen{% endif %}>
+    <div class="drawer-head">
+        <div>
+            <h2 id="new-app-title">Новая заявка</h2>
+            <p>Система сразу проверит заявку и опубликует её. Оператор смотрит только первую заявку компании и крупные суммы.</p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Закрыть">{{ ui.icon('x') }}</button>
+    </div>
+    <form method="post" action="/create_application" class="drawer-body">{{ csrf_field(request) }}
+        <fieldset {% if kyc != 'approved' %}disabled{% endif %}>
+        {% if form_error %}<div class="note note-bad" role="alert">{{ ui.icon('warning-circle') }}<span>Заявка не отправлена. Причина указана над списком заявок, исправьте и отправьте снова.</span></div>{% endif %}
+        <div class="form-row field">
+            <div>
+                <label class="f" for="amount">Сумма</label>
+                <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="input" placeholder="500 000" required>
             </div>
-            <div class="form-row field">
-                <div>
-                    <label class="f" for="country">Страна получения</label>
-                    <select name="country" id="country" class="input" required>
-                        <option value="" disabled selected>Выберите</option>
-                        {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label class="f" for="term_months">Срок, месяцев</label>
-                    <input type="number" min="1" max="{{ max_term }}" step="1" name="term_months" id="term_months" class="input" placeholder="6" required>
-                </div>
-            </div>
-            <div class="field">
-                <label class="f" for="transfer_method">Способ передачи средств</label>
-                <select name="transfer_method" id="transfer_method" class="input" required>
-                    <option value="" disabled selected>Выберите</option>
-                    {% for code, name in TRANSFER_METHODS.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+            <div>
+                <label class="f" for="currency">Валюта</label>
+                <select name="currency" id="currency" class="input" required>
+                    {% for code in currencies %}<option value="{{ code }}">{{ code }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="field">
-                <label class="f" for="purpose">Назначение средств</label>
-                <input type="text" name="purpose" id="purpose" class="input" placeholder="Закупка оборудования у поставщика" minlength="{{ PURPOSE_MIN_LENGTH }}" maxlength="255" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Опубликовать заявку</button>
-            <p class="hint" style="margin: 8px 0 0;">Система сразу проверит заявку и опубликует её. Оператор смотрит только первую заявку компании и крупные суммы.</p>
-            </fieldset>
-            {% if kyc != 'approved' %}<p class="hint" style="margin: 8px 0 0;">Доступно после верификации компании.</p>{% endif %}
-        </form>
-    </section>
-
-    <section class="card card-tight">
-        <div class="card-head"><h2 class="card-title">Все заявки</h2></div>
-        {% if apps %}
-        <div class="table-wrap">
-        <table class="t">
-            <thead><tr><th>№</th><th class="num">Сумма</th><th>Страна · срок</th><th>Статус</th><th></th></tr></thead>
-            <tbody>
-            {% for app in apps %}
-            <tr class="row-link">
-                <td class="muted">{{ app.id }}</td>
-                <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
-                <td>{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}
-                    <div class="small muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ app.purpose }}</div></td>
-                <td>
-                    {{ ui.app_status(app.status) }}
-                    {% if app.status == 'rejected' and app.moderation_comment %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ app.moderation_comment }}</div>{% endif %}
-                </td>
-                <td class="r">
-                    {% if app.status in ('in_work', 'agreed') %}
-                        <a href="/deal/{{ app.id }}" class="btn btn-primary btn-sm">Сделка</a>
-                    {% elif app.status == 'published' and shown_counts.get(app.id) %}
-                        <a href="/applications/{{ app.id }}/offers" class="btn btn-primary btn-sm">Сравнить · {{ shown_counts[app.id] }}</a>
-                    {% else %}
-                        <a href="/applications/{{ app.id }}/offers" class="btn btn-secondary btn-sm">Открыть</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
         </div>
-        {% else %}
-        {{ ui.empty('files', 'Здесь появятся ваши заявки', 'Заполните форму слева. После автоматической проверки заявку сразу увидят верифицированные кредиторы.') }}
-        {% endif %}
-    </section>
-</div>
+        <div class="form-row field">
+            <div>
+                <label class="f" for="country">Страна получения</label>
+                <select name="country" id="country" class="input" required>
+                    <option value="" disabled selected>Выберите</option>
+                    {% for code, name in countries.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="f" for="term_months">Срок, месяцев</label>
+                <input type="number" min="1" max="{{ max_term }}" step="1" name="term_months" id="term_months" class="input" placeholder="6" required>
+            </div>
+        </div>
+        <div class="field">
+            <label class="f" for="transfer_method">Способ передачи средств</label>
+            <select name="transfer_method" id="transfer_method" class="input" required>
+                <option value="" disabled selected>Выберите</option>
+                {% for code, name in TRANSFER_METHODS.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label class="f" for="purpose">Назначение средств</label>
+            <textarea name="purpose" id="purpose" class="input" rows="3" placeholder="Закупка оборудования у поставщика по контракту №…" minlength="{{ PURPOSE_MIN_LENGTH }}" maxlength="255" required></textarea>
+            <p class="hint">Кредиторы решают по этому описанию: укажите контракт и контрагента.</p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Опубликовать заявку</button>
+        </fieldset>
+    </form>
+</dialog>
 {% endblock %}

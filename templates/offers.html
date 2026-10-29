@@ -64,164 +64,155 @@
         </div>
     </div>
     <div class="funding-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}" aria-label="Собрано {{ pct }}% суммы"><i style="width: {{ pct }}%"></i></div>
-    <p class="small muted" style="margin: 8px 0 0;">Заявку можно собрать из нескольких предложений: примите оффер на часть суммы, и заявка останется открытой для остальной. Когда сумма покрыта, сделка начинается автоматически.</p>
+    <p class="small muted" style="margin: 8px 0 0;">Можно принять несколько предложений на части суммы. Когда сумма покрыта, сделка начинается автоматически.</p>
 </section>
 {% endif %}
 
-<div>
-    <div>
-        <section class="card card-tight">
-            <div class="card-head" style="display: block;">
-                <h2 class="card-title">Сравнение предложений <span class="muted">{{ rows|length }} {{ 'предложение' if rows|length == 1 else 'предложения' if rows|length in (2, 3, 4) else 'предложений' }}</span></h2>
-                <p class="muted small" style="margin: 4px 0 0;">Отсортированы по полной стоимости: ставка плюс комиссия за организацию, разнесённая на срок заявки.</p>
-                {% if rate_note %}<p class="fx-note">Суммы в рублях пересчитаны {{ rate_note|replace('По курсу', 'по курсу') }}</p>{% endif %}
-            </div>
+{% set shown_n = rows|selectattr('offer.status', 'equalto', 'shown')|list|length %}
+<div data-tabs>
+    <div class="seg-tabs" role="tablist" aria-label="Разделы заявки">
+        <button type="button" role="tab" id="t-offers" aria-controls="tab-offers" aria-selected="true" data-default>{{ ui.icon('hand-coins') }} Предложения <span class="tab-count {{ 'hot' if shown_n and application.status == 'published' }}">{{ rows|length }}</span></button>
+        <button type="button" role="tab" id="t-params" aria-controls="tab-params" aria-selected="false">{{ ui.icon('file-text') }} Параметры заявки</button>
+        <button type="button" role="tab" id="t-history" aria-controls="tab-history" aria-selected="false">{{ ui.icon('clock') }} История <span class="tab-count">{{ events|length }}</span></button>
+        <span class="seg-ink" aria-hidden="true"></span>
+    </div>
 
-            {% if best_id and savings is not none %}
-            {% set best = (rows|selectattr('offer.id', 'equalto', best_id)|first) %}
-            <div class="callout" style="margin: 0 24px 16px;">
-                <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 600;">{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}</div></div>
-                <div><div class="small muted">Полная стоимость</div><div class="big">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
-                <div><div class="small muted">Экономия против следующего на сумму заявки</div><div class="big">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub" title="{{ rate_note }}">{{ rub(savings)|rub }}</span>{% endif %}</div>
-            </div>
-            {% endif %}
+    <div role="tabpanel" id="tab-offers" aria-labelledby="t-offers">
+        {% if best_id and savings is not none %}
+        {% set best = (rows|selectattr('offer.id', 'equalto', best_id)|first) %}
+        <div class="summary-strip">
+            <div class="best"><div class="l">Лучшее предложение</div><div class="v" title="{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}">{{ best.offer.sender.display_name if best.offer.sender else 'Кредитор' }}</div></div>
+            <div><div class="l">Полная стоимость</div><div class="v">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
+            <div><div class="l">Экономия против следующего на сумму заявки</div><div class="v">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub" title="{{ rate_note }}">{{ rub(savings)|rub }}</span>{% endif %}</div>
+        </div>
+        {% endif %}
 
-            {% set chart_rows = rows|rejectattr('cost.effective_rate', 'none')|list %}
-            {% if chart_rows|length > 1 %}
-            {% set max_rate = chart_rows|map(attribute='cost.effective_rate')|max %}
-            <figure class="over-chart" aria-label="Полная стоимость предложений">
-                <figcaption class="small muted">Полная стоимость, % годовых — чем короче полоса, тем дешевле</figcaption>
-                {% for row in chart_rows %}
-                <div class="over-row {{ 'is-best' if row.offer.id == best_id }}" title="{{ row.offer.sender.display_name if row.offer.sender else 'Кредитор' }}: полная стоимость {{ row.cost.effective_rate|round(2)|percent }}, переплата {{ row.cost.overpayment|money }} {{ cur }}">
-                    <span class="over-name">{{ row.offer.sender.display_name if row.offer.sender else 'Кредитор' }}</span>
-                    <span class="over-track"><i style="width: {{ (100 * row.cost.effective_rate / max_rate)|round(1) if max_rate else 0 }}%"></i></span>
-                    <span class="over-value num">{{ row.cost.effective_rate|round(2)|percent }}</span>
-                </div>
-                {% endfor %}
-            </figure>
-            {% endif %}
-
-            {% if rows %}
-            {% set term = application.term_months %}
-            <div class="table-wrap">
-            <table class="t compare">
-                <thead>
-                    <tr>
-                        <th>Кредитор</th>
-                        <th class="num">Сумма</th>
-                        <th class="num">Ставка</th>
-                        <th class="num">Комиссия</th>
-                        <th class="num">Переплата за {{ term ~ ' мес.' if term else 'срок' }}</th>
-                        <th class="num">Полная стоимость</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for row in rows %}
-                {% set o, c = row.offer, row.cost %}
-                {% set is_best = o.id == best_id %}
-                <tr class="{{ 'best-row' if is_best }}">
-                    <td>
-                        {% set cs = creditor_stats.get(o.user_id) %}
-                        <b>{% if o.sender %}<a href="/creditors/{{ o.user_id }}" class="creditor-link" title="Профиль и рейтинг кредитора">{{ o.sender.display_name }}</a>{% else %}Кредитор{% endif %}</b> {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
-                        <div class="small muted">{{ ui.country(o.sender.country_code) if o.sender else '' }}{% if cs %} · сделок: {{ cs.deals_done }}{% endif %}</div>
-                        <div style="margin-top: 4px;">{{ ui.rating_badge(cs) }}</div>
-                        {% if o.status == 'shown' and o.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ o.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
-                        {% if o.counter_status == 'pending' %}<div style="margin-top: 4px;"><span class="pill pill-pending">Ждём ответа на {{ o.counter_rate|percent }}</span></div>
-                        {% elif o.counter_status == 'accepted' %}<div style="margin-top: 4px;"><span class="pill pill-ok">Ставка снижена по вашей просьбе</span></div>
-                        {% elif o.counter_status == 'declined' %}<div class="small muted" style="margin-top: 4px;">Кредитор оставил исходную ставку</div>{% endif %}
-                        {% if o.status != 'shown' %}<div style="margin-top: 4px;">{{ ui.offer_status(o.status) }}</div>{% endif %}
-                    </td>
-                    <td class="num"><b>{{ c.amount|money }}</b><div class="small muted">{{ c.coverage }}% запрошенного</div></td>
-                    <td class="num">{{ o.annual_interest_rate|percent }}</td>
-                    <td class="num">{{ o.total_commission|percent }}<div class="small muted">{{ c.commission|money }} {{ cur }}</div></td>
-                    <td class="num">
-                        {% if c.overpayment is not none %}
-                        <b>{{ c.overpayment|money }}</b> {{ cur }}
-                        {% if rub(c.overpayment) %}<span class="rub" title="{{ rate_note }}">{{ rub(c.overpayment)|rub }}</span>{% endif %}
-                        {% else %}—{% endif %}
-                    </td>
-                    <td class="num"><span class="big-num">{{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }}</span><div class="small muted">годовых</div></td>
-                </tr>
-                {% set name = o.sender.display_name if o.sender else 'кредитора' %}
-                {% set others = (rows|selectattr('offer.status', 'equalto', 'shown')|list|length) - 1 %}
-                <tr class="{{ 'best-row' if is_best }}">
-                    <td colspan="6" style="padding-top: 0;">
-                        <div class="actions" style="justify-content: space-between; align-items: flex-start;">
-                            <div style="display: grid; gap: 8px; min-width: 0;">
-                                {% if o.extra_terms %}<span class="small"><span class="muted">Дополнительные условия:</span> {{ o.extra_terms }}</span>{% endif %}
-                                {% if row.schedule %}
-                                <details class="schedule">
-                                    <summary>{{ ui.icon('arrow-right', 'ic-sm') }} График платежей</summary>
-                                    <div class="schedule-table">
-                                        <table class="t">
-                                            <thead><tr><th>Платёж</th><th class="num">Проценты</th><th class="num">Основной долг</th><th class="num">Комиссия</th><th class="num">Итого, {{ cur }}</th></tr></thead>
-                                            <tbody>
-                                            {% for p in row.schedule.rows %}
-                                            <tr><td>{{ p.label }}</td><td class="num">{{ p.interest|money }}</td><td class="num">{{ p.principal|money }}</td><td class="num">{{ p.commission|money }}</td><td class="num"><b>{{ p.payment|money }}</b></td></tr>
-                                            {% endfor %}
-                                            {% set t = row.schedule.totals %}
-                                            <tr class="total"><td>Всего</td><td class="num">{{ t.interest|money }}</td><td class="num">{{ t.principal|money }}</td><td class="num">{{ t.commission|money }}</td><td class="num">{{ t.payment|money }}</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <p class="hint">Комиссия при выдаче, проценты ежемесячно на всю сумму, основной долг одним платежом в конце срока. По этой модели считается и полная стоимость.</p>
-                                </details>
-                                {% endif %}
-                            </div>
-                            {% if o.status == 'shown' and application.status == 'published' %}
-                            {% set covers = o.funding_amount >= remaining %}
-                            {% set too_big = o.funding_amount > remaining %}
-                            {% set others_text = '' if others < 1 else ('Остальное предложение будет отклонено, ' if others == 1 else 'Остальные ' ~ others ~ ' предложения будут отклонены, ') %}
-                            {% set accept_text = (others_text ~ 'заявка перейдёт в работу.') if covers else ('Это ' ~ (100 * o.funding_amount / application.funding_amount)|round|int ~ '% суммы. Заявка останется открытой, чтобы собрать остальное.') %}
-                            <div class="offer-actions">
-                            {% if o.counter_status is none %}
-                            <details class="counter">
-                                <summary class="btn btn-ghost btn-sm">Предложить ставку</summary>
-                                <form method="post" action="/offers/{{ o.id }}/counter" class="counter-form">{{ csrf_field(request) }}
-                                    <label class="f" for="cr-{{ o.id }}">Ваша ставка, % годовых</label>
-                                    <input type="text" inputmode="decimal" name="rate" id="cr-{{ o.id }}" class="input input-sm" placeholder="ниже {{ o.annual_interest_rate|percent }}" required>
-                                    <input type="text" name="comment" class="input input-sm" maxlength="500" placeholder="Комментарий кредитору (необязательно)" aria-label="Комментарий кредитору">
-                                    <button type="submit" class="btn btn-secondary btn-sm">Отправить кредитору</button>
-                                    <p class="hint" style="margin: 0;">Одно встречное предложение на каждый оффер. Пока кредитор не ответил, принять оффер нельзя.</p>
-                                </form>
-                            </details>
-                            {% endif %}
-                            <div class="actions">
-                                <form method="post" action="/reject_offer/{{ o.id }}" data-confirm="Отклонить предложение {{ name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
-                                      data-confirm-text="Кредитор увидит, что предложение отклонено. Вернуть его нельзя.">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
-                                {% if too_big %}<span class="small muted" title="Несобранная часть заявки: {{ remaining|money }} {{ cur }}">Больше остатка {{ remaining|money }} {{ cur }}</span>
-                                {% elif o.counter_status == 'pending' %}<button type="button" class="btn btn-primary btn-sm" disabled>Ждём ответа кредитора</button>
-                                {% else %}
-                                <form method="post" action="/accept_offer/{{ o.id }}" data-confirm="Принять предложение {{ name }}?" data-confirm-ok="Принять предложение"
-                                      data-confirm-text="{{ accept_text }} Сумма {{ c.amount|money }} {{ cur }}, полная стоимость {{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }} годовых.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">{{ 'Принять предложение' if covers else 'Принять на часть суммы' }}</button></form>
-                                {% endif %}
-                            </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
-            {% else %}
-            {% if application.status == 'published' %}
-            {{ ui.empty('clock', 'Ждём предложений кредиторов', 'Предложения появятся здесь сразу после автоматической проверки, со сравнением по полной стоимости.') }}
-            {% elif application.status == 'moderation' %}
-            {{ ui.empty('list-checks', 'Заявка на проверке у оператора', 'После проверки её увидят кредиторы.') }}
-            {% else %}
-            {{ ui.empty('files', 'Предложений нет') }}
-            {% endif %}
-            {% endif %}
-        </section>
         {% if rows %}
-        <p class="muted small">Переплата = проценты за срок заявки + комиссия за организацию (кредитора и платформы {{ PLATFORM_COMMISSION|percent }}). Полная стоимость = ставка + комиссия × 12 / срок в месяцах.{% if fx and cur in fx.rates %} Рубли — по курсу ЦБ РФ на {{ fx.date.strftime('%d.%m.%Y') }}: {{ fx.rates[cur]|money }} ₽ за 1 {{ cur }}.{% endif %}</p>
+        <div class="list-bar">
+            <div>
+                <h2>Сравнение предложений <span class="muted" style="font-weight: 500;">{{ rows|length }} {{ 'предложение' if rows|length == 1 else 'предложения' if rows|length in (2, 3, 4) else 'предложений' }}</span></h2>
+                <p class="small">Сначала самые дешёвые по полной стоимости: ставка плюс комиссия за организацию, разнесённая на срок заявки.</p>
+            </div>
+        </div>
+        {% set term = application.term_months %}
+        <div class="offer-list" data-reveal>
+        {% for row in rows %}
+        {% set o, c = row.offer, row.cost %}
+        {% set is_best = o.id == best_id %}
+        {% set cs = creditor_stats.get(o.user_id) %}
+        {% set name = o.sender.display_name if o.sender else 'кредитора' %}
+        {% set others = shown_n - 1 %}
+        {% set actionable = o.status == 'shown' and application.status == 'published' %}
+        <article class="offer-card {{ 'is-best' if is_best }} {{ 'is-closed' if o.status not in ('shown', 'accepted') }}" id="offer-{{ o.id }}">
+            <div class="offer-top">
+                <div class="offer-who">
+                    <span class="avatar" aria-hidden="true">{{ (o.sender.display_name if o.sender else 'К')|first|upper }}</span>
+                    <div style="min-width: 0;">
+                        <div class="offer-name">
+                            {% if o.sender %}<a href="/creditors/{{ o.user_id }}" class="creditor-link" title="Профиль и рейтинг кредитора">{{ o.sender.display_name }}</a>{% else %}Кредитор{% endif %}
+                            {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
+                            {{ ui.rating_badge(cs) }}
+                        </div>
+                        <div class="offer-meta">
+                            <span>{{ ui.country(o.sender.country_code) if o.sender else '' }}{% if cs %} · сделок: {{ cs.deals_done }}{% endif %}</span>
+                            {% if o.status == 'shown' and o.valid_until %}<span>· Действует до {{ o.valid_until.strftime('%d.%m.%Y') }}</span>{% endif %}
+                            {% if o.status != 'shown' %}{{ ui.offer_status(o.status) }}{% endif %}
+                            {% if o.counter_status == 'pending' %}<span class="pill pill-pending">Ждём ответа на {{ o.counter_rate|percent }}</span>
+                            {% elif o.counter_status == 'accepted' %}<span class="pill pill-ok">Ставка снижена по вашей просьбе</span>
+                            {% elif o.counter_status == 'declined' %}<span>· Кредитор оставил исходную ставку</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="offer-cost">
+                    <div class="v">{{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }}</div>
+                    <div class="l">полная стоимость, годовых</div>
+                </div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric"><div class="l">Сумма</div><div class="v">{{ c.amount|money }} {{ cur }}</div><div class="s">{{ c.coverage }}% запрошенного</div></div>
+                <div class="metric"><div class="l">Ставка</div><div class="v">{{ o.annual_interest_rate|percent }}</div><div class="s">годовых</div></div>
+                <div class="metric"><div class="l">Комиссия</div><div class="v">{{ o.total_commission|percent }}</div><div class="s">{{ c.commission|money }} {{ cur }}</div></div>
+                <div class="metric"><div class="l">Переплата за {{ term ~ ' мес.' if term else 'срок' }}</div>
+                    {% if c.overpayment is not none %}<div class="v">{{ c.overpayment|money }} {{ cur }}</div>{% if rub(c.overpayment) %}<span class="rub" title="{{ rate_note }}">{{ rub(c.overpayment)|rub }}</span>{% endif %}
+                    {% else %}<div class="v">—</div>{% endif %}</div>
+            </div>
+
+            {% if o.extra_terms %}<p class="offer-note"><span>Дополнительные условия:</span> {{ o.extra_terms }}</p>{% endif %}
+
+            {% if row.schedule or actionable %}
+            <div class="offer-foot">
+                <div class="offer-tools">
+                    {% if row.schedule %}
+                    <details class="schedule smooth">
+                        <summary class="btn btn-ghost btn-sm">{{ ui.icon('arrow-right', 'ic-sm chev') }} График платежей</summary>
+                        <div>
+                            <div class="schedule-table">
+                                <table class="t">
+                                    <thead><tr><th>Платёж</th><th class="num">Проценты</th><th class="num">Основной долг</th><th class="num">Комиссия</th><th class="num">Итого, {{ cur }}</th></tr></thead>
+                                    <tbody>
+                                    {% for p in row.schedule.rows %}
+                                    <tr><td>{{ p.label }}</td><td class="num">{{ p.interest|money }}</td><td class="num">{{ p.principal|money }}</td><td class="num">{{ p.commission|money }}</td><td class="num"><b>{{ p.payment|money }}</b></td></tr>
+                                    {% endfor %}
+                                    {% set t = row.schedule.totals %}
+                                    <tr class="total"><td>Всего</td><td class="num">{{ t.interest|money }}</td><td class="num">{{ t.principal|money }}</td><td class="num">{{ t.commission|money }}</td><td class="num">{{ t.payment|money }}</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="hint">Комиссия при выдаче, проценты ежемесячно на всю сумму, основной долг одним платежом в конце срока. По этой модели считается и полная стоимость.</p>
+                        </div>
+                    </details>
+                    {% endif %}
+                    {% if actionable and o.counter_status is none %}
+                    <details class="counter smooth">
+                        <summary class="btn btn-ghost btn-sm">{{ ui.icon('chat-circle-text', 'ic-sm') }} Предложить ставку</summary>
+                        <form method="post" action="/offers/{{ o.id }}/counter" class="counter-form">{{ csrf_field(request) }}
+                            <label class="f" for="cr-{{ o.id }}">Ваша ставка, % годовых</label>
+                            <input type="text" inputmode="decimal" name="rate" id="cr-{{ o.id }}" class="input input-sm" placeholder="ниже {{ o.annual_interest_rate|percent }}" required>
+                            <input type="text" name="comment" class="input input-sm" maxlength="500" placeholder="Комментарий кредитору (необязательно)" aria-label="Комментарий кредитору">
+                            <button type="submit" class="btn btn-secondary btn-sm">Отправить кредитору</button>
+                            <p class="hint" style="margin: 0;">Одно встречное предложение на каждый оффер. Пока кредитор не ответил, принять оффер нельзя.</p>
+                        </form>
+                    </details>
+                    {% endif %}
+                </div>
+                {% if actionable %}
+                {% set covers = o.funding_amount >= remaining %}
+                {% set too_big = o.funding_amount > remaining %}
+                {% set others_text = '' if others < 1 else ('Остальное предложение будет отклонено, ' if others == 1 else 'Остальные ' ~ others ~ ' предложения будут отклонены, ') %}
+                {% set accept_text = (others_text ~ 'заявка перейдёт в работу.') if covers else ('Это ' ~ (100 * o.funding_amount / application.funding_amount)|round|int ~ '% суммы. Заявка останется открытой, чтобы собрать остальное.') %}
+                <div class="actions">
+                    <form method="post" action="/reject_offer/{{ o.id }}" data-confirm="Отклонить предложение {{ name }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
+                          data-confirm-text="Кредитор увидит, что предложение отклонено. Вернуть его нельзя.">{{ csrf_field(request) }}<button type="submit" class="btn btn-danger btn-sm">Отклонить</button></form>
+                    {% if too_big %}<span class="small muted" title="Несобранная часть заявки: {{ remaining|money }} {{ cur }}">Больше остатка {{ remaining|money }} {{ cur }}</span>
+                    {% elif o.counter_status == 'pending' %}<button type="button" class="btn btn-primary btn-sm" disabled>Ждём ответа кредитора</button>
+                    {% else %}
+                    <form method="post" action="/accept_offer/{{ o.id }}" data-confirm="Принять предложение {{ name }}?" data-confirm-ok="Принять предложение"
+                          data-confirm-text="{{ accept_text }} Сумма {{ c.amount|money }} {{ cur }}, полная стоимость {{ c.effective_rate|round(2)|percent if c.effective_rate is not none else '—' }} годовых.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">{{ 'Принять предложение' if covers else 'Принять на часть суммы' }}</button></form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+        </div>
+        <p class="foot-note">Переплата = проценты за срок заявки + комиссия за организацию (кредитора и платформы {{ PLATFORM_COMMISSION|percent }}). Полная стоимость = ставка + комиссия × 12 / срок в месяцах.{% if fx and cur in fx.rates %} Рубли — по курсу ЦБ РФ на {{ fx.date.strftime('%d.%m.%Y') }}: {{ fx.rates[cur]|money }} ₽ за 1 {{ cur }}.{% endif %}</p>
+        {% else %}
+        <section class="card">
+        {% if application.status == 'published' %}
+        {{ ui.empty('clock', 'Ждём предложений кредиторов', 'Предложения появятся здесь сразу после автоматической проверки, со сравнением по полной стоимости.') }}
+        {% elif application.status == 'moderation' %}
+        {{ ui.empty('list-checks', 'Заявка на проверке у оператора', 'После проверки её увидят кредиторы.') }}
+        {% else %}
+        {{ ui.empty('files', 'Предложений нет') }}
+        {% endif %}
+        </section>
         {% endif %}
     </div>
 
-    <div class="grid grid-2">
-        <section class="card">
+    <div role="tabpanel" id="tab-params" aria-labelledby="t-params" hidden>
+        <section class="card" style="max-width: 720px;">
             <h2 class="card-title">Параметры заявки</h2>
             <div class="kv"><span>Сумма</span><span class="num">{{ application.funding_amount|money }} {{ cur }}{% if rub(application.funding_amount) %}<span class="rub" title="{{ rate_note }}">{{ rub(application.funding_amount)|rub }}</span>{% endif %}</span></div>
             <div class="kv"><span>Страна получения</span><span>{{ ui.country(application.target_jurisdiction) }}</span></div>
@@ -229,7 +220,10 @@
             <div class="kv"><span>Способ передачи</span><span>{{ TRANSFER_METHODS.get(application.transfer_method, '—')|terms }}</span></div>
             <div class="kv"><span>Назначение</span><span>{{ application.purpose }}</span></div>
         </section>
-        <section class="card">
+    </div>
+
+    <div role="tabpanel" id="tab-history" aria-labelledby="t-history" hidden>
+        <section class="card" style="max-width: 720px;">
             <h2 class="card-title">История заявки</h2>
             {{ ui.timeline(events) }}
         </section>

@@ -1,7 +1,7 @@
 // Service worker платформы: приложение ставится на телефон и показывает понятную страницу без сети.
 // Страницы кабинета всегда берутся из сети (там деньги и статусы — кэшировать их нельзя),
 // из кэша отдаются только оформление, шрифты, иконки и офлайн-страница.
-const CACHE = 'liquidity-v2';
+const CACHE = 'liquidity-v3';
 const PRECACHE = ['/offline', '/static/css/app.css', '/static/icons/phosphor.svg', '/static/favicon.svg',
                   '/static/fonts/manrope-cyrillic.woff2', '/static/pwa/icon-192.png'];
 

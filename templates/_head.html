@@ -50,4 +50,4 @@
     addEventListener('appinstalled', () => document.querySelectorAll('[data-install]').forEach((b) => { b.hidden = true; }));
 </script>
 <link rel="preload" href="/static/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link href="/static/css/app.css" rel="stylesheet">
+<link href="/static/css/app.css?v={{ ASSET_V }}" rel="stylesheet">

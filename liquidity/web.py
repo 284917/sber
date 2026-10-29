@@ -1,5 +1,7 @@
 """Шаблоны Jinja2: фильтры форматирования и общие переменные. Autoescape включён — защита от XSS."""
+import hashlib
 import re
+from pathlib import Path
 from decimal import Decimal
 
 from jinja2 import pass_context
@@ -79,7 +81,20 @@ templates.env.filters["rub"] = format_rub_short
 # и подсказки «застрянут» в языке первого показа
 templates.env.filters["terms"] = pass_context(lambda _ctx, value: with_terms(value))
 templates.env.filters["filename"] = display_name
+
+
+def asset_version() -> str:
+    """Метка версии стилей и скриптов: меняется с содержимым, браузер не держит старое оформление."""
+    digest = hashlib.sha1()
+    for name in ("static/css/app.css", "static/js/ui.js"):
+        path = Path(__file__).resolve().parent.parent / name
+        if path.exists():
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:10]
+
+
 templates.env.globals.update(
+    ASSET_V=asset_version(),
     APPLICATION_STATUSES=config.APPLICATION_STATUSES, OFFER_STATUSES=config.OFFER_STATUSES,
     COUNTRY_NAMES=config.COUNTRY_NAMES, TRANSFER_METHODS=config.TRANSFER_METHODS, ROLE_NAMES=config.ROLE_NAMES,
     KYC_STATUSES=config.KYC_STATUSES, PLATFORM_COMMISSION=config.PLATFORM_COMMISSION, DEMO_MODE=config.DEMO_MODE, SITE_URL=config.SITE_URL,

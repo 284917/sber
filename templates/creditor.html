@@ -36,228 +36,235 @@
 <div class="note note-bad">Верификация отклонена: {{ user.kyc_reject_reason }}. <a href="/kyc"><b>Загрузить документы заново</b></a></div>
 {% endif %}
 
-{% if my_deals %}
-<section class="card card-tight">
-    <div class="card-head"><h2 class="card-title">Мои сделки</h2></div>
-    <table class="t">
-        <tbody>
-        {% for app in my_deals %}
-        <tr>
-            <td><b>{{ app.borrower.display_name if app.borrower else '' }}</b><div class="small muted">Заявка №{{ app.id }} · {{ app.purpose }}</div></td>
-            <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
-            <td>{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %} · {{ app.term_months }} мес.{% endif %}</td>
-            <td>{{ ui.app_status(app.status) }}</td>
-            <td class="r"><a href="/deal/{{ app.id }}" class="btn btn-primary btn-sm">Открыть сделку</a></td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</section>
-{% endif %}
-
-<form method="get" action="/dashboard" class="card" style="padding: 16px;" id="market">
-    <div class="form-row" style="grid-template-columns: repeat(5, minmax(0, 1fr)) auto; align-items: end;">
-        <div>
-            <label class="f" for="f-country">Страна получения</label>
-            <select name="country" id="f-country" class="input">
-                <option value="">Все страны</option>
-                {% for code, name in countries.items() %}<option value="{{ code }}" {% if filters.country == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
-            </select>
-        </div>
-        <div>
-            <label class="f" for="f-currency">Валюта</label>
-            <select name="currency" id="f-currency" class="input">
-                <option value="">Все валюты</option>
-                {% for code in currencies %}<option value="{{ code }}" {% if filters.currency == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
-            </select>
-        </div>
-        <div>
-            <label class="f" for="f-min">Сумма от</label>
-            <input type="number" min="0" name="amount_min" id="f-min" class="input" value="{{ filters.amount_min }}">
-        </div>
-        <div>
-            <label class="f" for="f-max">Сумма до</label>
-            <input type="number" min="0" name="amount_max" id="f-max" class="input" value="{{ filters.amount_max }}">
-        </div>
-        <div>
-            <label class="f" for="f-term">Срок до, мес.</label>
-            <input type="number" min="1" name="term_max" id="f-term" class="input" value="{{ filters.term_max }}">
-        </div>
-        <div class="actions">
-            <button type="submit" class="btn btn-primary">Показать</button>
-            {% if filters.values()|select|list %}<a href="/dashboard" class="btn btn-secondary">Сбросить</a>{% endif %}
-        </div>
-    </div>
-</form>
-
 {% set has_filter = filters.values()|select|list %}
+{% set counters_n = my_offers|selectattr('counter_status', 'equalto', 'pending')|selectattr('status', 'equalto', 'shown')|list|length %}
 {% if qp.get('search_saved') %}{{ ui.flash('ok', 'Фильтр сохранён. Когда появится подходящая заявка, придёт уведомление.') }}{% endif %}
 {% if qp.get('search_deleted') %}{{ ui.flash('ok', 'Фильтр удалён.') }}{% endif %}
 {% set search_errors = {'empty': 'Задайте хотя бы одно условие фильтра, чтобы его сохранить.', 'range': 'Проверьте диапазон суммы: «от» не больше «до».',
                         'limit': 'Можно сохранить не больше ' ~ max_saved ~ ' фильтров. Удалите ненужный.', 'duplicate': 'Такой фильтр уже сохранён.'} %}
 {% if qp.get('search_error') %}{{ ui.flash('bad', search_errors.get(qp.get('search_error'), 'Не удалось сохранить фильтр.')) }}{% endif %}
 
-<section class="card" id="saved" style="padding: 16px 24px;">
-    <div class="actions" style="justify-content: space-between; align-items: center;">
-        <div class="saved-head">
-            <span class="saved-icon" aria-hidden="true">{{ ui.icon('bell') }}</span>
-            <div>
-                <h2 class="saved-title">Уведомления о новых заявках</h2>
-                <p class="small muted" style="margin: 2px 0 0;">Сохраните фильтр — сообщим, когда опубликуют подходящую заявку.</p>
-            </div>
-        </div>
-        {% if has_filter and filter_saved %}<span class="small muted">{{ ui.icon('check', 'ic-sm') }} Этот фильтр уже сохранён</span>
-        {% elif has_filter and saved|length < max_saved %}
-        <form method="post" action="/saved-searches">{{ csrf_field(request) }}
-            {% for key, value in filters.items() if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
-            <button type="submit" class="btn btn-primary btn-sm">{{ ui.icon('bell', 'ic-sm') }} Сообщать по этому фильтру</button>
-        </form>
-        {% elif has_filter %}<span class="small muted">Сохранено максимум фильтров: {{ max_saved }}</span>
-        {% else %}<span class="small muted">Выберите условия в фильтре выше</span>{% endif %}
+<div data-tabs="hash">
+    <div class="seg-tabs" role="tablist" aria-label="Разделы кабинета кредитора">
+        <button type="button" role="tab" id="t-market" aria-controls="market" aria-selected="true" data-default>{{ ui.icon('magnifying-glass') }} Заявки <span class="tab-count">{{ available_apps|length }}</span></button>
+        <button type="button" role="tab" id="t-my-offers" aria-controls="my-offers" aria-selected="false">{{ ui.icon('hand-coins') }} Мои предложения <span class="tab-count {{ 'hot' if counters_n }}" {% if counters_n %}title="Ждут вашего ответа: {{ counters_n }}"{% endif %}>{{ counters_n if counters_n else my_offers|length }}</span></button>
+        {% if my_deals %}<button type="button" role="tab" id="t-my-deals" aria-controls="my-deals" aria-selected="false">{{ ui.icon('handshake') }} Мои сделки <span class="tab-count">{{ my_deals|length }}</span></button>{% endif %}
+        <span class="seg-ink" aria-hidden="true"></span>
     </div>
-    {% if saved %}
-    <ul class="saved-list" style="margin-top: 16px;">
-        {% for s, label, query in saved %}
-        <li>
-            <a href="/dashboard?{{ query }}">{{ label }}</a>
-            <form method="post" action="/saved-searches/{{ s.id }}/delete">{{ csrf_field(request) }}
-                <button type="submit" class="btn btn-ghost btn-sm" aria-label="Удалить фильтр {{ label }}">{{ ui.icon('x', 'ic-sm') }}</button>
+
+    <div role="tabpanel" id="market" aria-labelledby="t-market">
+        <div class="card filters" id="saved">
+            <form method="get" action="/dashboard" class="filters-row">
+                <div>
+                    <label class="f" for="f-country">Страна получения</label>
+                    <select name="country" id="f-country" class="input">
+                        <option value="">Все страны</option>
+                        {% for code, name in countries.items() %}<option value="{{ code }}" {% if filters.country == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="f" for="f-currency">Валюта</label>
+                    <select name="currency" id="f-currency" class="input">
+                        <option value="">Все валюты</option>
+                        {% for code in currencies %}<option value="{{ code }}" {% if filters.currency == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="f" for="f-min">Сумма от</label>
+                    <input type="number" min="0" name="amount_min" id="f-min" class="input" value="{{ filters.amount_min }}">
+                </div>
+                <div>
+                    <label class="f" for="f-max">Сумма до</label>
+                    <input type="number" min="0" name="amount_max" id="f-max" class="input" value="{{ filters.amount_max }}">
+                </div>
+                <div>
+                    <label class="f" for="f-term">Срок до, мес.</label>
+                    <input type="number" min="1" name="term_max" id="f-term" class="input" value="{{ filters.term_max }}">
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">{{ ui.icon('funnel', 'ic-sm') }} Показать</button>
+                    {% if has_filter %}<a href="/dashboard" class="btn btn-secondary">Сбросить</a>{% endif %}
+                </div>
             </form>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-</section>
-
-<p class="muted" style="margin: 0 0 12px;">Найдено заявок: {{ available_apps|length }}</p>
-
-{% for app in available_apps %}
-{% set got = funded.get(app.id, 0) %}
-{% set left = app.funding_amount - got %}
-{% set min_amount = [app.funding_amount * min_share / 100, left]|min %}
-<section class="card" id="app-{{ app.id }}">
-    <div class="actions" style="justify-content: space-between; align-items: flex-start;">
-        <div>
-            <div class="big-num" style="font-size: 24px; line-height: 32px;">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
-            {% if got %}
-            <div class="small" style="margin-top: 4px;"><span class="pill pill-in_work">Собрано {{ (100 * got / app.funding_amount)|round|int }}%</span> <span class="muted">осталось {{ left|money }} {{ app.currency_code }} — можно предложить часть суммы</span></div>
-            {% endif %}
-            <div style="margin-top: 2px;"><b>{{ app.borrower.display_name if app.borrower else '' }}</b> <span class="muted">· заявка №{{ app.id }}</span></div>
-            <div class="muted" style="margin-top: 8px;">{{ app.purpose }}</div>
-        </div>
-        <div class="actions">
-            <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>
-            <span class="tag">{{ app.term_months ~ ' мес.' if app.term_months else 'срок не указан' }}</span>
-            <span class="tag">{{ TRANSFER_METHODS.get(app.transfer_method, 'способ не указан')|terms }}</span>
-            {% if app.valid_until %}<span class="tag" title="Заявка открыта для предложений до этой даты">{{ ui.icon('clock', 'ic-sm') }} до {{ app.valid_until.strftime('%d.%m') }}</span>{% endif %}
-        </div>
-    </div>
-
-    <div style="border-top: 1px solid var(--line-2); margin: 24px -24px 0; padding: 24px 24px 0;">
-    {% if app.id in offered_app_ids %}
-        <p class="muted" style="margin: 0;">Вы уже отправили предложение по этой заявке. Статус — в разделе <a href="#my-offers">«Мои предложения»</a>.</p>
-    {% else %}
-    <form method="post" action="/create_offer/{{ app.id }}" class="offer-form" data-term="{{ app.term_months or '' }}" data-currency="{{ app.currency_code }}">{{ csrf_field(request) }}
-        <fieldset {% if kyc != 'approved' %}disabled{% endif %} style="border: 0; padding: 0; margin: 0;">
-        <div class="form-row offer-grid">
-            <div>
-                <label class="f">Сумма к выдаче, {{ app.currency_code }}</label>
-                <input type="number" step="0.01" min="{{ min_amount|round(2) }}" max="{{ left }}" name="amount" class="input" value="{{ left|int if left == left|int else left }}" required>
-                <div class="hint" style="margin-top: 4px;">От {{ min_amount|money }} до {{ left|money }}: заявку можно собрать из нескольких предложений</div>
-            </div>
-            <div>
-                <label class="f">Ставка, % годовых</label>
-                <input type="number" step="0.01" min="0.01" max="{{ OFFER_RATE_MAX }}" name="rate" class="input" placeholder="8,0" required>
-            </div>
-            <div>
-                <label class="f">Комиссия кредитора, %</label>
-                <input type="number" step="0.01" min="0" max="{{ OFFER_LENDER_COMM_MAX }}" name="lender_comm" class="input" placeholder="1,0" required>
-            </div>
-            <div>
-                <label class="f">Дополнительные условия</label>
-                <input type="text" name="extra_terms" maxlength="1000" class="input" placeholder="Льготный период, график погашения, обеспечение">
-            </div>
-            <div>
-                <label class="f">Действует</label>
-                <select name="valid_days" class="input">
-                    {% for d in valid_choices %}<option value="{{ d }}" {% if d == valid_default %}selected{% endif %}>{{ d }} дней</option>{% endfor %}
-                </select>
+            <div class="filters-saved">
+                <div class="chips">
+                    <span class="small muted" style="display: inline-flex; align-items: center; gap: 4px;">{{ ui.icon('bell', 'ic-sm') }} Уведомления о новых заявках:</span>
+                    {% for s, label, query in saved %}
+                    <span class="chip"><a href="/dashboard?{{ query }}">{{ label }}</a>
+                        <form method="post" action="/saved-searches/{{ s.id }}/delete">{{ csrf_field(request) }}<button type="submit" aria-label="Удалить фильтр {{ label }}" title="Удалить фильтр">{{ ui.icon('x') }}</button></form>
+                    </span>
+                    {% else %}<span class="small muted">сохраните фильтр, и мы сообщим о подходящей заявке</span>{% endfor %}
+                </div>
+                {% if has_filter and filter_saved %}<span class="small muted">{{ ui.icon('check', 'ic-sm') }} Этот фильтр уже сохранён</span>
+                {% elif has_filter and saved|length < max_saved %}
+                <form method="post" action="/saved-searches">{{ csrf_field(request) }}
+                    {% for key, value in filters.items() if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+                    <button type="submit" class="btn btn-secondary btn-sm">{{ ui.icon('bell', 'ic-sm') }} Сообщать по этому фильтру</button>
+                </form>
+                {% elif has_filter %}<span class="small muted">Сохранено максимум фильтров: {{ max_saved }}</span>{% endif %}
             </div>
         </div>
-        <div class="actions" style="justify-content: space-between; margin-top: 12px;">
-            <span class="muted small preview">Заёмщик увидит итоговую комиссию: ваша + {{ PLATFORM_COMMISSION|percent }} платформы.</span>
-            <button type="submit" class="btn btn-primary">Отправить предложение</button>
-        </div>
-        </fieldset>
-    </form>
-    {% endif %}
-    {% if app.id in complained_app_ids %}
-    <p class="small muted complain-sent">{{ ui.icon('warning-circle', 'ic-sm') }} Вы пожаловались на заявку — оператор её проверяет</p>
-    {% else %}
-    <details class="complain">
-        <summary>{{ ui.icon('warning-circle', 'ic-sm') }} Пожаловаться на заявку</summary>
-        <form method="post" action="/applications/{{ app.id }}/complain" class="complain-form">{{ csrf_field(request) }}
-            <textarea name="reason" class="input reason-input" rows="2" minlength="5" maxlength="500" required
-                      placeholder="Что не так: странная цель, неверные данные, подозрение на мошенничество" aria-label="Причина жалобы на заявку №{{ app.id }}"></textarea>
-            <button type="submit" class="btn btn-secondary btn-sm">Отправить оператору</button>
-        </form>
-    </details>
-    {% endif %}
-    </div>
-</section>
-{% else %}
-<section class="card">{{ ui.empty('funnel', 'Нет заявок по этим условиям', 'Сбросьте фильтры или расширьте диапазон суммы и срока.') }}</section>
-{% endfor %}
 
-<section class="card card-tight" id="my-offers" style="margin-top: 32px;">
-    <div class="card-head"><h2 class="card-title">Мои предложения</h2></div>
-    {% if my_offers %}
-    <div class="table-wrap">
-    <table class="t">
-        <thead><tr><th>Заявка</th><th class="num">Сумма</th><th class="num">Ставка</th><th class="num">Комиссия итого</th><th>Статус</th><th></th></tr></thead>
-        <tbody>
-        {% for offer in my_offers %}
-        <tr>
-            <td><b>{{ offer.application.borrower.display_name if offer.application and offer.application.borrower else '' }}</b><div class="small muted">Заявка №{{ offer.application_id }}</div></td>
-            <td class="num">{{ offer.funding_amount|money }} {{ offer.application.currency_code if offer.application else '' }}</td>
-            <td class="num">{{ offer.annual_interest_rate|percent }}</td>
-            <td class="num">{{ offer.total_commission|percent }}</td>
-            <td>
-                {{ ui.offer_status(offer.status) }}
-                {% if offer.status == 'hidden' and offer.hide_reason %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ offer.hide_reason }}</div>{% endif %}
-                {% if offer.status == 'accepted' and offer.application and offer.application.status == 'published' %}<div class="small muted" style="margin-top: 4px;">Заёмщик собирает остальную сумму, сделка начнётся после этого</div>{% endif %}
-                {% if offer.status == 'pending' %}<div class="small muted" style="margin-top: 4px;">{% if offer.review_reason %}<span>Автопроверка: {{ offer.review_reason }}.</span> {% endif %}Заёмщик увидит его после проверки оператором, обычно до {{ SLA_HOURS.offer }} ч</div>{% endif %}
-                {% if offer.status in ('pending', 'shown') and offer.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ offer.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
-                {% if offer.counter_status == 'accepted' %}<div class="small muted" style="margin-top: 4px;">Ставка снижена по встречному предложению</div>{% endif %}
-            </td>
-            <td class="r">
-                {% if offer.counter_status == 'pending' and offer.status == 'shown' %}
-                <div class="counter-box">
-                    <div class="small"><b>Заёмщик предлагает {{ offer.counter_rate|percent }}</b> вместо {{ offer.annual_interest_rate|percent }}</div>
-                    {% if offer.counter_comment %}<div class="small muted">«{{ offer.counter_comment }}»</div>{% endif %}
-                    <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
-                        <form method="post" action="/offers/{{ offer.id }}/counter/decline">{{ csrf_field(request) }}<button type="submit" class="btn btn-secondary btn-sm">Оставить {{ offer.annual_interest_rate|percent }}</button></form>
-                        <form method="post" action="/offers/{{ offer.id }}/counter/agree" data-confirm="Согласиться на ставку {{ offer.counter_rate|percent }}?" data-confirm-ok="Согласиться"
-                              data-confirm-text="Ставка в предложении изменится, заёмщик сможет его принять.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Согласиться</button></form>
-                    </div>
+        <div class="list-bar"><h2>Найдено заявок: {{ available_apps|length }}</h2></div>
+
+        <div data-reveal>
+        {% for app in available_apps %}
+        {% set got = funded.get(app.id, 0) %}
+        {% set left = app.funding_amount - got %}
+        {% set min_amount = [app.funding_amount * min_share / 100, left]|min %}
+        {% set sent = app.id in offered_app_ids %}
+        <article class="market-card" id="app-{{ app.id }}">
+            <div class="market-main">
+                <div style="min-width: 0;">
+                    <div class="market-amount">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
+                    <div class="market-who"><b>{{ app.borrower.display_name if app.borrower else '' }}</b> <span class="muted">· заявка №{{ app.id }}</span></div>
+                    <p class="market-purpose">{{ app.purpose }}</p>
+                </div>
+                <div class="market-tags">
+                    <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>
+                    <span class="tag">{{ app.term_months ~ ' мес.' if app.term_months else 'срок не указан' }}</span>
+                    <span class="tag">{{ TRANSFER_METHODS.get(app.transfer_method, 'способ не указан')|terms }}</span>
+                    {% if app.valid_until %}<span class="tag" title="Заявка открыта для предложений до этой даты">{{ ui.icon('clock', 'ic-sm') }} до {{ app.valid_until.strftime('%d.%m') }}</span>{% endif %}
+                </div>
+                {% if got %}
+                {% set pct = (100 * got / app.funding_amount)|round|int %}
+                <div class="market-progress">
+                    <span class="pill pill-in_work">Собрано {{ pct }}%</span>
+                    <div class="funding-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}" aria-label="Собрано {{ pct }}%"><i style="width: {{ pct }}%"></i></div>
+                    <span class="small muted">осталось {{ left|money }} {{ app.currency_code }} — можно предложить часть суммы</span>
                 </div>
                 {% endif %}
-                {% if offer.status in ('pending', 'shown') %}
-                <form method="post" action="/offers/{{ offer.id }}/withdraw" data-confirm="Отозвать предложение по заявке №{{ offer.application_id }}?" data-confirm-kind="danger" data-confirm-ok="Отозвать"
-                      data-confirm-text="{{ 'Заёмщик больше не увидит это предложение.' if offer.status == 'shown' else 'Оператор не будет его проверять.' }} Потом по этой заявке можно отправить новое.">{{ csrf_field(request) }}
-                    <button type="submit" class="btn btn-ghost btn-sm">Отозвать</button>
-                </form>
+            </div>
+
+            <div class="market-foot">
+                {% if sent %}
+                <span class="sent-note">{{ ui.icon('check', 'ic-sm') }} <span>Вы уже отправили предложение по этой заявке. Статус — во вкладке <a href="#my-offers">«Мои предложения»</a>.</span></span>
+                {% elif kyc != 'approved' %}
+                <span class="small muted">Отправлять предложения можно после верификации компании.</span>
+                {% else %}
+                <details class="offer-open smooth">
+                    <summary class="btn btn-primary">{{ ui.icon('hand-coins') }} Сделать предложение</summary>
+                    <form method="post" action="/create_offer/{{ app.id }}" class="offer-form offer-panel" data-term="{{ app.term_months or '' }}" data-currency="{{ app.currency_code }}">{{ csrf_field(request) }}
+                        <div class="offer-panel-head">
+                            <b>Ваше предложение по заявке №{{ app.id }}</b>
+                            <button type="button" class="icon-btn" data-fold aria-label="Свернуть форму">{{ ui.icon('x') }}</button>
+                        </div>
+                        <fieldset {% if kyc != 'approved' %}disabled{% endif %}>
+                        <div class="form-row offer-grid">
+                            <div>
+                                <label class="f">Сумма к выдаче, {{ app.currency_code }}</label>
+                                <input type="number" step="0.01" min="{{ min_amount|round(2) }}" max="{{ left }}" name="amount" class="input" value="{{ left|int if left == left|int else left }}" required>
+                                <div class="hint" style="margin-top: 4px;">От {{ min_amount|money }} до {{ left|money }}</div>
+                            </div>
+                            <div>
+                                <label class="f">Ставка, % годовых</label>
+                                <input type="number" step="0.01" min="0.01" max="{{ OFFER_RATE_MAX }}" name="rate" class="input" placeholder="8,0" required>
+                            </div>
+                            <div>
+                                <label class="f">Комиссия кредитора, %</label>
+                                <input type="number" step="0.01" min="0" max="{{ OFFER_LENDER_COMM_MAX }}" name="lender_comm" class="input" placeholder="1,0" required>
+                            </div>
+                            <div>
+                                <label class="f">Дополнительные условия</label>
+                                <input type="text" name="extra_terms" maxlength="1000" class="input" placeholder="Льготный период, график погашения, обеспечение">
+                            </div>
+                            <div>
+                                <label class="f">Действует</label>
+                                <select name="valid_days" class="input">
+                                    {% for d in valid_choices %}<option value="{{ d }}" {% if d == valid_default %}selected{% endif %}>{{ d }} дней</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="actions" style="justify-content: space-between; margin-top: 16px;">
+                            <span class="muted small preview">Заёмщик увидит итоговую комиссию: ваша + {{ PLATFORM_COMMISSION|percent }} платформы.</span>
+                            <button type="submit" class="btn btn-primary">Отправить предложение</button>
+                        </div>
+                        </fieldset>
+                    </form>
+                </details>
                 {% endif %}
-            </td>
-        </tr>
+                    {% if app.id in complained_app_ids %}
+                    <p class="small muted complain-sent">{{ ui.icon('warning-circle', 'ic-sm') }} Вы пожаловались на заявку — оператор её проверяет</p>
+                    {% else %}
+                    <details class="complain smooth">
+                        <summary>{{ ui.icon('warning-circle', 'ic-sm') }} Пожаловаться на заявку</summary>
+                        <form method="post" action="/applications/{{ app.id }}/complain" class="complain-form">{{ csrf_field(request) }}
+                            <textarea name="reason" class="input reason-input" rows="2" minlength="5" maxlength="500" required
+                                      placeholder="Что не так: странная цель, неверные данные, подозрение на мошенничество" aria-label="Причина жалобы на заявку №{{ app.id }}"></textarea>
+                            <button type="submit" class="btn btn-secondary btn-sm">Отправить оператору</button>
+                        </form>
+                    </details>
+                    {% endif %}
+            </div>
+        </article>
+        {% else %}
+        <section class="card">{{ ui.empty('funnel', 'Нет заявок по этим условиям', 'Сбросьте фильтры или расширьте диапазон суммы и срока.') }}</section>
         {% endfor %}
-        </tbody>
-    </table>
+        </div>
     </div>
-    {% else %}
-    {{ ui.empty('hand-coins', 'Предложений пока нет', 'Выберите заявку выше и отправьте условия. Статус появится здесь.') }}
+
+    <div role="tabpanel" id="my-offers" aria-labelledby="t-my-offers" hidden>
+        <section class="card card-tight">
+            <div class="card-head"><h2 class="card-title">Мои предложения</h2>{% if counters_n %}<span class="pill pill-pending">Ждут вашего ответа: {{ counters_n }}</span>{% endif %}</div>
+            {% if my_offers %}
+            {% for offer in my_offers %}
+            {% set cur = offer.application.currency_code if offer.application else '' %}
+            <div class="my-offer {{ 'needs-action' if offer.counter_status == 'pending' and offer.status == 'shown' }}">
+                <div style="min-width: 0;"><b>{{ offer.application.borrower.display_name if offer.application and offer.application.borrower else '' }}</b><div class="small muted">Заявка №{{ offer.application_id }}</div></div>
+                <div class="num-col"><div class="l">Сумма</div><b>{{ offer.funding_amount|money }} {{ cur }}</b></div>
+                <div class="num-col"><div class="l">Ставка</div><b>{{ offer.annual_interest_rate|percent }}</b></div>
+                <div class="num-col"><div class="l">Комиссия итого</div><b>{{ offer.total_commission|percent }}</b></div>
+                <div class="my-offer-actions">
+                    <div style="text-align: right;">
+                        {{ ui.offer_status(offer.status) }}
+                        {% if offer.status == 'hidden' and offer.hide_reason %}<div class="small" style="color: var(--danger); margin-top: 4px;">{{ offer.hide_reason }}</div>{% endif %}
+                        {% if offer.status == 'accepted' and offer.application and offer.application.status == 'published' %}<div class="small muted" style="margin-top: 4px;">Заёмщик собирает остальную сумму, сделка начнётся после этого</div>{% endif %}
+                        {% if offer.status == 'pending' %}<div class="small muted" style="margin-top: 4px;">{% if offer.review_reason %}<span>Автопроверка: {{ offer.review_reason }}.</span> {% endif %}Заёмщик увидит его после проверки оператором, обычно до {{ SLA_HOURS.offer }} ч</div>{% endif %}
+                        {% if offer.status in ('pending', 'shown') and offer.valid_until %}<div class="small muted" style="margin-top: 4px;">Действует до {{ offer.valid_until.strftime('%d.%m.%Y') }}</div>{% endif %}
+                        {% if offer.counter_status == 'accepted' %}<div class="small muted" style="margin-top: 4px;">Ставка снижена по встречному предложению</div>{% endif %}
+                    </div>
+                    {% if offer.counter_status == 'pending' and offer.status == 'shown' %}
+                    <div class="counter-box">
+                        <div class="small"><b>Заёмщик предлагает {{ offer.counter_rate|percent }}</b> вместо {{ offer.annual_interest_rate|percent }}</div>
+                        {% if offer.counter_comment %}<div class="small muted">«{{ offer.counter_comment }}»</div>{% endif %}
+                        <div class="actions" style="justify-content: flex-end; margin-top: 8px;">
+                            <form method="post" action="/offers/{{ offer.id }}/counter/decline">{{ csrf_field(request) }}<button type="submit" class="btn btn-secondary btn-sm">Оставить {{ offer.annual_interest_rate|percent }}</button></form>
+                            <form method="post" action="/offers/{{ offer.id }}/counter/agree" data-confirm="Согласиться на ставку {{ offer.counter_rate|percent }}?" data-confirm-ok="Согласиться"
+                                  data-confirm-text="Ставка в предложении изменится, заёмщик сможет его принять.">{{ csrf_field(request) }}<button type="submit" class="btn btn-primary btn-sm">Согласиться</button></form>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if offer.status in ('pending', 'shown') %}
+                    <form method="post" action="/offers/{{ offer.id }}/withdraw" data-confirm="Отозвать предложение по заявке №{{ offer.application_id }}?" data-confirm-kind="danger" data-confirm-ok="Отозвать"
+                          data-confirm-text="{{ 'Заёмщик больше не увидит это предложение.' if offer.status == 'shown' else 'Оператор не будет его проверять.' }} Потом по этой заявке можно отправить новое.">{{ csrf_field(request) }}
+                        <button type="submit" class="btn btn-ghost btn-sm">Отозвать</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            {{ ui.empty('hand-coins', 'Предложений пока нет', 'Выберите заявку во вкладке «Заявки» и отправьте условия. Статус появится здесь.') }}
+            {% endif %}
+        </section>
+    </div>
+
+    {% if my_deals %}
+    <div role="tabpanel" id="my-deals" aria-labelledby="t-my-deals" hidden>
+        <section class="card card-tight">
+            {% for app in my_deals %}
+            <a class="app-row" href="/deal/{{ app.id }}">
+                <span class="no">№{{ app.id }}</span>
+                <span style="min-width: 0;"><span class="amt">{{ app.funding_amount|money }} {{ app.currency_code }}</span><span class="sub" style="display: block;">{{ app.borrower.display_name if app.borrower else '' }} · {{ app.purpose }}</span></span>
+                <span class="where">{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %}<span class="sub" style="display: block;">{{ app.term_months }} мес.</span>{% endif %}</span>
+                <span>{{ ui.app_status(app.status) }}</span>
+                <span class="go"><span class="small muted">Открыть сделку</span>{{ ui.icon('arrow-right', 'ic-sm') }}</span>
+            </a>
+            {% endfor %}
+        </section>
+    </div>
     {% endif %}
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}
