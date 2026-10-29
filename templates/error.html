@@ -13,8 +13,10 @@
         <h1 style="margin-top: 16px;">{{ title }}</h1>
         <p class="lead" style="margin: 8px 0 32px;">{{ text }}</p>
         <div class="actions" style="justify-content: center;">
-            <a class="btn btn-primary" href="/dashboard">В кабинет</a>
-            <a class="btn btn-secondary" href="/">На главную</a>
+            {% if relogin %}<a class="btn btn-primary" href="/logout">Войти в другой аккаунт</a>
+            <a class="btn btn-secondary" href="/dashboard">Остаться в текущем</a>
+            {% else %}<a class="btn btn-primary" href="/dashboard">В кабинет</a>{% endif %}
+            {% if not relogin %}<a class="btn btn-secondary" href="/">На главную</a>{% endif %}
         </div>
     </div>
 </main>

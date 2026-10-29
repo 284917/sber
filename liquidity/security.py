@@ -58,11 +58,18 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.
     return user
 
 
+class WrongRole(Exception):
+    """Действие другой роли. Чаще всего — в другой вкладке этого браузера вошли в другой аккаунт (HTTP 403)."""
+
+    def __init__(self, user: models.User, roles):
+        self.user, self.roles = user, roles
+
+
 def require_role(*roles: str):
-    """Зависимость: пускает только пользователей с одной из ролей, остальным — 403."""
+    """Зависимость: пускает только пользователей с одной из ролей, остальным — 403 с понятной страницей."""
     def dependency(user: models.User = Depends(get_current_user)) -> models.User:
         if user.role not in roles:
-            raise HTTPException(status_code=403, detail="Недостаточно прав")
+            raise WrongRole(user, roles)
         return user
     return dependency
 

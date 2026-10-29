@@ -124,3 +124,21 @@ def test_creditor_complaint_and_operator_decision():
     assert any("оставил её опубликованной" in t for t in texts)
     assert any("снята с публикации по вашей жалобе" in t for t in texts)
     assert "Жалоб нет" in admin.get("/operator/moderation").text
+
+
+def test_other_account_in_same_browser_gets_clear_page():
+    """В другой вкладке вошли кредитором — форма заёмщика получает понятную страницу, а не голый JSON 403."""
+    make_company("tab-b@test.ru", "borrower", "ООО «Вкладка»", "RU", "7707329152")
+    make_company("tab-c@test.cy", "creditor", "Tab Capital", "CY", "HE 94")
+    browser = login("tab-b@test.ru")
+    assert "lp_account" in browser.get("/dashboard").text
+    browser.post("/login", data={"email": "tab-c@test.cy", "password": "Str0ng!Pass1"})  # «другая вкладка»
+    page = browser.post("/create_application", data={**FORM, "amount": "200000", "purpose": "Заявка из старой вкладки"})
+    assert page.status_code == 403 and "Сейчас вы вошли в другой аккаунт" in page.text
+    assert "Tab Capital" in page.text and "заёмщик" in page.text and 'href="/logout"' in page.text
+
+    # Из аккаунта вышли — форма отправляет на вход с пояснением, а не на ошибку 401
+    browser.get("/logout")
+    expired = browser.post("/create_application", data={**FORM, "amount": "200000", "purpose": "Заявка после выхода"})
+    assert expired.status_code == 303 and expired.headers["location"] == "/login?expired=1"
+    assert "Сессия завершилась" in browser.get("/login?expired=1").text

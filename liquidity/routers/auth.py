@@ -68,7 +68,7 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), d
 
 @router.get("/logout", summary="Выход")
 def logout():
-    response = redirect("/")
+    response = redirect("/?logged_out=1")
     end_session(response)
     return response
 

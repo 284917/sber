@@ -135,6 +135,22 @@
         clearTimeout(t._timer); t._timer = setTimeout(() => { t.hidden = true; }, 6000);
     }
     // Файл больше лимита отсекаем сразу после выбора: иначе сервер оборвёт загрузку и покажет чужую страницу ошибки
+    // Один браузер — один вход: если в другой вкладке вошли в другой аккаунт, эта вкладка устарела
+    (function () {
+        const me = '{{ user.id if user is defined and user else '' }}', who = {{ (user.display_name if user is defined and user else '')|tojson }};
+        if (!me) return;
+        const KEY = 'lp_account';
+        const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (err) { return null; } };
+        try { localStorage.setItem(KEY, JSON.stringify({id: me, name: who})); } catch (err) {}
+        const other = () => { const a = get(); return a && a.id !== me ? a : null; };
+        const warn = (a) => showToast('В другой вкладке выполнен вход как ' + a.name + '. Эта вкладка относится к аккаунту ' + who +
+            ' — обновите страницу, чтобы работать в текущем аккаунте.');
+        addEventListener('storage', (e) => { if (e.key === KEY && other()) warn(other()); });
+        document.addEventListener('submit', (e) => {
+            const a = other();
+            if (a) { e.preventDefault(); e.stopImmediatePropagation(); warn(a); }
+        }, true);
+    })();
     const MAX_UPLOAD = {{ MAX_UPLOAD_BYTES }};
     document.addEventListener('change', (e) => {
         const input = e.target;

@@ -9,7 +9,7 @@ from liquidity import config
 from liquidity.web import templates
 from liquidity.database import SessionLocal, create_schema, find_database_url
 from liquidity.routers import account, admin, auth, borrower, creditor, deals, kyc, notifications, operator
-from liquidity.security import SESSION_COOKIE, csrf_cookie_middleware, verify_csrf
+from liquidity.security import SESSION_COOKIE, WrongRole, csrf_cookie_middleware, verify_csrf
 from liquidity.services import Forbidden, Invalid, NotFound, accounts, demo, fx
 
 app = FastAPI(
@@ -85,16 +85,16 @@ def health():
 
 
 # --- Ошибки ---
-def _error_page(request: Request, status: int, title: str, text: str):
+def _error_page(request: Request, status: int, title: str, text: str, relogin: bool = False):
     return templates.TemplateResponse(request=request, name="error.html", status_code=status,
-                                      context={"status": status, "title": title, "text": text})
+                                      context={"status": status, "title": title, "text": text, "relogin": relogin})
 
 
 @app.exception_handler(StarletteHTTPException)
 async def http_errors(request: Request, exc: StarletteHTTPException):
     # Без входа (или с истёкшей сессией) страницы перекидывают на вход, а не показывают JSON-ошибку
-    if exc.status_code == 401 and request.method == "GET":
-        response = RedirectResponse(url="/login", status_code=303)
+    if exc.status_code == 401:  # и для форм: сессия истекла или из аккаунта вышли в другой вкладке
+        response = RedirectResponse(url="/login" if request.method == "GET" else "/login?expired=1", status_code=303)
         response.delete_cookie(SESSION_COOKIE)
         return response
     if exc.status_code == 403 and exc.detail == "CSRF":
@@ -102,6 +102,17 @@ async def http_errors(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404 and "text/html" in request.headers.get("accept", ""):
         return _error_page(request, 404, "Страница не найдена", "Такой страницы нет. Проверьте адрес или вернитесь на главную.")
     return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(WrongRole)
+async def wrong_role(request: Request, exc: WrongRole):
+    from liquidity import config
+    need = " или ".join(config.ROLE_NAMES.get(r, r).lower() for r in exc.roles)
+    return _error_page(request, 403, "Сейчас вы вошли в другой аккаунт",
+                       f"Вход выполнен как {exc.user.display_name} ({config.ROLE_NAMES.get(exc.user.role, exc.user.role).lower()}), "
+                       f"а это действие доступно роли: {need}. Скорее всего, в другой вкладке этого браузера вошли "
+                       "в другой аккаунт: в одном браузере работает только один вход. Ничего не отправлено — войдите "
+                       "в нужный аккаунт и повторите.", relogin=True)
 
 
 @app.exception_handler(NotFound)

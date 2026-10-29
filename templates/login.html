@@ -13,6 +13,7 @@
             <h1>Вход</h1>
             <p class="lead">Для заёмщиков, кредиторов и сотрудников платформы</p>
             {% if error %}<div class="note note-bad" role="alert">{{ error }}</div>{% endif %}
+            {% if request.query_params.get('expired') %}<div class="note note-warn" role="alert">Сессия завершилась или из аккаунта вышли в другой вкладке. Войдите снова — форму нужно будет отправить ещё раз.</div>{% endif %}
             {% if request.query_params.get('registered') %}
                 <div class="note note-ok">Компания зарегистрирована. Войдите и пройдите верификацию.</div>
             {% endif %}

@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+{% if request.query_params.get('logged_out') %}<script>try { localStorage.removeItem('lp_account'); } catch (e) {}</script>{% endif %}
 <script>
     // Тема до отрисовки страницы, чтобы не мигала: сохранённый выбор или системная настройка
     try { const t = localStorage.getItem('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch (e) {}
