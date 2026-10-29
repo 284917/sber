@@ -33,16 +33,16 @@ def dashboard(request: Request, user: models.User, db: Session):
                   currencies=config.CURRENCIES, countries=config.TARGET_COUNTRIES, max_term=config.MAX_TERM_MONTHS)
 
 
-@router.post("/create_application", summary="Создать заявку (уходит на модерацию)")
+@router.post("/create_application", summary="Создать заявку: автопроверка и публикация, подозрительные — оператору")
 def create_application(amount: float = Form(...), currency: str = Form(...), country: str = Form(...),
                        purpose: str = Form(...), term_months: int = Form(...), transfer_method: str = Form(...),
                        user: models.User = Depends(borrower_only), db: Session = Depends(get_db)):
     try:
-        applications.create(db, user, amount=amount, currency=currency, country=country, purpose=purpose,
-                            term_months=term_months, transfer_method=transfer_method)
+        application = applications.create(db, user, amount=amount, currency=currency, country=country,
+                                          purpose=purpose, term_months=term_months, transfer_method=transfer_method)
     except Invalid as e:
         return redirect(f"/dashboard?error={e.code}")
-    return redirect("/dashboard?created=1")
+    return redirect("/dashboard?created=" + ("review" if application.status == "moderation" else "1"))
 
 
 @router.get("/applications/{app_id}/offers", summary="Карточка заявки: этапы, сравнение предложений, история")

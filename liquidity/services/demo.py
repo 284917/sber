@@ -64,6 +64,10 @@ def clear(db: Session):
     db.query(models.Offer).filter((models.Offer.application_id.in_(app_ids or [0]))
                                   | (models.Offer.user_id.in_(ids))).delete(synchronize_session=False)
     db.query(models.Document).filter(models.Document.user_id.in_(ids)).delete(synchronize_session=False)
+    db.query(models.Complaint).filter((models.Complaint.application_id.in_(app_ids or [0]))
+                                      | (models.Complaint.user_id.in_(ids))).delete(synchronize_session=False)
+    db.query(models.Complaint).filter(models.Complaint.resolved_by.in_(ids)).update(
+        {"resolved_by": None}, synchronize_session=False)
     db.query(models.Application).filter(models.Application.id.in_(app_ids or [0])).delete(synchronize_session=False)
     db.query(models.Application).filter(models.Application.confirmed_by.in_(ids)).update(
         {"confirmed_by": None}, synchronize_session=False)
@@ -95,10 +99,11 @@ def seed(db: Session):
                 db.add(models.Document(user_id=user.id, doc_type=doc_type, file_path=path, status=kyc_state,
                                        created_at=at(13)))
 
-    def application(owner, amount, currency, country, term, method, purpose, status, days, comment=None):
+    def application(owner, amount, currency, country, term, method, purpose, status, days, comment=None, review=None):
         app = models.Application(user_id=users[owner].id, funding_amount=amount, currency_code=currency,
                                  target_jurisdiction=country, term_months=term, transfer_method=method,
-                                 purpose=purpose, status=status, moderation_comment=comment, created_at=at(days))
+                                 purpose=purpose, status=status, moderation_comment=comment, review_reason=review,
+                                 created_at=at(days))
         if status == "published":  # опубликованные демо-заявки открыты ещё на срок публикации
             app.valid_until = (at(days) + timedelta(days=config.APP_VALID_DAYS)).date()
         db.add(app)
@@ -109,11 +114,11 @@ def seed(db: Session):
         db.add(models.ApplicationEvent(application_id=app.id, actor_id=users[actor].id if actor else None,
                                        text=text, created_at=at(days, hours)))
 
-    def offer(app, creditor, amount, rate, comm, status, days, extra=None, hide_reason=None):
+    def offer(app, creditor, amount, rate, comm, status, days, extra=None, hide_reason=None, review=None):
         o = models.Offer(application_id=app.id, user_id=users[creditor].id, funding_amount=amount,
-                         annual_interest_rate=rate, lender_commission=comm,
+                         annual_interest_rate=rate, lender_commission=comm, platform_commission=config.PLATFORM_COMMISSION,
                          total_commission=comm + config.PLATFORM_COMMISSION, extra_terms=extra, status=status,
-                         hide_reason=hide_reason, created_at=at(days),
+                         hide_reason=hide_reason, review_reason=review, created_at=at(days),
                          operator_decision_at=at(days, -2) if status != "pending" else None)
         db.add(o)
         return o
@@ -127,8 +132,11 @@ def seed(db: Session):
                               created_at=at(days, hours)))
 
     def moderated(app, days):
-        event(app, "alfa" if app.user_id == users["alfa"].id else "sever", "Заявка создана и отправлена на модерацию", days)
-        event(app, "admin", "Заявка прошла модерацию и опубликована для кредиторов", days, -3)
+        event(app, "alfa" if app.user_id == users["alfa"].id else "sever", "Заявка создана", days)
+        event(app, None, "Заявка прошла автоматическую проверку и опубликована для кредиторов", days)
+
+    def auto_shown(app, creditor, days):
+        event(app, creditor, f"Предложение {users[creditor].company_name} прошло автоматическую проверку и показано заёмщику", days)
 
     # 1. Опубликована, три предложения — показать сравнение по полной стоимости
     a1 = application("alfa", 500000, "EUR", "DE", 6, "swift", "Закупка станков с ЧПУ у поставщика в Германии",
@@ -138,8 +146,7 @@ def seed(db: Session):
     offer(a1, "gulf", 500000, 7.2, 2.2, "shown", 4, "Погашение равными долями ежемесячно")
     offer(a1, "rongtong", 450000, 7.6, 1.4, "shown", 3, "Обеспечение: залог оборудования")
     for creditor, days in (("beta", 5), ("gulf", 4), ("rongtong", 3)):
-        event(a1, creditor, "Получено новое предложение, ждёт проверки оператором", days)
-        event(a1, "operator", f"Оператор показал заёмщику предложение {users[creditor].company_name}", days, -2)
+        auto_shown(a1, creditor, days)
 
     # 2. В работе: принято предложение, идёт обсуждение, договора ещё нет
     a2 = application("alfa", 1200000, "CNY", "CN", 12, "cips", "Предоплата по контракту на поставку комплектующих",
@@ -147,8 +154,8 @@ def seed(db: Session):
     moderated(a2, 10)
     offer(a2, "rongtong", 1200000, 6.9, 1.5, "accepted", 9, "Погашение равными долями ежеквартально")
     offer(a2, "beta", 1000000, 6.4, 2.4, "rejected", 9)
-    event(a2, "operator", "Оператор показал заёмщику предложение Shenzhen Rongtong Capital", 9, -2)
-    event(a2, "operator", "Оператор показал заёмщику предложение Beta Capital Ltd", 9, -3)
+    auto_shown(a2, "rongtong", 9)
+    auto_shown(a2, "beta", 9)
     event(a2, "alfa", "Принято предложение Shenzhen Rongtong Capital, сделка в работе", 8)
     message(a2, "alfa", "Добрый день! Можно ли перенести первый платёж на конец квартала?", 7, 5)
     message(a2, "rongtong", "Да, первый платёж — в конце квартала. Готовим проект договора.", 7, 2)
@@ -160,31 +167,34 @@ def seed(db: Session):
     a3.confirmed_by, a3.confirmed_at = users["operator"].id, at(12)
     moderated(a3, 20)
     offer(a3, "gulf", 250000, 9.5, 1.2, "accepted", 18, "Оплата через платёжного агента в Стамбуле")
-    event(a3, "operator", "Оператор показал заёмщику предложение Gulf Trade Finance FZE", 18, -2)
+    auto_shown(a3, "gulf", 18)
     event(a3, "sever", "Принято предложение Gulf Trade Finance FZE, сделка в работе", 17)
     message(a3, "gulf", "Направляем подписанный договор займа", 13, 3)
     message(a3, "gulf", "Загружен основной договор займа", 13, 2, file="dogovor_zayma_signed.pdf")
     event(a3, "gulf", "Gulf Trade Finance FZE загрузил основной договор займа", 13, 2)
     event(a3, "operator", "Сделка подтверждена оператором: статус «Согласовано», сделка в архиве", 12)
 
-    # 4. На модерации — показать работу администратора
-    a4 = application("sever", 800000, "EUR", "DE", 18, "spfs", "Финансирование поставки портовых кранов",
-                     "moderation", 1)
-    event(a4, "sever", "Заявка создана и отправлена на модерацию", 1)
+    # 4. Крупная сумма — автоматическая проверка отправила заявку оператору
+    a4 = application("sever", 1800000, "EUR", "DE", 18, "spfs", "Финансирование поставки портовых кранов",
+                     "moderation", 1, review="сумма выше 1 000 000 EUR")
+    event(a4, "sever", "Заявка создана и отправлена на проверку оператору: сумма выше 1 000 000 EUR", 1)
 
     # 5. Отклонена модератором
     a5 = application("alfa", 90000, "USD", "TR", 3, "swift", "Прочие нужды", "rejected", 15,
                      comment="Не раскрыто назначение средств: укажите контракт и контрагента")
-    event(a5, "alfa", "Заявка создана и отправлена на модерацию", 15)
-    event(a5, "admin", "Заявка отклонена модератором: Не раскрыто назначение средств: укажите контракт и контрагента", 15, -4)
+    event(a5, "alfa", "Заявка создана и отправлена на проверку оператору: первая заявка компании", 15)
+    event(a5, "admin", "Заявка отклонена оператором: Не раскрыто назначение средств: укажите контракт и контрагента", 15, -4)
 
-    # 6. Опубликована, предложение ждёт оператора — показать проверку оператором
+    # 6. Опубликована: одно предложение показано сразу, второе со ставкой далеко от рынка ждёт оператора,
+    #    на саму заявку пожаловался кредитор — показать ручную проверку и жалобы
     a6 = application("sever", 300000, "USD", "CN", 6, "cips", "Закупка оборудования для склада", "published", 3)
     moderated(a6, 3)
-    offer(a6, "rongtong", 300000, 8.4, 1.1, "pending", 1, "Без досрочного погашения в первые 2 месяца")
-    offer(a6, "beta", 350000, 7.9, 1.0, "pending", 1)  # сумма больше запрошенной — оператор увидит ошибку
-    event(a6, "rongtong", "Получено новое предложение, ждёт проверки оператором", 1)
+    offer(a6, "rongtong", 300000, 8.4, 1.1, "shown", 1, "Без досрочного погашения в первые 2 месяца")
+    auto_shown(a6, "rongtong", 1)
+    offer(a6, "beta", 300000, 16.5, 1.0, "pending", 1, review="ставка 16,5% заметно выше рынка (9,0% в USD)")
     event(a6, "beta", "Получено новое предложение, ждёт проверки оператором", 1)
+    db.add(models.Complaint(application_id=a6.id, user_id=users["gulf"].id, status="open", created_at=at(1),
+                            reason="В назначении не указаны поставщик и контракт — непонятно, какое оборудование закупается"))
 
     # Договоры в демо — настоящие PDF с условиями сделки: их можно открыть и просмотреть у оператора
     from liquidity.services.deals import accepted_offer

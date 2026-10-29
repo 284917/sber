@@ -2,7 +2,7 @@
 {% import "_ui.html" as ui %}
 {% import "_staff.html" as staff_ui %}
 {% set active = {'overview': 'analytics'}.get(tab, tab) %}
-{% set titles = {'overview': 'Обзор и аналитика', 'kyc': 'Очередь KYC', 'moderation': 'Модерация заявок', 'archive': 'Архив сделок', 'history': 'Все заявки', 'staff': 'Сотрудники', 'journal': 'Журнал действий'} %}
+{% set titles = {'overview': 'Обзор и аналитика', 'kyc': 'Очередь KYC', 'moderation': 'Проверка заявок', 'archive': 'Архив сделок', 'history': 'Все заявки', 'staff': 'Сотрудники', 'journal': 'Журнал действий'} %}
 {% block title %}{{ titles[tab] }}{% endblock %}
 {% block content %}
 {% set qp = request.query_params %}
@@ -175,7 +175,7 @@
         </div>
         {% endfor %}
     </div>
-    <p class="hint">Помогает увидеть, где заявки застревают: на модерации, в ожидании кредиторов или на согласовании договора.</p>
+    <p class="hint">Помогает увидеть, где заявки застревают: на проверке, в ожидании кредиторов или на согласовании договора.</p>
 </section>
 {% elif tab == 'kyc' %}
 <section class="card card-tight">
@@ -216,10 +216,14 @@
 
 {% elif tab == 'moderation' %}
 <section class="card card-tight">
-    <div class="card-head"><h2 class="card-title">Заявки на модерации <span class="muted">{{ moderation_apps|length }}</span></h2></div>
+    <div class="card-head"><h2 class="card-title">На ручной проверке <span class="muted">{{ moderation_apps|length }}</span></h2></div>
     {{ staff_ui.moderation_table(moderation_apps, request) }}
 </section>
-<p class="hint">Модерировать заявки может и оператор: у него тот же раздел в кабинете.</p>
+<section class="card card-tight" id="complaints">
+    <div class="card-head"><h2 class="card-title">Жалобы кредиторов <span class="muted">{{ complaints|length }}</span></h2></div>
+    {{ staff_ui.complaints_table(complaints, request) }}
+</section>
+<p class="hint">Заявки публикуются сразу после автоматической проверки. Здесь — только то, на что сработало правило: первая заявка компании и сумма выше порога. Проверять заявки и разбирать жалобы может и оператор: у него тот же раздел в кабинете.</p>
 
 {% elif tab == 'archive' %}
 <section class="card card-tight">

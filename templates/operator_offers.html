@@ -6,7 +6,7 @@
 <div class="page-head">
     <div>
         <h1>Предложения на проверке</h1>
-        <div class="sub">Оператор не меняет условия: только показывает предложение заёмщику или скрывает его с причиной. Срок проверки — {{ SLA_HOURS.offer }} ч.</div>
+        <div class="sub">Предложения показываются заёмщику сразу после автоматической проверки. Сюда попадают только те, на которые сработало правило: ставка заметно отличается от рынка. Оператор не меняет условия — показывает предложение или скрывает с причиной. Срок — {{ SLA_HOURS.offer }} ч.</div>
     </div>
 </div>
 
@@ -33,6 +33,7 @@
             <td class="num">{{ o.annual_interest_rate|percent }}</td>
             <td class="num">{{ o.total_commission|percent }}</td>
             <td>
+                {% if o.review_reason %}<div class="flag-list" style="margin: 0 0 4px;">{% for flag in o.review_reason.split('; ') %}<span class="pill pill-warn">{{ flag }}</span>{% endfor %}</div>{% endif %}
                 {% if item.is_valid %}<span class="pill pill-ok">В рамках заявки</span>
                 {% else %}<span class="pill pill-bad">{{ item.problems|join(', ') }}</span>{% endif %}
             </td>
@@ -53,7 +54,7 @@
     </table>
     </div>
     {% else %}
-    {{ ui.empty('seal-check', 'Все предложения проверены', 'Новые предложения кредиторов появятся здесь до показа заёмщику.') }}
+    {{ ui.empty('seal-check', 'Ручная проверка не нужна', 'Предложения уходят заёмщику сразу. Сюда попадают только предложения со ставкой далеко от рынка.') }}
     {% endif %}
 </section>
 {% endblock %}

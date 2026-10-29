@@ -1,24 +1,25 @@
-"""Заявки на ликвидность: создание, модерация, поиск для кредиторов и этапы."""
+"""Заявки на ликвидность: создание с автоматической проверкой, ручная проверка подозрительных, поиск и этапы."""
 from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
-from liquidity.services import Invalid, NotFound, kyc
+from liquidity.services import Invalid, NotFound, kyc, screening
 from liquidity.services.audit import record
 from liquidity.services.events import log_event
 from liquidity.services.notifications import notify, notify_staff
 
 WITHDRAWABLE = ("moderation", "published")
 
-STAGES = [("Модерация", "Проверка заявки администратором"), ("Публикация", "Заявку видят кредиторы"),
+STAGES = [("Проверка", "Автоматическая проверка заявки"), ("Публикация", "Заявку видят кредиторы"),
           ("Предложения", "Выбор лучшего предложения"), ("Сделка", "Обсуждение условий в чате"),
           ("Договор", "Подписанный договор загружен"), ("Согласовано", "Подтверждено оператором")]
 
 
 def create(db: Session, borrower: models.User, *, amount: float, currency: str, country: str, purpose: str,
            term_months: int, transfer_method: str) -> models.Application:
-    """Новая заявка уходит на модерацию; создать её может только верифицированный заёмщик."""
+    """Новая заявка проходит автоматическую проверку и публикуется сразу. Оператору уходит только
+    подозрительная (первая заявка компании, крупная сумма). Создать её может только верифицированный заёмщик."""
     if not kyc.is_approved(db, borrower.id):
         raise Invalid("kyc")
     purpose = purpose.strip()
@@ -26,40 +27,52 @@ def create(db: Session, borrower: models.User, *, amount: float, currency: str, 
             or not purpose or len(purpose) > 255 or not (1 <= term_months <= config.MAX_TERM_MONTHS)
             or transfer_method not in config.TRANSFER_METHODS):
         raise Invalid("form")
+    screening.check_application(amount, currency, purpose)
+    flags = screening.application_flags(db, borrower, amount, currency)
     application = models.Application(user_id=borrower.id, funding_amount=amount, currency_code=currency,
                                      target_jurisdiction=country, purpose=purpose, term_months=term_months,
                                      transfer_method=transfer_method, status="moderation")
     db.add(application)
     db.flush()
-    log_event(db, application.id, borrower, "Заявка создана и отправлена на модерацию")
-    notify_staff(db, f"Заявка №{application.id} от {borrower.display_name} ждёт модерации", "/operator/moderation",
-                 roles=("admin", "operator"))
+    if flags:
+        application.review_reason = "; ".join(flags)[:255]
+        log_event(db, application.id, borrower, f"Заявка создана и отправлена на проверку оператору: {', '.join(flags)}")
+        notify_staff(db, f"Заявка №{application.id} от {borrower.display_name} ждёт проверки: {', '.join(flags)}",
+                     "/operator/moderation", roles=("admin", "operator"))
+    else:
+        log_event(db, application.id, borrower, "Заявка создана")
+        _publish(db, application, None, "Заявка прошла автоматическую проверку и опубликована для кредиторов")
     db.commit()
     return application
 
 
+def _publish(db: Session, application: models.Application, actor, event_text: str):
+    application.status = "published"
+    application.moderation_comment = None
+    application.valid_until = date.today() + timedelta(days=config.APP_VALID_DAYS)
+    log_event(db, application.id, actor, event_text)
+    notify(db, application.user_id, f"Заявка №{application.id} опубликована, кредиторы её видят",
+           f"/applications/{application.id}/offers", "ok")
+    from liquidity.services.saved_searches import notify_matching  # здесь, чтобы не было циклического импорта
+    notify_matching(db, application)
+
+
 def moderate(db: Session, admin: models.User, app_id: int, decision: str, comment: str = ""):
+    """Решение оператора по заявке, которую автоматическая проверка отправила на ручную."""
     application = db.get(models.Application, app_id)
     if not application or application.status != "moderation":
         raise NotFound()
     comment = comment.strip()[:500]
     if decision == "approve":
-        application.status = "published"
-        application.moderation_comment = None
-        application.valid_until = date.today() + timedelta(days=config.APP_VALID_DAYS)
         record(db, admin, f"Опубликовал заявку №{app_id}", f"/operator/deal/{app_id}")
-        log_event(db, app_id, admin, "Заявка прошла модерацию и опубликована для кредиторов")
-        notify(db, application.user_id, f"Заявка №{app_id} опубликована, кредиторы её видят",
-               f"/applications/{app_id}/offers", "ok")
-        from liquidity.services.saved_searches import notify_matching  # здесь, чтобы не было циклического импорта
-        notify_matching(db, application)
+        _publish(db, application, admin, "Оператор проверил заявку, она опубликована для кредиторов")
     elif decision == "reject":
         if not comment:
             raise Invalid("reason")
         application.status = "rejected"
         application.moderation_comment = comment
         record(db, admin, f"Отклонил заявку №{app_id}: {comment}", f"/operator/deal/{app_id}")
-        log_event(db, app_id, admin, f"Заявка отклонена модератором: {comment}")
+        log_event(db, app_id, admin, f"Заявка отклонена оператором: {comment}")
         notify(db, application.user_id, f"Заявка №{app_id} отклонена. Исправьте и подайте новую. Причина: {comment}",
                f"/applications/{app_id}/offers", "bad")
     else:
@@ -98,6 +111,8 @@ def unpublish(db: Session, staff: models.User, app_id: int, reason: str):
                                                models.Offer.status.in_(["pending", "shown", "accepted"])).all():
         offer.status = "rejected"
         notify(db, offer.user_id, f"Заявка №{app_id} снята с публикации, ваше предложение закрыто", "/dashboard#my-offers", "warn")
+    from liquidity.services.complaints import close_for_application  # здесь, чтобы не было циклического импорта
+    close_for_application(db, staff, application)
     record(db, staff, f"Снял с публикации заявку №{app_id}: {reason}", f"/operator/deal/{app_id}")
     log_event(db, app_id, staff, f"Заявка снята с публикации: {reason}")
     notify(db, application.user_id, f"Заявка №{app_id} снята с публикации: {reason}", f"/applications/{app_id}/offers", "bad")
@@ -169,6 +184,8 @@ def stages(db: Session, application: models.Application, shown_offers: int = 0):
             result[2]["note"] = f"Получено предложений: {shown_offers}" if shown_offers else "Ждём предложений кредиторов"
     if status == "expired":
         result[2]["note"] = "Срок публикации истёк"
+    if status == "moderation":
+        result[0]["note"] = "Ручная проверка: " + (application.review_reason or "ждёт оператора")
     if status == "rejected":
         result[0]["note"] = "Отклонена: " + (application.moderation_comment or "без комментария")
     if status == "withdrawn":

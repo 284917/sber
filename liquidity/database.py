@@ -58,6 +58,8 @@ MIGRATIONS = [
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_rate NUMERIC(5, 2)",
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_comment VARCHAR(500)",
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_status VARCHAR(20)",
+    "ALTER TABLE applications ADD COLUMN IF NOT EXISTS review_reason VARCHAR(255)",
+    "ALTER TABLE offers ADD COLUMN IF NOT EXISTS review_reason VARCHAR(255)",
 ]
 
 

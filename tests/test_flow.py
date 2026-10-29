@@ -82,14 +82,20 @@ def test_full_deal_flow(world):
     assert get(models.User, id=beta_id).kyc_reject_reason is None
     pass_kyc(gamma, admin, "gamma@gamma.ae", CREDITOR_DOCS)
 
-    # Заявка: проверка полей, затем модерация
-    assert alfa.post("/create_application", data={**app_form, "term_months": "0"}).headers["location"] == "/dashboard?error=form"
-    assert alfa.post("/create_application", data={**app_form, "transfer_method": "cash"}).headers["location"] == "/dashboard?error=form"
-    assert alfa.post("/create_application", data=app_form).headers["location"] == "/dashboard?created=1"
-    alfa.post("/create_application", data={**app_form, "amount": "1000", "purpose": "Тест"})
+    # Заявка: проверка полей и автоматические правила; первую заявку компании смотрит оператор
+    def create(**changes):
+        return alfa.post("/create_application", data={**app_form, **changes}).headers["location"]
+    assert create(term_months="0") == "/dashboard?error=form"
+    assert create(transfer_method="cash") == "/dashboard?error=form"
+    assert create(amount="1000") == "/dashboard?error=amount"
+    assert create(purpose="Тест") == "/dashboard?error=purpose"
+    assert create(purpose="Обналичивание через казино") == "/dashboard?error=stop_word"
+    assert create() == "/dashboard?created=review"
+    create(purpose="Неполная заявка без контракта")
     application = get(models.Application, purpose="Закупка оборудования")
-    spam = get(models.Application, purpose="Тест")
+    spam = get(models.Application, purpose="Неполная заявка без контракта")
     assert application.status == "moderation" and application.term_months == 6
+    assert application.review_reason == "первая заявка компании"
     assert "Закупка оборудования" not in beta.get("/dashboard").text  # до модерации кредиторы не видят
 
     assert admin.post(f"/admin/application/{spam.id}/moderate",
@@ -117,13 +123,9 @@ def test_full_deal_flow(world):
     beta_offer = get(models.Offer, user_id=beta_id)
     gamma_offer = get(models.Offer, user_id=get(models.User, email="gamma@gamma.ae").id)
     assert beta_offer.extra_terms == "Льготный период 1 месяц" and float(beta_offer.total_commission) == pytest.approx(4.0)
-    assert "Beta Capital" not in alfa.get(f"/applications/{application.id}/offers").text  # до оператора не видно
-
-    # Оператор показывает офферы; заёмщик не может решать по чужой заявке и по непоказанным
-    assert alfa.post(f"/accept_offer/{beta_offer.id}").headers["location"].endswith("error=decided")
-    assert operator.get("/operator/offers").status_code == 200
-    operator.post(f"/operator/offer/{beta_offer.id}/show")
-    operator.post(f"/operator/offer/{gamma_offer.id}/show")
+    # Ставки в рамках рынка: предложения прошли автопроверку и сразу видны заёмщику, оператору проверять нечего
+    assert beta_offer.status == "shown" and gamma_offer.status == "shown"
+    assert "Ручная проверка не нужна" in operator.get("/operator/offers").text
     page = alfa.get(f"/applications/{application.id}/offers").text
     assert "Beta Capital Ltd" in page and "Gamma Finance" in page and "Льготный период" in page
     # Сравнение: Beta дешевле по полной стоимости (16% против 16,5% при комиссии платформы 3%), экономия на сумму заявки за 6 мес.
@@ -157,7 +159,7 @@ def test_full_deal_flow(world):
 
     # История, архив и аналитика
     history = alfa.get(f"/applications/{application.id}/offers").text
-    for text in ("отправлена на модерацию", "прошла модерацию", "Оператор показал", "Отклонено предложение",
+    for text in ("отправлена на проверку оператору", "Оператор проверил заявку", "прошло автоматическую проверку", "Отклонено предложение",
                  "Принято предложение", "загрузил основной договор", "Сделка подтверждена"):
         assert text in history, text
     admin_page = admin.get("/admin?tab=archive").text

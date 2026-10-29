@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import get_current_user, require_role
-from liquidity.services import Invalid, applications, creditors, expiry, kyc, offers, saved_searches
+from liquidity.services import Invalid, applications, complaints, creditors, expiry, kyc, offers, saved_searches
 from liquidity.web import redirect, render
 
 router = APIRouter(tags=["Кредитор"])
@@ -33,6 +33,7 @@ def dashboard(request: Request, user: models.User, db: Session):
                   funded=offers.funded_map(db, [a.id for a in available_apps]), min_share=config.MIN_OFFER_SHARE,
                   valid_choices=config.OFFER_VALID_CHOICES, valid_default=config.OFFER_VALID_DEFAULT,
                   offered_app_ids={o.application_id for o in my_offers if o.status in offers.ACTIVE_STATUSES},
+                  complained_app_ids=complaints.complained_app_ids(db, user),
                   saved=[(s, saved_searches.describe(s), saved_searches.as_query(s))
                          for s in saved_searches.for_user(db, user)],
                   max_saved=config.MAX_SAVED_SEARCHES, filter_saved=saved_searches.is_saved(db, user, filters),
@@ -44,11 +45,21 @@ def create_offer(app_id: int, amount: float = Form(...), rate: float = Form(...)
                  extra_terms: str = Form(""), valid_days: int = Form(config.OFFER_VALID_DEFAULT),
                  user: models.User = Depends(require_role("creditor")), db: Session = Depends(get_db)):
     try:
-        offers.create(db, user, app_id, amount=amount, rate=rate, lender_comm=lender_comm, extra_terms=extra_terms,
-                      valid_days=valid_days)
+        offer = offers.create(db, user, app_id, amount=amount, rate=rate, lender_comm=lender_comm,
+                              extra_terms=extra_terms, valid_days=valid_days)
     except Invalid as e:
         return redirect(f"/dashboard?error={e.code}")
-    return redirect("/dashboard?offer_sent=1")
+    return redirect("/dashboard?offer_sent=" + ("review" if offer.status == "pending" else "1"))
+
+
+@router.post("/applications/{app_id}/complain", summary="Пожаловаться на опубликованную заявку")
+def complain(app_id: int, reason: str = Form(""), user: models.User = Depends(require_role("creditor")),
+             db: Session = Depends(get_db)):
+    try:
+        complaints.create(db, user, app_id, reason)
+    except Invalid as e:
+        return redirect(f"/dashboard?error={e.code}#app-{app_id}")
+    return redirect("/dashboard?complained=1")
 
 
 @router.post("/offers/{offer_id}/withdraw", summary="Отозвать своё предложение (пока нет решения заёмщика)")

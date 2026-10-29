@@ -669,6 +669,14 @@ abbr.term:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; 
 .decision-reject { display: grid; gap: 8px; }
 .decision-reject .input { width: 100%; min-width: 0; }
 .reason-input { height: auto; min-height: 72px; resize: vertical; font-size: 14px; line-height: 20px; }
+.flag-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.complain { margin-top: 16px; }
+.complain summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); font-size: 13px; list-style: none; }
+.complain summary::-webkit-details-marker { display: none; }
+.complain summary:hover { color: var(--danger); }
+.complain-form { display: grid; gap: 8px; margin-top: 8px; max-width: 520px; justify-items: start; }
+.complain-form .input { width: 100%; }
+.complain-sent { display: flex; align-items: center; gap: 6px; margin: 16px 0 0; }
 .doc-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .doc-links a { display: inline-flex; gap: 6px; align-items: flex-start; font-size: 14px; line-height: 20px; }
 .doc-links .ic-sm, .doc-links svg { flex: none; margin-top: 2px; }

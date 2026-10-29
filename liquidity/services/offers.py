@@ -1,4 +1,4 @@
-"""Предложения кредиторов: отправка, проверка оператором, решение заёмщика.
+"""Предложения кредиторов: отправка с автоматической проверкой, ручная проверка подозрительных, решение заёмщика.
 
 Заявку можно собрать из нескольких предложений (частичное финансирование): заёмщик принимает офферы,
 пока сумма не покрыта, или начинает сделку с уже собранной частью.
@@ -10,7 +10,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
-from liquidity.services import Invalid, NotFound, kyc
+from liquidity.services import Invalid, NotFound, kyc, screening
 from liquidity.services.audit import record
 from liquidity.services.events import log_event
 from liquidity.services.notifications import notify, notify_staff
@@ -50,18 +50,18 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
     if not application or application.status != "published":
         raise NotFound()
     extra_terms = extra_terms.strip()
-    # Проверки из макета: сумма не больше ещё не собранной части заявки, ставка больше 0
+    # Жёсткие правила: доля заявки, не больше несобранной части, ставка и комиссия в разумных пределах
     left = remaining(db, application)
     if 0 < amount < float(min_offer(application, left)):
         raise Invalid("offer_min", f"Минимальное предложение — {config.MIN_OFFER_SHARE}% суммы заявки")
-    if (not (0 < amount <= float(left)) or not (0 < rate < 100)
-            or not (0 <= lender_comm < 100) or len(extra_terms) > 1000
-            or valid_days not in config.OFFER_VALID_CHOICES):
+    if not (0 < amount <= float(left)) or len(extra_terms) > 1000 or valid_days not in config.OFFER_VALID_CHOICES:
         raise Invalid("offer")
+    screening.check_offer(rate, lender_comm, extra_terms)
     if db.query(models.Offer).filter(models.Offer.application_id == app_id, models.Offer.user_id == creditor.id,
                                      models.Offer.status.in_(ACTIVE_STATUSES)).first():
         raise Invalid("duplicate")
 
+    flags = screening.offer_flags(db, application, rate)
     offer = models.Offer(application_id=app_id, user_id=creditor.id, funding_amount=amount,
                          annual_interest_rate=rate, lender_commission=lender_comm,
                          platform_commission=config.PLATFORM_COMMISSION,
@@ -69,11 +69,26 @@ def create(db: Session, creditor: models.User, app_id: int, *, amount: float, ra
                          extra_terms=extra_terms or None, status="pending",
                          valid_until=date.today() + timedelta(days=valid_days))
     db.add(offer)
-    # Имя кредитора в истории не раскрываем: до проверки оператором оффер видит только оператор
-    log_event(db, app_id, creditor, "Получено новое предложение, ждёт проверки оператором")
-    notify_staff(db, f"Новое предложение {creditor.display_name} по заявке №{app_id} ждёт проверки", "/operator/offers")
+    if flags:
+        offer.review_reason = "; ".join(flags)[:255]
+        # Имя кредитора в истории не раскрываем, пока оператор не показал оффер
+        log_event(db, app_id, creditor, "Получено новое предложение, ждёт проверки оператором")
+        notify_staff(db, f"Предложение {creditor.display_name} по заявке №{app_id} ждёт проверки: {offer.review_reason}",
+                     "/operator/offers")
+    else:
+        db.flush()
+        _show(db, offer, creditor, f"Предложение {creditor.display_name} прошло автоматическую проверку и показано заёмщику")
     db.commit()
     return offer
+
+
+def _show(db: Session, offer: models.Offer, actor: models.User, event_text: str):
+    """Предложение становится видно заёмщику (сразу после автопроверки или после оператора)."""
+    offer.status = "shown"
+    offer.operator_decision_at = datetime.utcnow()  # момент, когда оффер стал виден заёмщику
+    log_event(db, offer.application_id, actor, event_text)
+    notify(db, offer.application.user_id, f"Новое предложение от {offer.sender.display_name} по заявке "
+                                          f"№{offer.application_id}", f"/applications/{offer.application_id}/offers", "ok")
 
 
 def withdraw(db: Session, creditor: models.User, offer_id: int):
@@ -233,7 +248,7 @@ def reject(db: Session, borrower: models.User, offer_id: int) -> models.Applicat
 
 # --- Оператор ---
 def review_list(db: Session):
-    """Офферы на проверке с подсказкой: что не так с условиями относительно заявки."""
+    """Офферы, отправленные на ручную проверку, с причиной и подсказкой, что не так относительно заявки."""
     result = []
     for offer in db.query(models.Offer).filter(models.Offer.status == "pending").order_by(models.Offer.id):
         application = offer.application
@@ -259,13 +274,9 @@ def _pending(db: Session, offer_id: int) -> models.Offer:
 
 def show(db: Session, operator: models.User, offer_id: int):
     offer = _pending(db, offer_id)
-    offer.status = "shown"
-    offer.operator_decision_at = datetime.utcnow()
     record(db, operator, f"Показал заёмщику предложение {offer.sender.display_name} по заявке №{offer.application_id}",
            f"/operator/deal/{offer.application_id}")
-    log_event(db, offer.application_id, operator, f"Оператор показал заёмщику предложение {offer.sender.display_name}")
-    notify(db, offer.application.user_id, f"Новое предложение от {offer.sender.display_name} по заявке "
-                                          f"№{offer.application_id}", f"/applications/{offer.application_id}/offers", "ok")
+    _show(db, offer, operator, f"Оператор проверил предложение {offer.sender.display_name}, оно показано заёмщику")
     notify(db, offer.user_id, f"Ваше предложение по заявке №{offer.application_id} проверено и показано заёмщику",
            "/dashboard#my-offers", "ok")
     db.commit()

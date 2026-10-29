@@ -27,11 +27,11 @@
 <section class="card">{{ ui.stepper(stages) }}</section>
 
 {% if application.status == 'rejected' and application.moderation_comment %}
-    {{ ui.flash('bad', 'Заявка отклонена модератором: ' ~ application.moderation_comment) }}
+    {{ ui.flash('bad', 'Заявка отклонена: ' ~ application.moderation_comment) }}
 {% elif application.status == 'withdrawn' %}
     {{ ui.flash('info', 'Заявка отозвана. Кредиторы её не видят, открытые предложения закрыты.') }}
 {% elif application.status == 'moderation' %}
-    {{ ui.flash('info', 'Заявка на модерации. Кредиторы увидят её после проверки администратором.') }}
+    {{ ui.flash('info', 'Заявку проверяет оператор: ' ~ (application.review_reason or 'ручная проверка') ~ '. Кредиторы увидят её после проверки, обычно до ' ~ SLA_HOURS.moderation ~ ' ч.') }}
 {% elif application.status == 'expired' %}
     {{ ui.flash('warn', 'Срок публикации заявки истёк, открытые предложения закрыты. Если финансирование ещё нужно, подайте новую заявку.') }}
 {% endif %}
@@ -207,9 +207,9 @@
             </div>
             {% else %}
             {% if application.status == 'published' %}
-            {{ ui.empty('clock', 'Ждём предложений кредиторов', 'Каждое предложение сначала проверяет оператор, затем оно появится здесь со сравнением по полной стоимости.') }}
+            {{ ui.empty('clock', 'Ждём предложений кредиторов', 'Предложения появятся здесь сразу после автоматической проверки, со сравнением по полной стоимости.') }}
             {% elif application.status == 'moderation' %}
-            {{ ui.empty('list-checks', 'Заявка на модерации', 'После проверки администратором её увидят кредиторы.') }}
+            {{ ui.empty('list-checks', 'Заявка на проверке у оператора', 'После проверки её увидят кредиторы.') }}
             {% else %}
             {{ ui.empty('files', 'Предложений нет') }}
             {% endif %}

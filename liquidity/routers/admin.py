@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, accounts, analytics, applications, audit, expiry, export, kyc, sla
+from liquidity.services import Invalid, accounts, analytics, applications, audit, complaints, expiry, export, kyc, sla
 from liquidity.web import redirect, render
 
 router = APIRouter(prefix="/admin", tags=["Администратор"])
@@ -41,6 +41,7 @@ def admin_page(request: Request, tab: str = "overview", user: models.User = Depe
                   journal=audit.latest(db) if tab == "journal" else [],
                   charts=analytics.charts(db) if tab == "overview" else None,
                   doc_names={k: v for docs in config.KYC_DOCS.values() for k, v in docs},
+                  complaints=complaints.open_list(db),
                   nav_counts={"kyc": len(kyc_queue), "moderation": len(data["moderation_apps"])})
 
 
@@ -63,12 +64,20 @@ def moderate(app_id: int, decision: str = Form(...), comment: str = Form(""),
 
 
 @router.post("/application/{app_id}/unpublish", summary="Снять опубликованную заявку с причиной")
-def unpublish(app_id: int, reason: str = Form(""), user: models.User = Depends(staff), db: Session = Depends(get_db)):
+def unpublish(app_id: int, reason: str = Form(""), back: str = Form("history"), user: models.User = Depends(staff),
+              db: Session = Depends(get_db)):
+    tab = back if back in TABS else "history"
     try:
         applications.unpublish(db, user, app_id, reason)
     except Invalid as e:
-        return redirect(back_to(user, "history", error=e.code))
-    return redirect(back_to(user, "history", unpublished=1))
+        return redirect(back_to(user, tab, error=e.code))
+    return redirect(back_to(user, tab, unpublished=1))
+
+
+@router.post("/complaint/{complaint_id}/dismiss", summary="Отклонить жалобу: заявка остаётся опубликованной")
+def dismiss_complaint(complaint_id: int, user: models.User = Depends(staff), db: Session = Depends(get_db)):
+    complaints.dismiss(db, user, complaint_id)
+    return redirect(back_to(user, "moderation", dismissed=1))
 
 
 @router.post("/kyc/approve_user/{target_user_id}", summary="Одобрить пакет KYC компании")

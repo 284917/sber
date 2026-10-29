@@ -62,7 +62,7 @@ def test_funnel_and_weekly():
               NS(application_id=3, operator_decision_at=datetime.now(), status="accepted"),
               NS(application_id=5, operator_decision_at=None, status="pending")]
     stages = {s["label"]: s["count"] for s in analytics.funnel(apps, offers, published_ids={1, 2, 3, 5})}
-    assert stages == {"Подано заявок": 6, "Прошли модерацию": 4, "Получили предложения": 3,
+    assert stages == {"Подано заявок": 6, "Опубликованы": 4, "Получили предложения": 3,
                       "Дошли до сделки": 2, "Согласованы": 1}
     weeks = analytics.weekly(apps, weeks=4, today=date(2026, 10, 27))  # вторник; неделя с 26.10
     assert [w["start"] for w in weeks] == [date(2026, 10, 5), date(2026, 10, 12), date(2026, 10, 19), date(2026, 10, 26)]
@@ -87,13 +87,13 @@ def test_withdraw_confirm_and_pdf():
     make_company("w-creditor2@test.ae", "creditor", "Second Capital", "AE", "AE 2")
     borrower, creditor, creditor2 = login("w-borrower@test.ru"), login("w-creditor@test.cy"), login("w-creditor2@test.ae")
     admin, = (login("admin@test.local", "admin-password"),)
-    form = {"amount": "300000", "currency": "USD", "country": "TR", "purpose": "Отзыв", "term_months": "3",
+    form = {"amount": "300000", "currency": "USD", "country": "TR", "purpose": "Отзыв заявки заёмщиком", "term_months": "3",
             "transfer_method": "agent"}
 
     # Заявку на модерации можно отозвать
     borrower.post("/create_application", data=form)
     with SessionLocal() as db:
-        first = db.query(models.Application).filter_by(purpose="Отзыв").one().id
+        first = db.query(models.Application).filter_by(purpose="Отзыв заявки заёмщиком").one().id
     assert borrower.post(f"/applications/{first}/withdraw").headers["location"].endswith("withdrawn=1")
     with SessionLocal() as db:
         assert db.get(models.Application, first).status == "withdrawn"
@@ -114,9 +114,7 @@ def test_withdraw_confirm_and_pdf():
     creditor2.post(f"/create_offer/{app_id}", data={"amount": "250000", "rate": "8", "lender_comm": "2"})
     operator = admin
     with SessionLocal() as db:
-        live = [o.id for o in db.query(models.Offer).filter_by(application_id=app_id, status="pending")]
-    for oid in live:
-        operator.post(f"/operator/offer/{oid}/show")
+        live = [o.id for o in db.query(models.Offer).filter_by(application_id=app_id, status="shown").order_by(models.Offer.id)]
 
     # Карточка заявки: подтверждения, график платежей, рубли по курсу ЦБ
     page = borrower.get(f"/applications/{app_id}/offers").text

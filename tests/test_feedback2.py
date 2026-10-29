@@ -82,10 +82,10 @@ def test_fee_min_offer_and_contract_rights():
     make_company("min-c@test.cn", "creditor", "Min Lender", "CN", "CN 81")
     borrower, creditor = login("min-b@test.ru"), login("min-c@test.cn")
     admin = login("admin@test.local", "admin-password")
-    borrower.post("/create_application", data={"amount": "500000", "currency": "CNY", "country": "CN", "purpose": "Минимум",
+    borrower.post("/create_application", data={"amount": "500000", "currency": "CNY", "country": "CN", "purpose": "Минимальное предложение",
                                                "term_months": "12", "transfer_method": "cips"})
     with SessionLocal() as db:
-        app_id = db.query(models.Application).filter_by(purpose="Минимум").one().id
+        app_id = db.query(models.Application).filter_by(purpose="Минимальное предложение").one().id
     admin.post(f"/admin/application/{app_id}/moderate", data={"decision": "approve"})
 
     # 40 000 из 500 000 — меньше 10%: платформа останавливает отправку
@@ -98,8 +98,9 @@ def test_fee_min_offer_and_contract_rights():
         offer = db.query(models.Offer).filter_by(application_id=app_id).one()
         assert float(offer.platform_commission) == 3.0 and float(offer.total_commission) == 4.0
         offer_id = offer.id
-    assert "Заёмщик увидит его после проверки оператором" in creditor.get("/dashboard").text
-    admin.post(f"/operator/offer/{offer_id}/show")
+        db.expunge(offer)
+    assert offer.status == "shown"
+    assert "заёмщик уже его видит" in creditor.get("/dashboard?offer_sent=1").text
     borrower.post(f"/accept_offer/{offer_id}")
 
     # Сотрудник не загружает договор, стороны — да

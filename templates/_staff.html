@@ -1,4 +1,4 @@
-{# Общие блоки сотрудников: модерация заявок и снятие опубликованной заявки (админка и кабинет оператора) #}
+{# Общие блоки сотрудников: ручная проверка заявок, жалобы и снятие опубликованной заявки (админка и кабинет оператора) #}
 {% import "_ui.html" as sui %}
 
 {% macro moderation_table(apps, request) -%}
@@ -13,7 +13,8 @@
         <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if app.borrower and app.borrower.registration_number %}<div class="small muted">ИНН {{ app.borrower.registration_number }}</div>{% endif %}<div>{{ sui.sla_badge(app.created_at, 'moderation') }}</div></td>
         <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
         <td>{{ sui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}<div class="small muted">{{ TRANSFER_METHODS.get(app.transfer_method, '—')|terms }}</div></td>
-        <td class="cell-wrap">{{ app.purpose }}</td>
+        <td class="cell-wrap">{{ app.purpose }}
+            {% if app.review_reason %}<div class="flag-list">{% for flag in app.review_reason.split('; ') %}<span class="pill pill-warn">{{ flag }}</span>{% endfor %}</div>{% endif %}</td>
         <td>
             <div class="decision">
                 <form method="post" action="/admin/application/{{ app.id }}/moderate" data-confirm="Опубликовать заявку №{{ app.id }}?" data-confirm-ok="Опубликовать"
@@ -34,13 +35,44 @@
     </tbody>
 </table>
 </div>
-{% else %}{{ sui.empty('list-checks', 'Все заявки проверены', 'Новые заявки заёмщиков попадут сюда до публикации.') }}{% endif %}
+{% else %}{{ sui.empty('list-checks', 'Ручная проверка не нужна', 'Заявки публикуются сразу после автоматической проверки. Сюда попадают только первая заявка компании и крупные суммы.') }}{% endif %}
 {%- endmacro %}
 
-{% macro unpublish_form(app, request) -%}
+{% macro complaints_table(complaints, request, back='moderation') -%}
+{% if complaints %}
+<div class="table-wrap">
+<table class="t t-top">
+    <thead><tr><th>Заявка</th><th>Жалоба</th><th style="width: 320px;">Решение</th></tr></thead>
+    <tbody>
+    {% for c in complaints %}
+    {% set app = c.application %}
+    <tr>
+        <td><b>№{{ app.id }} · {{ app.borrower.display_name if app.borrower else '—' }}</b>
+            <div class="small muted num">{{ app.funding_amount|money }} {{ app.currency_code }} · {{ sui.country(app.target_jurisdiction) }}</div>
+            <div class="small cell-wrap" style="margin-top: 4px;">{{ app.purpose }}</div></td>
+        <td class="cell-wrap"><div class="small muted">{{ c.author.display_name if c.author else 'Кредитор' }} · {{ c.created_at.strftime('%d.%m %H:%M') if c.created_at else '' }}</div>{{ c.reason }}</td>
+        <td>
+            <div class="decision">
+                <form method="post" action="/admin/complaint/{{ c.id }}/dismiss" data-confirm="Оставить заявку №{{ app.id }} опубликованной?" data-confirm-ok="Отклонить жалобу"
+                      data-confirm-text="Кредитор получит уведомление, что заявка проверена.">{{ csrf_field(request) }}
+                    <button type="submit" class="btn btn-secondary btn-sm btn-block">Заявка в порядке</button>
+                </form>
+                {{ unpublish_form(app, request, back, c.reason) }}
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}{{ sui.empty('seal-check', 'Жалоб нет', 'Кредиторы могут пожаловаться на опубликованную заявку — жалоба появится здесь.') }}{% endif %}
+{%- endmacro %}
+
+{% macro unpublish_form(app, request, back='history', reason='') -%}
 <form method="post" action="/admin/application/{{ app.id }}/unpublish" class="decision-reject" data-confirm="Снять заявку №{{ app.id }} с публикации?" data-confirm-kind="danger" data-confirm-ok="Снять"
       data-confirm-text="Кредиторы перестанут её видеть, открытые предложения закроются. Заёмщик увидит причину.">{{ csrf_field(request) }}
-    <textarea name="reason" class="input reason-input" rows="2" placeholder="Причина снятия" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}"></textarea>
+    <input type="hidden" name="back" value="{{ back }}">
+    <textarea name="reason" class="input reason-input" rows="2" placeholder="Причина снятия" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}">{{ reason }}</textarea>
     <button type="submit" class="btn btn-danger btn-sm btn-block">Снять с публикации</button>
 </form>
 {%- endmacro %}

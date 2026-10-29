@@ -49,13 +49,13 @@ def test_formatting():
 def test_stages():
     with SessionLocal() as db:
         states = lambda status: [s["state"] for s in applications.stages(  # noqa: E731
-            db, NS(id=0, status=status, moderation_comment="причина"))]
+            db, NS(id=0, status=status, moderation_comment="причина", review_reason=None))]
         assert states("moderation") == ["current"] + ["todo"] * 5
         assert states("rejected") == ["failed"] + ["todo"] * 5
         assert states("published")[:3] == ["done", "done", "current"]
         assert states("in_work")[:4] == ["done", "done", "done", "current"]  # договора ещё нет
         assert states("agreed") == ["done"] * 6
-        notes = applications.stages(db, NS(id=0, status="published", moderation_comment=None), shown_offers=2)
+        notes = applications.stages(db, NS(id=0, status="published", moderation_comment=None, review_reason=None), shown_offers=2)
         assert notes[2]["note"] == "Получено предложений: 2"
 
 

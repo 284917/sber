@@ -32,8 +32,8 @@ EN = {
     "Политика конфиденциальности": "Privacy policy",
     "Условия использования": "Terms of use",
     "Документы": "Documents",
-    "Платформа ликвидности: российские компании получают предложения зарубежных кредиторов и сравнивают их по полной стоимости. Проверка KYC, модерация заявок и сделка до согласования.":
-        "Liquidity Platform: Russian companies receive offers from international lenders and compare them by total cost. KYC checks, moderated applications and deals managed through to signing.",
+    "Платформа ликвидности: российские компании получают предложения зарубежных кредиторов и сравнивают их по полной стоимости. Проверка KYC, автоматическая проверка заявок и сделка до согласования.":
+        "Liquidity Platform: Russian companies receive offers from international lenders and compare them by total cost. KYC checks, automatic application screening and deals managed through to signing.",
     "Трансграничное финансирование между юрлицами: заявка, предложения кредиторов, сравнение по полной стоимости и сделка под контролем оператора.":
         "Cross-border corporate financing: one application, lender offers, total-cost comparison and an operator-supervised deal.",
     "Платформа ликвидности: сравнение предложений по полной стоимости": "Liquidity Platform: offers compared by total cost",
@@ -52,8 +52,8 @@ EN = {
     "Каждый участник проходит KYC": "Every participant passes KYC",
     "Заявки проверенных": "Applications from verified",
     "российских компаний": "Russian companies",
-    "Каждый заёмщик прошёл KYC, каждая заявка прошла модерацию. Фильтруйте по стране, валюте, сумме и сроку и отправляйте условия, сразу видя полную стоимость, с которой заёмщик сравнит ваше предложение.":
-        "Every borrower has passed KYC and every application has been moderated. Filter by country, currency, amount and term, and send terms while seeing the total cost the borrower will compare your offer by.",
+    "Каждый заёмщик прошёл KYC, каждая заявка — автоматическую проверку. Фильтруйте по стране, валюте, сумме и сроку и отправляйте условия, сразу видя полную стоимость, с которой заёмщик сравнит ваше предложение.":
+        "Every borrower has passed KYC and every application an automatic check. Filter by country, currency, amount and term, and send terms while seeing the total cost the borrower will compare your offer by.",
     "Зарегистрироваться как кредитор": "Register as a lender",
     "Заёмщики проверены по ЕГРЮЛ и UBO": "Borrowers checked against the state register and UBO",
     "EUR, USD и CNY": "EUR, USD and CNY",
@@ -90,8 +90,8 @@ EN = {
     "Загрузите устав, выписку из ЕГРЮЛ и сведения о бенефициарах. Администратор проверяет пакет целиком, а при отказе пишет причину.":
         "Upload the charter, state register extract and beneficial owners. An administrator reviews the whole package and explains any rejection.",
     "Опубликуйте заявку": "Publish an application",
-    "Сумма, валюта, страна получения, срок и способ передачи. После модерации заявку видят только верифицированные кредиторы.":
-        "Amount, currency, destination country, term and transfer method. After moderation only verified lenders can see it.",
+    "Сумма, валюта, страна получения, срок и способ передачи. Заявка публикуется сразу после автоматической проверки, её видят только верифицированные кредиторы.":
+        "Amount, currency, destination country, term and transfer method. The application is published right after an automatic check, and only verified lenders can see it.",
     "Выберите предложение": "Choose an offer",
     "Сравните офферы по полной стоимости, примите лучший, согласуйте детали в чате и загрузите договор. Оператор подтверждает сделку.":
         "Compare offers by total cost, accept the best one, agree details in chat and upload the contract. The operator confirms the deal.",
@@ -154,8 +154,8 @@ EN = {
     "Ставка и комиссии кредитора и платформы пересчитываются в процент годовых на срок вашей заявки. Предложения сортируются от самого выгодного.":
         "The rate and the lender and platform fees are converted into an annual percentage over your term. Offers are sorted from the cheapest.",
     "Только проверенные участники": "Verified participants only",
-    "Заёмщики и кредиторы проходят KYC и AML у администратора. Предложение попадает к вам только после проверки оператором.":
-        "Borrowers and lenders pass KYC and AML with an administrator. Offers reach you only after an operator review.",
+    "Заёмщики и кредиторы проходят KYC и AML у администратора. Предложение проходит автоматическую проверку и сразу попадает к вам.":
+        "Borrowers and lenders pass KYC and AML with an administrator. Offers pass an automatic check and reach you right away.",
     "Ваш маршрут платежа": "Your payment route",
     "EUR, USD или CNY с получением в Германии, Турции или Китае. Передача через SWIFT, СПФС, CIPS или платёжного агента.":
         "EUR, USD or CNY received in Germany, Turkey or China. Transfer via SWIFT, SPFS, CIPS or a payment agent.",
@@ -187,9 +187,9 @@ EN = {
     "Какие документы нужны для проверки?": "Which documents are needed for verification?",
     "Заёмщику: устав, выписка из ЕГРЮЛ, паспорт директора, сведения о бенефициарах и документ о полномочиях директора. Кредитору: свидетельство о регистрации, устав, реестр директоров, бенефициары, налоговое резидентство и подтверждение источника средств.":
         "Borrowers: charter, state register extract, director's passport, beneficial owners and the director's authority. Lenders: certificate of incorporation, articles, register of directors, beneficial owners, tax residency and proof of source of funds.",
-    "Сколько длится модерация заявки?": "How long does moderation take?",
-    "Администратор проверяет заявку вручную, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.":
-        "Applications are reviewed manually, usually within a business day. If rejected, you will see the reason and can resubmit.",
+    "Сколько длится проверка заявки?": "How long does the application check take?",
+    "Обычно заявка публикуется сразу: система проверяет сумму, срок и назначение. Первую заявку компании и крупные суммы дополнительно смотрит оператор, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.":
+        "Usually the application is published right away: the system checks the amount, term and purpose. A company's first application and large amounts are also reviewed by an operator, usually within a business day. If rejected, you will see the reason and can resubmit.",
     "Кто видит мою заявку?": "Who can see my application?",
     "Только кредиторы, прошедшие KYC. Название кредитора вы видите после того, как оператор проверит его предложение.":
         "Only KYC-verified lenders. You see a lender's name after the operator has reviewed their offer.",
@@ -253,12 +253,12 @@ EN = {
     "Проверка компании": "Company verification",
     "KYC проходят все заёмщики и кредиторы. Администратор проверяет пакет документов целиком и при отказе называет причину.":
         "All borrowers and lenders pass KYC. An administrator reviews the whole package and states the reason for any rejection.",
-    "Модерация заявок": "Application moderation",
-    "Каждую заявку до публикации проверяет сотрудник. Кредиторы видят только одобренные заявки верифицированных компаний.":
-        "Staff review every application before publication. Lenders see only approved applications from verified companies.",
+    "Автоматическая проверка заявок": "Automatic application screening",
+    "Каждую заявку проверяет система: сумма, срок, назначение и стоп-слова. Оператор вручную смотрит только подозрительные — первую заявку компании и крупные суммы — и разбирает жалобы кредиторов.":
+        "The system checks every application: amount, term, purpose and prohibited words. An operator manually reviews only suspicious ones — a company's first application and large amounts — and handles lender reports.",
     "Проверка предложений": "Offer review",
-    "Оператор сверяет условия кредитора с заявкой до того, как их увидит заёмщик. Условия он не меняет.":
-        "The operator checks a lender's terms against the application before the borrower sees them. The terms are never changed.",
+    "Система сверяет условия кредитора с заявкой и рынком. Если ставка заметно отличается от рынка, предложение сначала смотрит оператор. Условия он не меняет.":
+        "The system checks a lender's terms against the application and the market. If the rate differs noticeably from the market, an operator reviews the offer first. The terms are never changed.",
     "Подтверждение сделки": "Deal confirmation",
     "Сделка получает статус «Согласовано», только когда загружен подписанный договор и обе стороны проверены.":
         "A deal becomes “Closed” only once the signed contract is uploaded and both sides are verified.",
@@ -280,19 +280,20 @@ EN = {
     "Да": "Yes",
     "Нет": "No",
     "Заявка: сумма, валюта, срок, назначение": "Application: amount, currency, term, purpose",
-    "Только верифицированные кредиторы, после модерации": "Verified lenders only, after moderation",
+    "Только верифицированные кредиторы, после автоматической проверки":
+        "Verified lenders only, after an automatic check",
     "Название заёмщика": "Borrower's name",
     "Верифицированные кредиторы": "Verified lenders",
     "Предложение кредитора": "Lender's offer",
-    "Заёмщик — после проверки оператором": "Borrower — after operator review",
+    "Заёмщик — после автоматической проверки": "Borrower — after an automatic check",
     "Чат сделки и файлы": "Deal chat and files",
     "Только принятый кредитор": "Accepted lender only",
     "Договор": "Contract",
     "Сроки": "Timelines",
     "Сколько ждать ответа платформы": "How long the platform takes to respond",
     "проверка документов KYC": "KYC document review",
-    "модерация заявки": "application moderation",
-    "проверка предложения кредитора": "lender offer review",
+    "ручная проверка заявки, если сработало правило": "manual application review, if a rule fires",
+    "ручная проверка предложения, если сработало правило": "manual offer review, if a rule fires",
     "Сроки считаются с момента отправки. Если срок вышел, задача подсвечивается у сотрудника как просроченная.":
         "Timelines run from submission. Once exceeded, the task is flagged as overdue for staff.",
     "Защита данных": "Data protection",
@@ -352,8 +353,8 @@ EN = {
     "Зарегистрироваться могут юридические лица: заёмщики из России и зарубежные кредиторы. Публиковать заявки и предложения можно только после проверки KYC администратором.":
         "Legal entities may register: borrowers from Russia and international lenders. Applications and offers can be published only after KYC approval.",
     "Заявки и предложения": "Applications and offers",
-    "Заявка публикуется после модерации. Предложение кредитора становится видно заёмщику после проверки оператором. Заёмщик вправе принять или отклонить любое предложение.":
-        "Applications are published after moderation. A lender's offer becomes visible to the borrower after operator review. The borrower may accept or decline any offer.",
+    "Заявка и предложение кредитора публикуются после автоматической проверки. Если сработало правило (первая заявка компании, крупная сумма, ставка далеко от рынка), их сначала проверяет оператор. Кредитор может пожаловаться на заявку, оператор вправе снять её с публикации. Заёмщик вправе принять или отклонить любое предложение.":
+        "Applications and lender offers are published after an automatic check. If a rule fires (a company's first application, a large amount, a rate far from the market), an operator reviews them first. A lender may report an application, and the operator may unpublish it. The borrower may accept or decline any offer.",
     "Регистрация и публикация заявки бесплатны. Комиссия платформы 3% от суммы включается в итоговую комиссию предложения и удерживается только по согласованной сделке.":
         "Registration and publishing are free. The platform fee of 3% of the amount is included in the offer's total fee and charged only on a closed deal.",
     "Ответственность": "Liability",
@@ -452,6 +453,18 @@ EN = {
     "Вы уже отправили предложение по этой заявке.": "You have already sent an offer on this application.",
     "Предложение отозвано. По этой заявке можно отправить новое.": "Offer withdrawn. You can send a new one on this application.",
     "Предложение отправлено. Оператор проверит условия, после этого его увидит заёмщик.": "Offer sent. The operator will review it, then the borrower will see it.",
+    "Предложение прошло автоматическую проверку, заёмщик уже его видит.": "The offer passed the automatic check, the borrower can already see it.",
+    "Проверьте предложение: сумма не больше несобранной части заявки, ставка больше 0 и не выше 50% годовых, комиссия кредитора от 0 до 10%, дополнительные условия не длиннее 1000 символов.":
+        "Check the offer: amount within the unfunded part of the application, rate above 0 and up to 50% p.a., lender fee from 0 to 10%, additional terms up to 1000 characters.",
+    "В дополнительных условиях есть недопустимое слово. Уберите его и отправьте предложение снова.":
+        "The additional terms contain a prohibited word. Remove it and send the offer again.",
+    "Опишите, что не так с заявкой: оператор проверит её по вашему описанию.": "Describe what is wrong with the application: the operator will review it based on your description.",
+    "Вы уже пожаловались на эту заявку, оператор её проверяет.": "You have already reported this application, the operator is reviewing it.",
+    "Жалоба отправлена оператору. Когда он проверит заявку, придёт уведомление.": "Report sent to the operator. You will be notified once the application is reviewed.",
+    "Пожаловаться на заявку": "Report application",
+    "Отправить оператору": "Send to operator",
+    "Что не так: странная цель, неверные данные, подозрение на мошенничество": "What is wrong: odd purpose, incorrect data, suspected fraud",
+    "Вы пожаловались на заявку — оператор её проверяет": "You reported this application — the operator is reviewing it",
     "Вы согласились на встречную ставку. Заёмщик получил уведомление.": "You accepted the counter rate. The borrower has been notified.",
     "Ставка оставлена прежней. Заёмщик получил уведомление.": "The rate stays the same. The borrower has been notified.",
     "Фильтр сохранён. Когда появится подходящая заявка, придёт уведомление.": "Filter saved. You'll be notified when a matching application appears.",
@@ -464,7 +477,7 @@ EN = {
 
     # --- Статусы ---
     **{ru: en for ru, en in (
-        ("На модерации", "In moderation"), ("Отклонена", "Rejected"), ("Опубликована", "Published"),
+        ("На проверке у оператора", "Under operator review"), ("Отклонена", "Rejected"), ("Опубликована", "Published"),
         ("В работе", "In progress"), ("Согласовано", "Closed"), ("Отозвана", "Withdrawn"), ("Срок истёк", "Expired"),
         ("На проверке у оператора", "Under operator review"), ("Получено заёмщиком", "Received by borrower"),
         ("Скрыто оператором", "Hidden by operator"), ("Принято", "Accepted"), ("Отклонено", "Declined"),
@@ -565,11 +578,11 @@ EN = {
     "Валютный риск: если рубль ослабнет": "FX risk: if the rouble weakens",
     "Синдикат кредиторов": "Lender syndicate",
     "Загрузил:": "Uploaded by:",
-    "Модерация": "Moderation",
+    "Проверка": "Check",
     "Публикация": "Publication",
     "Предложения": "Offers",
     "Сделка": "Deal",
-    "Проверка заявки администратором": "Application review",
+    "Автоматическая проверка заявки": "Automatic application check",
     "Заявку видят кредиторы": "Visible to lenders",
     "Выбор лучшего предложения": "Choosing the best offer",
     "Обсуждение условий в чате": "Discussing terms in chat",
@@ -665,6 +678,12 @@ def _flows(m):
 
 
 PATTERNS = [
+    (r"Автопроверка: ставка (\S+)% заметно (выше|ниже) рынка \((\S+)% в (\w+)\)\.",
+     lambda m: f"Automatic check: the {m.group(1)}% rate is well {'above' if m.group(2) == 'выше' else 'below'} "
+               f"the market ({m.group(3)}% in {m.group(4)})."),
+    (r"Предложение отправлено\. Ставка заметно отличается от рынка, поэтому его сначала посмотрит оператор, обычно до (\d+) ч\.",
+     r"Offer sent. The rate differs noticeably from the market, so the operator will review it first, usually within \1 h."),
+    (r"Причина жалобы на заявку №(\d+)", r"Reason for reporting application #\1"),
     (r"Заявка №(\d+)", r"Application #\1"),
     (r"· заявка №(\d+)", r"· application #\1"),
     (r"(\d+) мес\.", r"\1 mo."),

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from liquidity import models
 from liquidity.services import Forbidden, NotFound
 
-PUBLISHED_EVENT = "%прошла модерацию%"
+PUBLISHED_EVENT = "%опубликована для кредиторов%"
 MIN_DECISIONS = 3
 
 

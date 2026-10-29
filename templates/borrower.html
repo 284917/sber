@@ -14,7 +14,11 @@
 
 {% if qp.get('error') == 'kyc' %}{{ ui.flash('bad', 'Создавать заявки можно после верификации компании (KYC).') }}{% endif %}
 {% if qp.get('error') == 'form' %}{{ ui.flash('bad', 'Проверьте заявку: сумма больше 0, валюта, страна и способ передачи из списка, срок от 1 до ' ~ max_term ~ ' месяцев, назначение не длиннее 255 символов.') }}{% endif %}
-{% if qp.get('created') %}{{ ui.flash('ok', 'Заявка отправлена на модерацию. Кредиторы увидят её после проверки администратором.') }}{% endif %}
+{% if qp.get('error') == 'amount' %}{{ ui.flash('bad', 'Сумма заявки — от ' ~ (APP_MIN_AMOUNT|money) ~ ' до ' ~ (APP_MAX_AMOUNT|money) ~ ' в валюте заявки.') }}{% endif %}
+{% if qp.get('error') == 'purpose' %}{{ ui.flash('bad', 'Опишите назначение подробнее, не короче ' ~ PURPOSE_MIN_LENGTH ~ ' символов: например, контракт и контрагента. Кредиторы решают по этому описанию.') }}{% endif %}
+{% if qp.get('error') == 'stop_word' %}{{ ui.flash('bad', 'Назначение содержит недопустимую цель (азартные игры, оружие, обналичивание и т. п.). Такие заявки платформа не публикует.') }}{% endif %}
+{% if qp.get('created') == 'review' %}{{ ui.flash('info', 'Заявка прошла автоматическую проверку, но её посмотрит оператор: это первая заявка компании или крупная сумма. Обычно до ' ~ SLA_HOURS.moderation ~ ' ч.') }}
+{% elif qp.get('created') %}{{ ui.flash('ok', 'Заявка прошла автоматическую проверку и опубликована: кредиторы уже её видят.') }}{% endif %}
 
 {% include "_inbox.html" %}
 {{ ui.onboarding(onboarding) }}
@@ -29,7 +33,7 @@
 {% set active_apps = apps|selectattr('status', 'in', ['moderation', 'published', 'in_work'])|list %}
 {% set waiting = namespace(n=0) %}{% for a in apps %}{% if a.status == 'published' %}{% set waiting.n = waiting.n + shown_counts.get(a.id, 0) %}{% endif %}{% endfor %}
 <div class="grid grid-3" style="margin-bottom: 16px;">
-    <div class="card stat" style="margin: 0;"><div class="label">Активные заявки</div><div class="value">{{ active_apps|length }}</div><div class="hint">на модерации, опубликованы или в работе</div></div>
+    <div class="card stat" style="margin: 0;"><div class="label">Активные заявки</div><div class="value">{{ active_apps|length }}</div><div class="hint">на проверке, опубликованы или в работе</div></div>
     <div class="card stat" style="margin: 0;"><div class="label">Предложения ждут решения</div><div class="value">{{ waiting.n }}</div><div class="hint">проверены оператором</div></div>
     <div class="card stat" style="margin: 0;"><div class="label">Согласованные сделки</div><div class="value">{{ apps|selectattr('status', 'equalto', 'agreed')|list|length }}</div><div class="hint">в архиве</div></div>
 </div>
@@ -73,9 +77,10 @@
             </div>
             <div class="field">
                 <label class="f" for="purpose">Назначение средств</label>
-                <input type="text" name="purpose" id="purpose" class="input" placeholder="Закупка оборудования у поставщика" maxlength="255" required>
+                <input type="text" name="purpose" id="purpose" class="input" placeholder="Закупка оборудования у поставщика" minlength="{{ PURPOSE_MIN_LENGTH }}" maxlength="255" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Отправить на модерацию</button>
+            <button type="submit" class="btn btn-primary btn-block">Опубликовать заявку</button>
+            <p class="hint" style="margin: 8px 0 0;">Система сразу проверит заявку и опубликует её. Оператор смотрит только первую заявку компании и крупные суммы.</p>
             </fieldset>
             {% if kyc != 'approved' %}<p class="hint" style="margin: 8px 0 0;">Доступно после верификации компании.</p>{% endif %}
         </form>
@@ -113,7 +118,7 @@
         </table>
         </div>
         {% else %}
-        {{ ui.empty('files', 'Здесь появятся ваши заявки', 'Заполните форму слева. После модерации заявку увидят верифицированные кредиторы.') }}
+        {{ ui.empty('files', 'Здесь появятся ваши заявки', 'Заполните форму слева. После автоматической проверки заявку сразу увидят верифицированные кредиторы.') }}
         {% endif %}
     </section>
 </div>

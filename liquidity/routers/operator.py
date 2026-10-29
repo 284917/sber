@@ -1,11 +1,11 @@
-"""Оператор: проверка предложений и подтверждение сделок (администратору тоже доступно)."""
+"""Оператор: ручная проверка того, на что сработали правила, жалобы и подтверждение сделок (администратору тоже доступно)."""
 from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, NotFound, applications, deals, expiry, offers
+from liquidity.services import Invalid, NotFound, applications, complaints, deals, expiry, offers
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
 
@@ -13,17 +13,18 @@ router = APIRouter(prefix="/operator", tags=["Оператор"])
 staff = require_role(*config.STAFF_ROLES)
 
 
-@router.get("/moderation", summary="Заявки на модерации и опубликованные заявки")
+@router.get("/moderation", summary="Заявки на ручной проверке, жалобы кредиторов и опубликованные заявки")
 def moderation_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
     expiry.run(db)
     apps = db.query(models.Application).filter(models.Application.status.in_(["moderation", "published"])).order_by(
         models.Application.created_at, models.Application.id).all()
     return render(request, "operator_moderation.html", user=user,
                   moderation_apps=[a for a in apps if a.status == "moderation"],
-                  published_apps=[a for a in apps if a.status == "published"])
+                  published_apps=[a for a in apps if a.status == "published"],
+                  complaints=complaints.open_list(db), complaint_counts=complaints.open_counts(db))
 
 
-@router.get("/offers", summary="Предложения на проверке")
+@router.get("/offers", summary="Предложения, отправленные автопроверкой на ручную проверку")
 def offers_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
     expiry.run(db)
     return render(request, "operator_offers.html", user=user, offers_data=offers.review_list(db))

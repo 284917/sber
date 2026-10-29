@@ -132,7 +132,7 @@ def test_expiry_closes_offers_and_applications():
     make_company("exp-c@test.cy", "creditor", "Expiry Lender", "CY", "HE 51")
     borrower, creditor = login("exp-b@test.ru"), login("exp-c@test.cy")
     admin = login("admin@test.local", "admin-password")
-    app_id = publish(borrower, admin, "Истекает", 300000)
+    app_id = publish(borrower, admin, "Истекает срок заявки", 300000)
     creditor.post(f"/create_offer/{app_id}", data={"amount": "300000", "rate": "9", "lender_comm": "1", "valid_days": "7"})
     oid = offer_of(app_id, "exp-c@test.cy")
     admin.post(f"/operator/offer/{oid}/show")

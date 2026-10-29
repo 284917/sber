@@ -9,13 +9,13 @@ from liquidity import models
 
 def funnel(apps, offers, published_ids=None):
     """Воронка: подано -> опубликовано -> получили предложения -> дошли до сделки -> согласовано.
-    published_ids — заявки, прошедшие модерацию (по истории); без неё считаем по текущему статусу."""
+    published_ids — заявки, которые были опубликованы (по истории); без неё считаем по текущему статусу."""
     if published_ids is None:
         published_ids = {a.id for a in apps if a.status in ("published", "in_work", "agreed")}
     with_offers = {o.application_id for o in offers if o.operator_decision_at is not None and o.status != "hidden"}
     total = len(apps)
     stages = [("Подано заявок", total),
-              ("Прошли модерацию", sum(1 for a in apps if a.id in published_ids)),
+              ("Опубликованы", sum(1 for a in apps if a.id in published_ids)),
               ("Получили предложения", sum(1 for a in apps if a.id in with_offers)),
               ("Дошли до сделки", sum(1 for a in apps if a.status in ("in_work", "agreed"))),
               ("Согласованы", sum(1 for a in apps if a.status == "agreed"))]
@@ -72,7 +72,7 @@ def overview(db: Session):
                 "confirmed_by": db.get(models.User, a.confirmed_by) if a.confirmed_by else None}
                for a in apps if a.status == "agreed"]
     published_ids = {e.application_id for e in db.query(models.ApplicationEvent).filter(
-        models.ApplicationEvent.text.like("%прошла модерацию%"))}
+        models.ApplicationEvent.text.like("%опубликована для кредиторов%"))}
     weeks = weekly(apps)
     return {"apps": apps, "archive": archive, "analytics": build(apps, offers),
             "funnel": funnel(apps, offers, published_ids), "weeks": weeks,
@@ -131,19 +131,22 @@ def charts(db: Session, weeks: int = 8, today=None):
     for e in db.query(models.ApplicationEvent).order_by(models.ApplicationEvent.id):
         events[e.application_id].append(e)
 
-    def first(app_id, needle):
-        return next((e.created_at for e in events[app_id] if needle in e.text), None)
+    def first(app_id, *needles):
+        return next((e.created_at for e in events[app_id] if any(n in e.text for n in needles)), None)
+
+    published = lambda i: first(i, "опубликована для кредиторов")  # noqa: E731
+    shown = lambda i: first(i, "показано заёмщику", "Оператор показал")  # noqa: E731
 
     by_id = {a.id: a for a in apps}
     stages = [
-        ("Модерация", "от подачи до публикации", _avg_hours(
-            (by_id[i].created_at, first(i, "прошла модерацию")) for i in by_id)),
+        ("Проверка заявки", "от подачи до публикации", _avg_hours(
+            (by_id[i].created_at, published(i)) for i in by_id)),
         ("Первое предложение", "от публикации до показа заёмщику", _avg_hours(
-            (first(i, "прошла модерацию"), first(i, "Оператор показал")) for i in by_id)),
+            (published(i), shown(i)) for i in by_id)),
         ("Выбор кредитора", "от первого предложения до сделки", _avg_hours(
-            (first(i, "Оператор показал"), first(i, "сделка в работе") or first(i, "Сделка в работе")) for i in by_id)),
+            (shown(i), first(i, "сделка в работе", "Сделка в работе")) for i in by_id)),
         ("Согласование", "от начала сделки до подтверждения", _avg_hours(
-            (first(i, "сделка в работе") or first(i, "Сделка в работе"), first(i, "Сделка подтверждена")) for i in by_id)),
+            (first(i, "сделка в работе", "Сделка в работе"), first(i, "Сделка подтверждена")) for i in by_id)),
     ]
     stage_max = max((h for _, _, h in stages if h), default=0)
     lines = trend_lines(trend, min(trend_values, default=0), max(trend_values, default=0), weeks)

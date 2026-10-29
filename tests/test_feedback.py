@@ -113,10 +113,10 @@ def test_chat_json_and_contract_delete():
     make_company("chat-creditor@test.cy", "creditor", "Chat Capital", "CY", "HE 9")
     borrower, creditor = login("chat-borrower@test.ru"), login("chat-creditor@test.cy")
     admin = login("admin@test.local", "admin-password")
-    borrower.post("/create_application", data={"amount": "50000", "currency": "USD", "country": "DE", "purpose": "Чат",
+    borrower.post("/create_application", data={"amount": "50000", "currency": "USD", "country": "DE", "purpose": "Чат по сделке займа",
                                                "term_months": "2", "transfer_method": "swift"})
     with SessionLocal() as db:
-        app_id = db.query(models.Application).filter_by(purpose="Чат").one().id
+        app_id = db.query(models.Application).filter_by(purpose="Чат по сделке займа").one().id
     admin.post(f"/admin/application/{app_id}/moderate", data={"decision": "approve"})
     creditor.post(f"/create_offer/{app_id}", data={"amount": "50000", "rate": "7", "lender_comm": "1"})
     with SessionLocal() as db:

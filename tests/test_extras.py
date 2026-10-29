@@ -75,9 +75,9 @@ def test_creditor_profile_contract_draft_and_export():
     with SessionLocal() as db:
         offer_id = db.query(models.Offer).filter_by(application_id=app_id).one().id
 
-    # Пока оператор не показал предложение, заёмщик профиль не видит
-    assert borrower.get(f"/creditors/{creditor_id}").status_code == 403
-    admin.post(f"/operator/offer/{offer_id}/show")
+    # Предложение прошло автопроверку и сразу показано заёмщику — вместе с профилем кредитора
+    with SessionLocal() as db:
+        assert db.get(models.Offer, offer_id).status == "shown"
     page = borrower.get(f"/applications/{app_id}/offers").text
     assert f'href="/creditors/{creditor_id}"' in page and "Новый кредитор" in page
     profile = borrower.get(f"/creditors/{creditor_id}")

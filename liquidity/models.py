@@ -58,6 +58,8 @@ class Application(Base):
     # moderation -> published | rejected; published -> in_work -> agreed
     status = Column(String(20), default="moderation")
     moderation_comment = Column(String(500), nullable=True)
+    # Почему автоматическая проверка отправила заявку оператору (пусто — опубликована сразу)
+    review_reason = Column(String(255), nullable=True)
     # До какой даты заявка открыта для предложений (ставится при публикации)
     valid_until = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -81,8 +83,10 @@ class Offer(Base):
     total_commission = Column(Numeric(5, 2), nullable=False)
     extra_terms = Column(String(1000), nullable=True)
 
-    # pending -> shown | hidden (оператор); shown -> accepted | rejected (заёмщик)
+    # shown сразу после автопроверки или pending -> shown | hidden (оператор, если сработало правило);
+    # shown -> accepted | rejected (заёмщик)
     status = Column(String(20), default="pending")
+    review_reason = Column(String(255), nullable=True)
 
     hide_reason = Column(String(255), nullable=True)
     operator_decision_at = Column(DateTime, nullable=True)
@@ -197,3 +201,19 @@ class AuditEntry(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     actor = relationship("User")
+
+
+class Complaint(Base):
+    """Жалоба кредитора на опубликованную заявку: open -> accepted (заявку сняли) | dismissed."""
+    __tablename__ = "complaints"
+    id = Column(Integer, primary_key=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(String(500), nullable=False)
+    status = Column(String(20), nullable=False, default="open")
+    created_at = Column(DateTime, server_default=func.now())
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+
+    author = relationship("User", foreign_keys=[user_id])
+    application = relationship("Application")
