@@ -53,13 +53,13 @@
                 </div>
             </div>
             <div class="foot-actions">
-                <button type="button" class="foot-btn" onclick="toggleTheme()" aria-label="Переключить тему">{{ base_ui.icon('moon', 'ic-moon') }}{{ base_ui.icon('sun', 'ic-sun') }}<span>Тема</span></button>
+                <button type="button" class="foot-btn" onclick="toggleTheme()" aria-label="Переключить тему" title="Переключить тему">{{ base_ui.icon('moon', 'ic-moon') }}{{ base_ui.icon('sun', 'ic-sun') }}<span>Тема</span></button>
                 <a href="/logout" class="foot-btn foot-logout">{{ base_ui.icon('sign-out') }}<span>Выйти</span></a>
                 {% if role == 'creditor' %}
                 {% set path = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
-                <a href="/lang/{{ 'ru' if lang == 'en' else 'en' }}?next={{ path|urlencode }}" class="foot-btn" hreflang="{{ 'ru' if lang == 'en' else 'en' }}">{{ base_ui.icon('globe-hemisphere-east') }}<span>{{ 'Русский' if lang == 'en' else 'English' }}</span></a>
+                <a href="/lang/{{ 'ru' if lang == 'en' else 'en' }}?next={{ path|urlencode }}" class="foot-btn" title="{{ 'Русский' if lang == 'en' else 'English' }}" hreflang="{{ 'ru' if lang == 'en' else 'en' }}">{{ base_ui.icon('globe-hemisphere-east') }}<span>{{ 'Русский' if lang == 'en' else 'English' }}</span></a>
                 {% endif %}
-                <button type="button" class="foot-btn" data-install hidden>{{ base_ui.icon('upload-simple') }}<span>Установить</span></button>
+                <button type="button" class="foot-btn" data-install title="Установить" hidden>{{ base_ui.icon('upload-simple') }}<span>Установить</span></button>
             </div>
         </div>
     </aside>

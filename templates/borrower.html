@@ -52,7 +52,7 @@
     <a class="app-row" href="{{ '/deal/' ~ app.id if app.status in ('in_work', 'agreed') else '/applications/' ~ app.id ~ '/offers' }}">
         <span class="no">№{{ app.id }}</span>
         <span style="min-width: 0;">
-            <span class="amt">{{ app.funding_amount|money }} {{ app.currency_code }}</span>
+            <span class="amt"><span class="morph" style="view-transition-name: app-{{ app.id }};">{{ app.funding_amount|money }}</span> {{ app.currency_code }}</span>
             <span class="sub" style="display: block;">{{ app.purpose }}</span>
         </span>
         <span class="where" style="min-width: 0;">{{ ui.country(app.target_jurisdiction) }}{% if app.term_months %}<span class="sub" style="display: block;">{{ app.term_months }} мес. · {{ TRANSFER_METHODS.get(app.transfer_method, '')|terms }}</span>{% endif %}</span>

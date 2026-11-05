@@ -21,6 +21,7 @@ def offer_cost(offer, application):
         "commission": commission,
         "overpayment": interest + commission if interest is not None else None,
         "effective_rate": rate + commission_pct * 12 / term if term else None,
+        "commission_annual": commission_pct * 12 / term if term else None,
     }
 
 
@@ -39,6 +40,20 @@ def compare_offers(application, offers):
         rate_gap = open_rows[1]["cost"]["effective_rate"] - open_rows[0]["cost"]["effective_rate"]
         savings = float(application.funding_amount) * rate_gap / 100 * application.term_months / 12
     return rows, best_id, savings
+
+
+def explain_choice(rows, best_id):
+    """Почему лучшее предложение лучшее: сравниваем самую низкую ставку с самой низкой полной стоимостью.
+
+    Главный случай, ради которого считается полная стоимость: низкая ставка при высокой комиссии.
+    """
+    open_rows = [r for r in rows if r["offer"].status == "shown" and r["cost"]["effective_rate"] is not None]
+    if best_id is None or len(open_rows) < 2:
+        return None
+    best = open_rows[0]
+    lowest = min(open_rows, key=lambda r: float(r["offer"].annual_interest_rate))
+    return {"best": best, "lowest": lowest, "same": lowest is best, "lowest_is_worst": lowest is open_rows[-1],
+            "gap": lowest["cost"]["effective_rate"] - best["cost"]["effective_rate"]}
 
 
 def payment_schedule(offer, application):

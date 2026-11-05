@@ -6,7 +6,7 @@ from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
 from liquidity.services import Invalid, applications, creditors, expiry, fx, kyc, offers
-from liquidity.services.costs import compare_offers, payment_schedule
+from liquidity.services.costs import compare_offers, explain_choice, payment_schedule
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
 
@@ -57,11 +57,18 @@ def application_page(app_id: int, request: Request, user: models.User = Depends(
     rates = fx.current_rates(db)
     rub = lambda amount: fx.to_rub(amount, application.currency_code, rates)  # noqa: E731
     return render(request, "offers.html", user=user, application=application, rows=rows, best_id=best_id,
-                  savings=savings, events=get_events(db, app_id), fx=rates, rub=rub,
+                  savings=savings, choice=explain_choice(rows, best_id), version=offers.version(db, application),
+                  events=get_events(db, app_id), fx=rates, rub=rub,
                   creditor_stats=creditors.stats(db, [r["offer"].user_id for r in rows]),
                   funded=offers.funded(db, app_id), remaining=offers.remaining(db, application),
                   days_left=expiry.days_left(application.valid_until),
                   stages=applications.stages(db, application, shown))
+
+
+@router.get("/applications/{app_id}/offers/version", summary="Отпечаток предложений: страница обновляется без перезагрузки")
+def application_version(app_id: int, user: models.User = Depends(borrower_only), db: Session = Depends(get_db)):
+    application = applications.get_own(db, user, app_id)
+    return {"version": offers.version(db, application), "status": application.status}
 
 
 @router.post("/applications/{app_id}/withdraw", summary="Отозвать заявку (до сделки)")

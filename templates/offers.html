@@ -8,7 +8,7 @@
 <a href="/dashboard" class="back">{{ ui.icon('arrow-left', 'ic-sm') }} Все заявки</a>
 <div class="page-head">
     <div>
-        <h1>Заявка №{{ application.id }} · <span class="num">{{ application.funding_amount|money }}</span> {{ cur }}</h1>
+        <h1>Заявка №{{ application.id }} · <span class="num morph" style="view-transition-name: app-{{ application.id }};">{{ application.funding_amount|money }}</span> {{ cur }}</h1>
         <div class="sub">{{ ui.country(application.target_jurisdiction) }} · {{ application.term_months ~ ' мес.' if application.term_months else 'срок не указан' }} · {{ TRANSFER_METHODS.get(application.transfer_method, 'способ передачи не указан')|terms }}{% if rub(application.funding_amount) %} · {{ rub(application.funding_amount)|rub }}{% endif %}</div>
     </div>
     <div class="actions">
@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<section class="card">{{ ui.stepper(stages) }}</section>
+<section class="card" data-live="stepper">{{ ui.stepper(stages) }}</section>
 
 {% if application.status == 'rejected' and application.moderation_comment %}
     {{ ui.flash('bad', 'Заявка отклонена: ' ~ application.moderation_comment) }}
@@ -47,7 +47,7 @@
 
 {% if application.status == 'published' %}
 {% set pct = (100 * funded / application.funding_amount)|round|int %}
-<section class="card funding">
+<section class="card funding" data-live="funding">
     <div class="funding-head">
         <div>
             <div class="small muted">Собрано по заявке</div>
@@ -71,13 +71,13 @@
 {% set shown_n = rows|selectattr('offer.status', 'equalto', 'shown')|list|length %}
 <div data-tabs>
     <div class="seg-tabs" role="tablist" aria-label="Разделы заявки">
-        <button type="button" role="tab" id="t-offers" aria-controls="tab-offers" aria-selected="true" data-default>{{ ui.icon('hand-coins') }} Предложения <span class="tab-count {{ 'hot' if shown_n and application.status == 'published' }}">{{ rows|length }}</span></button>
+        <button type="button" role="tab" id="t-offers" aria-controls="tab-offers" aria-selected="true" data-default>{{ ui.icon('hand-coins') }} Предложения <span class="tab-count {{ 'hot' if shown_n and application.status == 'published' }}" data-live="count-offers">{{ rows|length }}</span></button>
         <button type="button" role="tab" id="t-params" aria-controls="tab-params" aria-selected="false">{{ ui.icon('file-text') }} Параметры заявки</button>
-        <button type="button" role="tab" id="t-history" aria-controls="tab-history" aria-selected="false">{{ ui.icon('clock') }} История <span class="tab-count">{{ events|length }}</span></button>
+        <button type="button" role="tab" id="t-history" aria-controls="tab-history" aria-selected="false">{{ ui.icon('clock') }} История <span class="tab-count" data-live="count-history">{{ events|length }}</span></button>
         <span class="seg-ink" aria-hidden="true"></span>
     </div>
 
-    <div role="tabpanel" id="tab-offers" aria-labelledby="t-offers">
+    <div role="tabpanel" id="tab-offers" aria-labelledby="t-offers" data-live="offers" data-version="{{ version }}">
         {% if best_id and savings is not none %}
         {% set best = (rows|selectattr('offer.id', 'equalto', best_id)|first) %}
         <div class="summary-strip">
@@ -85,6 +85,17 @@
             <div><div class="l">Полная стоимость</div><div class="v">{{ best.cost.effective_rate|round(2)|percent }}</div></div>
             <div><div class="l">Экономия против следующего на сумму заявки</div><div class="v">{{ savings|money }} {{ cur }}</div>{% if rub(savings) %}<span class="rub" title="{{ rate_note }}">{{ rub(savings)|rub }}</span>{% endif %}</div>
         </div>
+        {% endif %}
+
+        {% if choice %}
+        {% set low = choice.lowest %}
+        {% set low_name = low.offer.sender.display_name if low.offer.sender else 'этого кредитора' %}
+        <p class="insight">
+            {% if choice.same %}У {{ low_name }} и самая низкая ставка, и самая низкая полная стоимость.
+            {% elif choice.lowest_is_worst %}У {{ low_name }} самая низкая ставка, {{ low.offer.annual_interest_rate|percent }}, но с комиссией это самое дорогое предложение: {{ low.cost.effective_rate|round(2)|percent }} годовых.
+            {% else %}У {{ low_name }} самая низкая ставка, {{ low.offer.annual_interest_rate|percent }}, но с комиссией предложение дороже лучшего на {{ choice.gap|round(2)|percent|replace('%', '') }} п. п.{% endif %}
+            {% if choice.best.cost.coverage < 100 %}Лучшее предложение закрывает {{ choice.best.cost.coverage }}% суммы, остальное можно добрать другими.{% endif %}
+        </p>
         {% endif %}
 
         {% if rows %}
@@ -95,6 +106,7 @@
             </div>
         </div>
         {% set term = application.term_months %}
+        {% set max_eff = rows|rejectattr('cost.effective_rate', 'none')|map(attribute='cost.effective_rate')|max %}
         <div class="offer-list" data-reveal>
         {% for row in rows %}
         {% set o, c = row.offer, row.cost %}
@@ -111,6 +123,7 @@
                         <div class="offer-name">
                             {% if o.sender %}<a href="/creditors/{{ o.user_id }}" class="creditor-link" title="Профиль и рейтинг кредитора">{{ o.sender.display_name }}</a>{% else %}Кредитор{% endif %}
                             {% if is_best %}<span class="tag tag-best">Лучшее</span>{% endif %}
+                            {% if choice and not choice.same and o.id == choice.lowest.offer.id %}<span class="tag">Самая низкая ставка</span>{% endif %}
                             {{ ui.rating_badge(cs) }}
                         </div>
                         <div class="offer-meta">
@@ -128,6 +141,18 @@
                     <div class="l">полная стоимость, годовых</div>
                 </div>
             </div>
+
+            {% if c.commission_annual is not none %}
+            <div class="cost-split" role="img" aria-label="Ставка {{ o.annual_interest_rate|percent }} плюс комиссия в пересчёте на год {{ c.commission_annual|round(2)|percent }}">
+                <div class="split-track">
+                    <i class="s-rate" style="width: {{ (100 * (o.annual_interest_rate|float) / max_eff)|round(2) }}%"></i><i class="s-comm" style="width: {{ (100 * c.commission_annual / max_eff)|round(2) }}%"></i>
+                </div>
+                <div class="split-legend">
+                    <span><i class="sw s1"></i> Ставка {{ o.annual_interest_rate|percent }}</span>
+                    <span><i class="sw s2"></i> Комиссия в пересчёте на год {{ c.commission_annual|round(2)|percent }}</span>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="metrics">
                 <div class="metric"><div class="l">Сумма</div><div class="v">{{ c.amount|money }} {{ cur }}</div><div class="s">{{ c.coverage }}% запрошенного</div></div>
@@ -223,10 +248,77 @@
     </div>
 
     <div role="tabpanel" id="tab-history" aria-labelledby="t-history" hidden>
-        <section class="card" style="max-width: 720px;">
+        <section class="card" style="max-width: 720px;" data-live="history">
             <h2 class="card-title">История заявки</h2>
             {{ ui.timeline(events) }}
         </section>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if application.status in ('moderation', 'published') %}
+<script>
+    // Новые предложения появляются без перезагрузки. Раз в 4 секунды спрашиваем отпечаток;
+    // если он изменился, берём свежую страницу и заменяем только изменившиеся блоки.
+    (function () {
+        const url = '/applications/{{ application.id }}/offers';
+        const panel = document.getElementById('tab-offers');
+        let version = panel.dataset.version, stopped = false, told = false;
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Пока человек пишет встречную ставку или подтверждает действие, экран не трогаем
+        const busy = () => document.querySelector('dialog[open]')
+            || [...panel.querySelectorAll('details[open] input:not([type=hidden])')].some((i) => i.value)
+            || (panel.contains(document.activeElement) && document.activeElement.matches('input, textarea'));
+        const cards = () => [...panel.querySelectorAll('.offer-card')];
+
+        function swap(doc) {
+            const before = new Map(cards().map((c) => [c.id, c.getBoundingClientRect().top]));
+            const opened = [...panel.querySelectorAll('.offer-card details[open]')].map((d) => [d.closest('.offer-card').id, d.className.split(' ')[0]]);
+            document.querySelectorAll('[data-live]').forEach((el) => {
+                const fresh = doc.querySelector('[data-live="' + el.dataset.live + '"]');
+                if (fresh && fresh.innerHTML !== el.innerHTML) el.innerHTML = fresh.innerHTML;
+            });
+            cards().forEach((card) => {
+                if (before.has(card.id)) {
+                    card.classList.add('still');
+                    if (reduce) return;
+                    const dy = before.get(card.id) - card.getBoundingClientRect().top;
+                    if (dy) card.animate([{transform: 'translateY(' + dy + 'px)'}, {transform: 'none'}], {duration: 700, easing: 'cubic-bezier(0.22, 1, 0.36, 1)'});
+                } else {
+                    card.classList.add('is-new');
+                    setTimeout(() => card.classList.remove('is-new'), 2400);
+                    const name = card.querySelector('.offer-name a');
+                    showToast('Новое предложение: ' + (name ? name.textContent : 'кредитор'), 'ok');
+                }
+            });
+            opened.forEach(([id, kind]) => {
+                const d = document.getElementById(id) && document.getElementById(id).querySelector('details.' + kind);
+                if (d) { d.classList.add('no-unfold'); d.open = true; }
+            });
+        }
+
+        async function tick() {
+            if (document.hidden || stopped) return;
+            try {
+                const r = await fetch(url + '/version', {headers: {Accept: 'application/json'}});
+                if (!r.ok) { stopped = true; return; }  // вышли из аккаунта или вошли в другой в соседней вкладке
+                const data = await r.json();
+                if (data.version === version) return;
+                if (busy()) {
+                    if (!told) { told = true; showToast('По заявке есть изменения. Обновим список, когда закончите.', 'ok'); }
+                    return;
+                }
+                if (data.status !== '{{ application.status }}') { location.reload(); return; }
+                const page = await fetch(url);
+                if (!page.ok) return;
+                swap(new DOMParser().parseFromString(await page.text(), 'text/html'));
+                version = data.version; told = false;
+            } catch (err) { /* сеть недоступна: попробуем в следующий раз */ }
+        }
+        setInterval(tick, 4000);
+    })();
+</script>
+{% endif %}
 {% endblock %}

@@ -3,6 +3,7 @@
 Заявку можно собрать из нескольких предложений (частичное финансирование): заёмщик принимает офферы,
 пока сумма не покрыта, или начинает сделку с уже собранной частью.
 """
+import hashlib
 from collections import Counter
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -293,3 +294,10 @@ def hide(db: Session, operator: models.User, offer_id: int, reason: str):
     notify(db, offer.user_id, f"Оператор скрыл ваше предложение по заявке №{offer.application_id}: {offer.hide_reason}",
            "/dashboard#my-offers", "bad")
     db.commit()
+
+
+def version(db: Session, application: models.Application) -> str:
+    """Отпечаток видимых заёмщику предложений. Только хэш: ничего не раскрывает, если его кто-то перехватит."""
+    state = sorted((o.id, o.status, str(o.annual_interest_rate), str(o.total_commission), str(o.funding_amount),
+                    o.counter_status or "") for o in visible_to_borrower(db, application.id))
+    return hashlib.sha1(repr((application.status, state)).encode()).hexdigest()[:16]

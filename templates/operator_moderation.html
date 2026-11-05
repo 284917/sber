@@ -8,7 +8,7 @@
 <div class="page-head">
     <div>
         <h1>Проверка заявок</h1>
-        <div class="sub">Заявки публикуются сразу после автоматической проверки. Здесь — только то, на что сработало правило, и жалобы кредиторов. Опубликованную заявку можно снять, пока по ней нет сделки.</div>
+        <div class="sub">Заявки публикуются сразу. Здесь только то, на что сработало правило, и жалобы кредиторов.</div>
     </div>
 </div>
 
@@ -17,36 +17,45 @@
 {% if qp.get('unpublished') %}{{ ui.flash('ok', 'Заявка снята с публикации, заёмщик и кредиторы получили уведомления.') }}{% endif %}
 {% if qp.get('error') == 'reason' %}{{ ui.flash('bad', 'Укажите причину, её увидит заёмщик.') }}{% endif %}
 
-<section class="card card-tight">
-    <div class="card-head"><h2 class="card-title">На ручной проверке <span class="muted">{{ moderation_apps|length }}</span></h2></div>
-    {{ staff_ui.moderation_table(moderation_apps, request) }}
-</section>
-
-<section class="card card-tight" id="complaints">
-    <div class="card-head"><h2 class="card-title">Жалобы кредиторов <span class="muted">{{ complaints|length }}</span></h2></div>
-    {{ staff_ui.complaints_table(complaints, request) }}
-</section>
-
-<section class="card card-tight">
-    <div class="card-head"><h2 class="card-title">Опубликованные заявки <span class="muted">{{ published_apps|length }}</span></h2></div>
-    {% if published_apps %}
-    <div class="table-wrap">
-    <table class="t t-top">
-        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Назначение</th><th style="width: 280px;">Снять с публикации</th></tr></thead>
-        <tbody>
-        {% for app in published_apps %}
-        <tr>
-            <td class="muted">{{ app.id }}</td>
-            <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if complaint_counts.get(app.id) %}<div><span class="pill pill-bad">Жалоб: {{ complaint_counts[app.id] }}</span></div>{% endif %}</td>
-            <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
-            <td>{{ ui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}</td>
-            <td class="cell-wrap">{{ app.purpose }}</td>
-            <td>{{ staff_ui.unpublish_form(app, request, 'moderation') }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+{% set first_tab = 'review' if moderation_apps or not complaints else 'complaints' %}
+<div data-tabs="hash">
+    <div class="seg-tabs" role="tablist" aria-label="Разделы проверки">
+        <button type="button" role="tab" id="t-review" aria-controls="review" aria-selected="{{ 'true' if first_tab == 'review' else 'false' }}" {% if first_tab == 'review' %}data-default{% endif %}>{{ ui.icon('list-checks') }} На ручной проверке <span class="tab-count {{ 'hot' if moderation_apps }}">{{ moderation_apps|length }}</span></button>
+        <button type="button" role="tab" id="t-complaints" aria-controls="complaints" aria-selected="{{ 'true' if first_tab == 'complaints' else 'false' }}" {% if first_tab == 'complaints' %}data-default{% endif %}>{{ ui.icon('warning-circle') }} Жалобы кредиторов <span class="tab-count {{ 'hot' if complaints }}">{{ complaints|length }}</span></button>
+        <button type="button" role="tab" id="t-published" aria-controls="published" aria-selected="false">{{ ui.icon('files') }} Опубликованные <span class="tab-count">{{ published_apps|length }}</span></button>
+        <span class="seg-ink" aria-hidden="true"></span>
     </div>
-    {% else %}{{ ui.empty('list-checks', 'Опубликованных заявок нет') }}{% endif %}
-</section>
+
+    <div role="tabpanel" id="review" aria-labelledby="t-review" {% if first_tab != 'review' %}hidden{% endif %}>
+        <section class="card card-tight">{{ staff_ui.moderation_table(moderation_apps, request) }}</section>
+    </div>
+
+    <div role="tabpanel" id="complaints" aria-labelledby="t-complaints" {% if first_tab != 'complaints' %}hidden{% endif %}>
+        <section class="card card-tight">{{ staff_ui.complaints_table(complaints, request) }}</section>
+    </div>
+
+    <div role="tabpanel" id="published" aria-labelledby="t-published" hidden>
+        <section class="card card-tight">
+            {% if published_apps %}
+            <div class="table-wrap">
+            <table class="t t-top">
+                <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок</th><th>Назначение</th><th style="width: 240px;">Действие</th></tr></thead>
+                <tbody>
+                {% for app in published_apps %}
+                <tr>
+                    <td class="muted">{{ app.id }}</td>
+                    <td><b>{{ app.borrower.display_name if app.borrower else '—' }}</b>{% if complaint_counts.get(app.id) %}<div><span class="pill pill-bad">Жалоб: {{ complaint_counts[app.id] }}</span></div>{% endif %}</td>
+                    <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
+                    <td>{{ ui.country(app.target_jurisdiction) }} · {{ app.term_months ~ ' мес.' if app.term_months else '—' }}</td>
+                    <td class="cell-wrap">{{ app.purpose }}</td>
+                    <td>{{ staff_ui.unpublish_form(app, request, 'moderation') }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}{{ ui.empty('list-checks', 'Опубликованных заявок нет') }}{% endif %}
+        </section>
+    </div>
+</div>
 {% endblock %}

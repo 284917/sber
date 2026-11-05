@@ -27,9 +27,9 @@
                         <a href="/register" class="btn btn-primary btn-lg">Зарегистрировать компанию {{ ui.icon('arrow-right') }}</a>
                     </div>
                     <div class="proof">
-                        <span>{{ ui.icon('check') }} Регистрация и заявка бесплатно</span>
-                        <span>{{ ui.icon('check') }} SWIFT, СПФС, CIPS или платёжный агент</span>
-                        <span>{{ ui.icon('check') }} Каждый участник проходит KYC</span>
+                        <span>{{ ui.icon('check') }} <span>Регистрация и заявка бесплатно</span></span>
+                        <span>{{ ui.icon('check') }} <span>SWIFT, СПФС, CIPS или платёжный агент</span></span>
+                        <span>{{ ui.icon('check') }} <span>Каждый участник проходит KYC</span></span>
                     </div>
                 </div>
                 <div data-for="creditor">
@@ -39,39 +39,129 @@
                         <a href="/register?role=creditor" class="btn btn-primary btn-lg">Зарегистрироваться как кредитор {{ ui.icon('arrow-right') }}</a>
                     </div>
                     <div class="proof">
-                        <span>{{ ui.icon('check') }} Заёмщики проверены по ЕГРЮЛ и UBO</span>
-                        <span>{{ ui.icon('check') }} EUR, USD и CNY</span>
-                        <span>{{ ui.icon('check') }} Сделка под контролем оператора</span>
+                        <span>{{ ui.icon('check') }} <span>Заёмщики проверены по ЕГРЮЛ и UBO</span></span>
+                        <span>{{ ui.icon('check') }} <span>EUR, USD и CNY</span></span>
+                        <span>{{ ui.icon('check') }} <span>Сделка под контролем оператора</span></span>
                     </div>
                 </div>
             </div>
 
-            <figure class="showcase" data-for="borrower" style="margin: 0;" aria-label="Пример экрана сравнения предложений">
+            <figure class="showcase scene" id="scene" data-for="borrower" style="margin: 0;" aria-label="Пример: три предложения по заявке, отсортированные по полной стоимости">
                 <div class="showcase-inner">
-                    <div class="showcase-bar"><i></i><i></i><i></i><b>Заявка №1 · 500 000 EUR · Германия · 6 мес. · SWIFT</b></div>
-                    <div class="showcase-body">
-                        <div class="callout">
-                            <div><div class="small muted">Лучшее предложение</div><div style="font-weight: 700;">Beta Capital Ltd</div></div>
-                            <div><div class="small muted">Полная стоимость</div><div class="big">16%</div></div>
-                            <div><div class="small muted">Экономия против следующего</div><div class="big">1 000 EUR</div></div>
+                    <div class="scene-head">
+                        <div><b>Заявка №1</b> <span class="muted">· 500 000 EUR · Германия · 6 мес. · SWIFT</span></div>
+                        <span class="pill pill-published">Опубликована</span>
+                    </div>
+                    <div class="scene-sum">
+                        <div class="best"><span>Лучшее предложение</span><b id="sc-best">Beta Capital Ltd</b></div>
+                        <div><span>Полная стоимость</span><b id="sc-cost" class="num">16%</b></div>
+                        <div><span>Экономия против следующего</span><b id="sc-save" class="num">1 000 EUR</b></div>
+                    </div>
+                    <div class="scene-list">
+                        <div class="sc-head">
+                            <span>Кредитор</span>
+                            <span class="sc-legend"><span><i class="sw s1"></i> Ставка</span><span><i class="sw s2"></i> Комиссия в пересчёте на год</span></span>
+                            <span class="num">Полная стоимость</span>
                         </div>
-                        <div class="table-wrap" style="border: 1px solid var(--line); border-radius: 12px;">
-                            <table class="t compare">
-                                <thead><tr><th>Кредитор</th><th class="num hide-sm">Сумма</th><th class="num">Ставка</th><th class="num hide-sm">Комиссия</th><th class="num hide-sm">Переплата</th><th class="num">Полная стоимость</th></tr></thead>
-                                <tbody>
-                                    <tr class="best-row"><td><b>Beta Capital Ltd</b> <span class="tag tag-best">Лучшее</span><div class="small muted">Кипр</div></td><td class="num hide-sm">500 000</td><td class="num">8%</td><td class="num hide-sm">4%</td><td class="num hide-sm"><b>40 000</b> EUR</td><td class="num"><span class="big-num">16%</span></td></tr>
-                                    <tr><td><b>Shenzhen Rongtong Capital</b><div class="small muted">Китай</div></td><td class="num hide-sm">450 000</td><td class="num">7,6%</td><td class="num hide-sm">4,4%</td><td class="num hide-sm"><b>36 900</b> EUR</td><td class="num"><span class="big-num">16,4%</span></td></tr>
-                                    <tr><td><b>Gulf Trade Finance FZE</b><div class="small muted">ОАЭ</div></td><td class="num hide-sm">500 000</td><td class="num">7,2%</td><td class="num hide-sm">5,2%</td><td class="num hide-sm"><b>44 000</b> EUR</td><td class="num"><span class="big-num">17,6%</span></td></tr>
-                                </tbody>
-                            </table>
+                        <div id="sc-rows">
+                            {% for key, name, country_name, rate, annual, cost, rate_text, cost_text in [
+                                ('beta', 'Beta Capital Ltd', 'Кипр', 8, 8, 16, '8%', '16%'),
+                                ('rongtong', 'Shenzhen Rongtong Capital', 'Китай', 7.6, 8.8, 16.4, '7,6%', '16,4%'),
+                                ('gulf', 'Gulf Trade Finance FZE', 'ОАЭ', 7.2, 10.4, 17.6, '7,2%', '17,6%')] %}
+                            <div class="sc-row" data-key="{{ key }}" data-rate="{{ rate }}" data-cost="{{ cost }}">
+                                <div class="sc-ghost" aria-hidden="true"><i></i><i></i><i></i></div>
+                                <div class="sc-name"><b>{{ name }}</b>
+                                    {% if key == 'beta' %}<span class="tag tag-best sc-tag">Лучшее</span>{% endif %}
+                                    {% if key == 'gulf' %}<span class="tag sc-tag">Самая низкая ставка</span>{% endif %}
+                                    <div class="small muted">{{ country_name }}</div></div>
+                                <div class="sc-bar"><i class="s-rate" style="width: {{ (100 * rate / 17.6)|round(2) }}%"></i><i class="s-comm" style="width: {{ (100 * annual / 17.6)|round(2) }}%"></i></div>
+                                <div class="sc-cost num" data-final="{{ cost_text }}">{{ cost_text }}</div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
+                    <p class="scene-note" id="sc-note">У Gulf Trade Finance самая низкая ставка, 7,2%, но с комиссией это самое дорогое предложение.</p>
                 </div>
             </figure>
+            <script>
+                // Сцена первого экрана: заявка опубликована, предложения приходят и сами встают по полной стоимости.
+                // В разметке уже итоговое состояние: без скрипта и при «уменьшить движение» виден готовый экран.
+                (function () {
+                    const box = document.getElementById('scene');
+                    if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+                    const list = box.querySelector('#sc-rows');
+                    const row = (key) => list.querySelector('[data-key="' + key + '"]');
+                    const best = box.querySelector('#sc-best'), cost = box.querySelector('#sc-cost'), save = box.querySelector('#sc-save');
+                    const note = box.querySelector('#sc-note'), sum = box.querySelector('.scene-sum'), body = box.querySelector('.showcase-inner');
+                    const locale = {{ ('en-GB' if lang == 'en' else 'ru-RU')|tojson }};
+                    const pct = (v) => v.toLocaleString(locale, {maximumFractionDigits: 1}) + '%';
+                    const fin = box.querySelectorAll('.sc-cost');
+                    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+                    let seen = false, wake = null;
+                    new IntersectionObserver(([e]) => { seen = e.isIntersecting; if (seen && wake) { wake(); wake = null; } }, {threshold: 0.2}).observe(box);
+                    const visible = () => seen ? null : new Promise((r) => { wake = r; });
+
+                    // Полная стоимость растёт от голой ставки: видно, сколько добавляет комиссия
+                    function grow(el, from, to) {
+                        const start = performance.now();
+                        const step = (t) => {
+                            const k = Math.min(1, (t - start) / 900), e = 1 - Math.pow(1 - k, 4);
+                            el.textContent = pct(from + (to - from) * e);
+                            if (k < 1) requestAnimationFrame(step);
+                        };
+                        requestAnimationFrame(step);
+                    }
+                    function arrive(key) {
+                        const r = row(key);
+                        r.classList.remove('is-ghost');
+                        grow(r.querySelector('.sc-cost'), +r.dataset.rate, +r.dataset.cost);
+                    }
+                    // Строка встаёт на своё место: измеряем позиции до и после, анимируем только сдвиг
+                    function moveUp(key) {
+                        const rows = [...list.children], top = new Map(rows.map((r) => [r, r.getBoundingClientRect().top]));
+                        list.prepend(row(key));
+                        rows.forEach((r) => {
+                            const dy = top.get(r) - r.getBoundingClientRect().top;
+                            if (dy) r.animate([{transform: 'translateY(' + dy + 'px)'}, {transform: 'none'}], {duration: 800, easing: 'cubic-bezier(0.22, 1, 0.36, 1)'});
+                        });
+                    }
+                    function leader(name, value, saving) {
+                        sum.classList.add('on');
+                        best.textContent = name; cost.textContent = pct(value);
+                        save.textContent = saving.toLocaleString(locale) + ' EUR';
+                        [best, cost, save].forEach((el) => el.animate([{opacity: 0, transform: 'translateY(8px)'}, {opacity: 1, transform: 'none'}], {duration: 500, easing: 'cubic-bezier(0.22, 1, 0.36, 1)'}));
+                    }
+                    function reset() {
+                        ['gulf', 'rongtong', 'beta'].forEach((k) => { list.append(row(k)); row(k).classList.add('is-ghost'); });
+                        box.classList.remove('has-best');
+                        sum.classList.remove('on'); note.classList.remove('on');
+                        best.textContent = '…'; cost.textContent = '…'; save.textContent = '…';
+                    }
+
+                    reset();
+                    (async function () {
+                        for (let run = 0; run < 3; run++) {  // три показа и остаёмся на итоге: постоянное движение отвлекает от текста
+                            await visible(); await wait(run ? 300 : 900);
+                            arrive('gulf'); await wait(1500);
+                            await visible(); arrive('rongtong'); await wait(1000);
+                            moveUp('rongtong'); leader('Shenzhen Rongtong Capital', 16.4, 3000); await wait(1800);
+                            await visible(); arrive('beta'); await wait(1000);
+                            moveUp('beta'); leader('Beta Capital Ltd', 16, 1000); box.classList.add('has-best'); await wait(800);
+                            note.classList.add('on');
+                            if (run === 2) return;
+                            await wait(5200);
+                            body.animate([{opacity: 1}, {opacity: 0}], {duration: 300, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards'});
+                            await wait(320);
+                            reset();
+                            body.animate([{opacity: 0}, {opacity: 1}], {duration: 300, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards'});
+                        }
+                    })();
+                })();
+            </script>
 
             <figure class="showcase" data-for="creditor" style="margin: 0;" aria-label="Пример ленты заявок для кредитора">
                 <div class="showcase-inner">
-                    <div class="showcase-bar"><i></i><i></i><i></i><b>Заявки на финансирование · Германия · EUR · до 12 мес.</b></div>
+                    <div class="showcase-bar"><b>Заявки на финансирование · Германия · EUR · до 12 мес.</b></div>
                     <div class="showcase-body">
                         <div class="app-preview">
                             <div>
@@ -103,12 +193,19 @@
     <!-- Живые цифры из базы платформы -->
     <section class="live" aria-label="Платформа в цифрах">
         <div class="wrap live-grid">
+            {% if stats.enough %}
             <div class="live-item"><b data-count="{{ stats.published }}">{{ stats.published }}</b><span>заявок опубликовано</span></div>
             <div class="live-item"><b data-count="{{ stats.offers }}">{{ stats.offers }}</b><span>предложений кредиторов</span></div>
             <div class="live-item"><b {% if stats.avg_effective %}data-count="{{ stats.avg_effective }}" data-decimals="1" data-suffix="%"{% endif %}>{{ (stats.avg_effective|string|replace('.', ',') ~ '%') if stats.avg_effective else '—' }}</b><span>средняя полная стоимость</span></div>
             <div class="live-item"><b data-count="{{ stats.agreed }}">{{ stats.agreed }}</b><span>сделок согласовано</span></div>
+            {% else %}
+            <div class="live-item"><b data-count="{{ calc.currencies|length }}">{{ calc.currencies|length }}</b><span>валюты: {{ calc.currencies|join(', ') }}</span></div>
+            <div class="live-item"><b data-count="{{ TRANSFER_METHODS|length }}">{{ TRANSFER_METHODS|length }}</b><span>способа передачи средств</span></div>
+            <div class="live-item"><b data-count="{{ SLA_HOURS.kyc }}" data-suffix=" ч">{{ SLA_HOURS.kyc }} ч</b><span>на проверку компании</span></div>
+            <div class="live-item"><b data-count="{{ PLATFORM_COMMISSION }}" data-suffix="%">{{ PLATFORM_COMMISSION|percent }}</b><span>комиссия платформы, только по согласованной сделке</span></div>
+            {% endif %}
         </div>
-        <p class="wrap live-note"><span class="live-dot" aria-hidden="true"></span> Данные платформы в реальном времени</p>
+        {% if stats.enough %}<p class="wrap live-note"><span class="live-dot" aria-hidden="true"></span> Данные платформы в реальном времени</p>{% endif %}
     </section>
 
     <!-- Слоган: слова проявляются по одному при прокрутке -->
@@ -155,7 +252,7 @@
                 <article class="step-card reveal">
                     <span class="n">3</span>
                     <h3>Отправьте условия</h3>
-                    <p>Сумма, ставка, комиссия и дополнительные условия. Оператор проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.</p>
+                    <p>Сумма, ставка, комиссия и дополнительные условия. Система проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.</p>
                 </article>
             </div>
         </div>
@@ -227,9 +324,10 @@
             <p class="lead-lg reveal" style="margin-top: 16px;">Слева — откуда кредиторы делают предложения, справа — куда российские компании получают средства. Толщина линии — число предложений и заявок.</p>
             {% set supply = stats.supply if stats.supply else [('AE', 'ОАЭ', 0), ('CY', 'Кипр', 0), ('CN', 'Китай', 0), ('TR', 'Турция', 0)] %}
             {% set smax = (supply|map(attribute=2)|max) or 1 %}
-            {% set dmax = (stats.demand|map(attribute=2)|max) or 1 %}
+            {% set demand = stats.demand|selectattr(2)|list or stats.demand %}
+            {% set dmax = (demand|map(attribute=2)|max) or 1 %}
             {% set left_step = 300 / (supply|length - 1) if supply|length > 1 else 0 %}
-            <figure class="flow reveal" aria-label="Потоки: {% for c, n, v in supply %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %} → Россия → {% for c, n, v in stats.demand %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}">
+            <figure class="flow reveal" aria-label="Потоки: {% for c, n, v in supply %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %} → Россия → {% for c, n, v in demand %}{{ n }} {{ v }}{{ ', ' if not loop.last }}{% endfor %}">
                 <svg viewBox="0 0 960 400" class="flow-svg" aria-hidden="true">
                     {% for code, name, value in supply %}
                     {% set y = 50 + loop.index0 * left_step if supply|length > 1 else 200 %}
@@ -238,8 +336,8 @@
                     <circle cx="180" cy="{{ y }}" r="7" class="flow-node"/>
                     <text x="164" y="{{ y + 5 }}" text-anchor="end" class="flow-label">{{ name }}<tspan class="flow-value"> {{ value }}</tspan></text>
                     {% endfor %}
-                    {% for code, name, value in stats.demand %}
-                    {% set y = 90 + loop.index0 * 110 %}
+                    {% for code, name, value in demand %}
+                    {% set y = 200 - (demand|length - 1) * 55 + loop.index0 * 110 %}
                     <path d="M 520 200 C 620 200, 630 {{ y }}, 770 {{ y }}" class="flow-line out" style="stroke-width: {{ (3 + 12 * value / dmax)|round(1) }}px"/>
                     <path d="M 520 200 C 620 200, 630 {{ y }}, 770 {{ y }}" class="flow-pulse out" style="animation-delay: -{{ loop.index0 * 0.4 }}s"/>
                     <circle cx="780" cy="{{ y }}" r="7" class="flow-node out"/>
@@ -254,9 +352,9 @@
                 <div class="flow-list">
                     <div><h3>Кредиторы</h3><ul>{% for code, name, value in supply %}<li><span>{{ name }}</span><b>{{ value }}</b></li>{% endfor %}</ul></div>
                     <div class="flow-hub-mobile">{{ ui.icon('arrow-right') }} Российские компании {{ ui.icon('arrow-right') }}</div>
-                    <div><h3>Получение средств</h3><ul>{% for code, name, value in stats.demand %}<li><span>{{ name }}</span><b>{{ value }}</b></li>{% endfor %}</ul></div>
+                    <div><h3>Получение средств</h3><ul>{% for code, name, value in demand %}<li><span>{{ name }}</span><b>{{ value }}</b></li>{% endfor %}</ul></div>
                 </div>
-                <figcaption class="small muted">{% if stats.supply %}По предложениям, которые оператор показал заёмщикам, и опубликованным заявкам.{% else %}Пока на платформе нет показанных предложений: слева показаны страны, откуда регистрируются кредиторы.{% endif %}</figcaption>
+                <figcaption class="small muted">{% if stats.supply %}По предложениям, показанным заёмщикам, и опубликованным заявкам.{% else %}Пока на платформе нет показанных предложений: слева показаны страны, откуда регистрируются кредиторы.{% endif %}</figcaption>
             </figure>
         </div>
     </section>
@@ -332,7 +430,7 @@
                     ('Как считается полная стоимость?', 'Ставка плюс комиссия за организацию, разнесённая на срок заявки: комиссия × 12 / срок в месяцах. Так предложение с низкой ставкой и высокой комиссией честно сравнивается с остальными.'),
                     ('Какие документы нужны для проверки?', 'Заёмщику: устав, выписка из ЕГРЮЛ, паспорт директора, сведения о бенефициарах и документ о полномочиях директора. Кредитору: свидетельство о регистрации, устав, реестр директоров, бенефициары, налоговое резидентство и подтверждение источника средств.'),
                     ('Сколько длится проверка заявки?', 'Обычно заявка публикуется сразу: система проверяет сумму, срок и назначение. Первую заявку компании и крупные суммы дополнительно смотрит оператор, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.'),
-                    ('Кто видит мою заявку?', 'Только кредиторы, прошедшие KYC. Название кредитора вы видите после того, как оператор проверит его предложение.'),
+                    ('Кто видит мою заявку?', 'Только кредиторы, прошедшие KYC. Название кредитора и его условия вы видите сразу после проверки предложения.'),
                     ('Можно ли отказаться от предложения?', 'Да. Любое предложение можно отклонить. Когда вы принимаете одно, остальные по заявке отклоняются автоматически.'),
                     ('В каких валютах и куда можно получить средства?', 'EUR, USD и CNY с получением в Германии, Турции или Китае. Способ передачи вы выбираете в заявке: SWIFT, СПФС, CIPS или платёжный агент.'),
                     ('Что если предложений нет?', 'Заявка остаётся опубликованной, пока вы её не закроете. Можно изменить срок или сумму и подать новую заявку, чтобы она подошла большему числу кредиторов.'),

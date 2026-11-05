@@ -207,7 +207,7 @@ def public_stats(db: Session):
     return {
         "published": len(apps), "offers": len(offers), "agreed": len(agreed),
         "avg_effective": round(sum(effective) / len(effective), 1) if effective else None,
-        "creditor_countries": len(supply),
+        "creditor_countries": len(supply), "enough": len(offers) >= config.LIVE_STATS_MIN_OFFERS,
         "demand": [(code, config.COUNTRY_NAMES.get(code, code), demand.get(code, 0)) for code in config.TARGET_COUNTRIES],
         "supply": [(code, config.COUNTRY_NAMES.get(code, code), n) for code, n in supply.most_common(5)],
     }

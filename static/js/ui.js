@@ -5,6 +5,9 @@
     const ease = (t) => 1 - Math.pow(1 - t, 4);
 
     // --- Появление: блоки поднимаются на 32px и проявляются один раз, по очереди в пределах одного кадра
+    // Внутри сайта первый экран уже плавно сменился переходом страницы: проявляем только то, что ниже
+    const internal = (() => { try { return new URL(document.referrer).origin === location.origin; } catch (err) { return false; } })();
+    const below = (el) => !internal || el.getBoundingClientRect().top > innerHeight;
     const main = document.getElementById('main');
     if (main && 'IntersectionObserver' in window) {
         const items = [...main.querySelectorAll(':scope > *:not(script):not(dialog), [data-reveal] > *')]
@@ -24,11 +27,18 @@
             cancelAnimationFrame(frame);
             frame = requestAnimationFrame(() => { batch = 0; });
         }, {rootMargin: '0px 0px -40px 0px'});
-        items.forEach((el) => { el.classList.add('rv'); io.observe(el); });
+        items.filter(below).forEach((el) => { el.classList.add('rv'); io.observe(el); });
     }
 
-    // --- Счётчики в карточках статистики: от нуля до значения
-    document.querySelectorAll('[data-count], .stat .value').forEach((el) => {
+    // --- Счётчики в карточках статистики: от нуля до значения, один раз за сеанс на каждой странице
+    const counted = (() => {
+        try {
+            const key = 'lp_counted:' + location.pathname, was = sessionStorage.getItem(key);
+            sessionStorage.setItem(key, '1');
+            return !!was;
+        } catch (err) { return true; }
+    })();
+    if (!counted) document.querySelectorAll('[data-count], .stat .value').forEach((el) => {
         const text = el.textContent.trim();
         if (!/^\d{1,6}$/.test(text) || reduce) return;
         const target = +text, start = performance.now(), dur = 900;
@@ -122,21 +132,22 @@
         d.classList.add('closing');
         setTimeout(() => { d.open = false; d.classList.remove('closing'); }, 220);
     };
-    document.querySelectorAll('details.smooth').forEach((d) => {
-        d.querySelector(':scope > summary').addEventListener('click', (e) => {
-            if (!d.open) return;
-            e.preventDefault();
-            fold(d);
-        });
-        // Открыли форму — сразу ставим курсор в первое пустое поле
-        d.addEventListener('toggle', () => {
-            if (!d.open) return;
-            const f = d.querySelector('input:not([type=hidden]):not([value]), textarea, input[name=rate]');
-            f && f.focus({preventScroll: true});
-        });
-    });
+    // Обработчики на документе: блоки могут быть заменены при обновлении без перезагрузки
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-fold]');
-        if (btn) fold(btn.closest('details'));
+        if (btn) { fold(btn.closest('details')); return; }
+        const summary = e.target.closest('details.smooth > summary');
+        if (summary && summary.parentElement.open) {
+            e.preventDefault();
+            summary.parentElement.classList.remove('no-unfold');
+            fold(summary.parentElement);
+        }
     });
+    // Открыли форму — сразу ставим курсор в первое пустое поле
+    document.addEventListener('toggle', (e) => {
+        const d = e.target;
+        if (!d.matches || !d.matches('details.smooth') || !d.open || d.classList.contains('no-unfold')) return;
+        const f = d.querySelector('input:not([type=hidden]):not([value]), textarea, input[name=rate]');
+        f && f.focus({preventScroll: true});
+    }, true);
 })();

@@ -5,7 +5,7 @@
 {% if apps %}
 <div class="table-wrap">
 <table class="t t-top">
-    <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок · передача</th><th>Назначение</th><th style="width: 320px;">Решение</th></tr></thead>
+    <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Страна · срок · передача</th><th>Назначение</th><th style="width: 240px;">Решение</th></tr></thead>
     <tbody>
     {% for app in apps %}
     <tr>
@@ -22,12 +22,15 @@
                     <input type="hidden" name="decision" value="approve">
                     <button type="submit" class="btn btn-primary btn-sm btn-block">Опубликовать</button>
                 </form>
-                <form method="post" action="/admin/application/{{ app.id }}/moderate" class="decision-reject" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
-                      data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя.">{{ csrf_field(request) }}
-                    <input type="hidden" name="decision" value="reject">
-                    <textarea name="comment" class="input reason-input" rows="3" placeholder="Причина отказа: заёмщик увидит этот текст" maxlength="500" required aria-label="Причина отказа по заявке №{{ app.id }}"></textarea>
-                    <button type="submit" class="btn btn-danger btn-sm btn-block">Отклонить</button>
-                </form>
+                <details class="decision-more smooth">
+                    <summary class="btn btn-secondary btn-sm btn-block">Отклонить</summary>
+                    <form method="post" action="/admin/application/{{ app.id }}/moderate" class="decision-reject" data-confirm="Отклонить заявку №{{ app.id }}?" data-confirm-kind="danger" data-confirm-ok="Отклонить"
+                          data-confirm-text="Заёмщик увидит причину. Опубликовать эту заявку после отказа нельзя.">{{ csrf_field(request) }}
+                        <input type="hidden" name="decision" value="reject">
+                        <textarea name="comment" class="input reason-input" rows="3" placeholder="Причина отказа: заёмщик увидит этот текст" maxlength="500" required aria-label="Причина отказа по заявке №{{ app.id }}"></textarea>
+                        <button type="submit" class="btn btn-danger btn-sm btn-block">Отклонить заявку</button>
+                    </form>
+                </details>
             </div>
         </td>
     </tr>
@@ -42,7 +45,7 @@
 {% if complaints %}
 <div class="table-wrap">
 <table class="t t-top">
-    <thead><tr><th>Заявка</th><th>Жалоба</th><th style="width: 320px;">Решение</th></tr></thead>
+    <thead><tr><th>Заявка</th><th>Жалоба</th><th style="width: 240px;">Решение</th></tr></thead>
     <tbody>
     {% for c in complaints %}
     {% set app = c.application %}
@@ -69,10 +72,13 @@
 {%- endmacro %}
 
 {% macro unpublish_form(app, request, back='history', reason='') -%}
-<form method="post" action="/admin/application/{{ app.id }}/unpublish" class="decision-reject" data-confirm="Снять заявку №{{ app.id }} с публикации?" data-confirm-kind="danger" data-confirm-ok="Снять"
-      data-confirm-text="Кредиторы перестанут её видеть, открытые предложения закроются. Заёмщик увидит причину.">{{ csrf_field(request) }}
-    <input type="hidden" name="back" value="{{ back }}">
-    <textarea name="reason" class="input reason-input" rows="2" placeholder="Причина снятия" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}">{{ reason }}</textarea>
-    <button type="submit" class="btn btn-danger btn-sm btn-block">Снять с публикации</button>
-</form>
+<details class="decision-more smooth">
+    <summary class="btn btn-secondary btn-sm btn-block">Снять с публикации</summary>
+    <form method="post" action="/admin/application/{{ app.id }}/unpublish" class="decision-reject" data-confirm="Снять заявку №{{ app.id }} с публикации?" data-confirm-kind="danger" data-confirm-ok="Снять"
+          data-confirm-text="Кредиторы перестанут её видеть, открытые предложения закроются. Заёмщик увидит причину.">{{ csrf_field(request) }}
+        <input type="hidden" name="back" value="{{ back }}">
+        <textarea name="reason" class="input reason-input" rows="2" placeholder="Причина снятия: заёмщик увидит этот текст" maxlength="500" required aria-label="Причина снятия заявки №{{ app.id }}">{{ reason }}</textarea>
+        <button type="submit" class="btn btn-danger btn-sm btn-block">Снять заявку</button>
+    </form>
+</details>
 {%- endmacro %}

@@ -101,7 +101,7 @@ EN = {
     "Фильтры по стране получения, валюте, сумме и сроку. Видны назначение средств, срок и способ передачи.":
         "Filter by destination country, currency, amount and term. Purpose, term and transfer method are visible.",
     "Отправьте условия": "Send your terms",
-    "Сумма, ставка, комиссия и дополнительные условия. Оператор проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.":
+    "Сумма, ставка, комиссия и дополнительные условия. Система проверит их, заёмщик сравнит, а после выбора откроется сделка с чатом.":
         "Amount, rate, fee and additional terms. The operator checks them, the borrower compares, and once chosen a deal room with chat opens.",
 
     # --- Калькулятор ---
@@ -142,7 +142,7 @@ EN = {
     "Кредиторы": "Lenders",
     "Получение средств": "Funds received in",
     "Российские компании": "Russian companies",
-    "По предложениям, которые оператор показал заёмщикам, и опубликованным заявкам.":
+    "По предложениям, показанным заёмщикам, и опубликованным заявкам.":
         "Based on offers the operator showed to borrowers and on published applications.",
     "Пока на платформе нет показанных предложений: слева показаны страны, откуда регистрируются кредиторы.":
         "No offers have been shown yet: the left side lists countries lenders register from.",
@@ -191,7 +191,7 @@ EN = {
     "Обычно заявка публикуется сразу: система проверяет сумму, срок и назначение. Первую заявку компании и крупные суммы дополнительно смотрит оператор, обычно в течение рабочего дня. Если заявку отклонили, вы увидите причину и сможете подать её заново.":
         "Usually the application is published right away: the system checks the amount, term and purpose. A company's first application and large amounts are also reviewed by an operator, usually within a business day. If rejected, you will see the reason and can resubmit.",
     "Кто видит мою заявку?": "Who can see my application?",
-    "Только кредиторы, прошедшие KYC. Название кредитора вы видите после того, как оператор проверит его предложение.":
+    "Только кредиторы, прошедшие KYC. Название кредитора и его условия вы видите сразу после проверки предложения.":
         "Only KYC-verified lenders. You see a lender's name after the operator has reviewed their offer.",
     "Можно ли отказаться от предложения?": "Can I decline an offer?",
     "Да. Любое предложение можно отклонить. Когда вы принимаете одно, остальные по заявке отклоняются автоматически.":
@@ -448,6 +448,16 @@ EN = {
     "Документы компании на проверке у администратора.": "Your company documents are under review.",
     "Загрузить документы заново": "Upload documents again",
     "Отправлять предложения можно после верификации компании (KYC).": "Offers can be sent after company verification (KYC).",
+    # Главная v3: сцена первого экрана и условия платформы
+    "Самая низкая ставка": "Lowest rate",
+    "Заявка №1": "Request #1",
+    "Опубликована": "Published",
+    "Комиссия в пересчёте на год": "Fee per year",
+    "У Gulf Trade Finance самая низкая ставка, 7,2%, но с комиссией это самое дорогое предложение.": "Gulf Trade Finance has the lowest rate, 7.2%, but with the fee it is the most expensive offer.",
+    "Пример: три предложения по заявке, отсортированные по полной стоимости": "Example: three offers on one request, sorted by total cost",
+    "способа передачи средств": "ways to transfer funds",
+    "на проверку компании": "for company verification",
+    "комиссия платформы, только по согласованной сделке": "platform fee, only on an agreed deal",
     # Кабинет кредитора v2: вкладки, раскрывающаяся форма предложения, сохранённые фильтры
     "Заявки": "Requests",
     "Разделы кабинета кредитора": "Creditor workspace sections",
@@ -746,4 +756,5 @@ PATTERNS = [
     (r"Ваше предложение по заявке №(\d+)", r"Your offer for request #\1"),
     (r"Ждут вашего ответа: (\d+)", r"Awaiting your reply: \1"),
     (r"Найдено заявок: (\d+)", r"Requests found: \1"),
+    (r"валюты: (.+)", r"currencies: \1"),
 ]

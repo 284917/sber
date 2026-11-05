@@ -415,7 +415,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .hero .lead-lg { margin: 24px auto 0; }
 .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
 .proof { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; margin-top: 32px; color: var(--muted); font-weight: 500; }
-.proof span { display: inline-flex; align-items: center; gap: 8px; }
+.proof > span { display: inline-flex; align-items: center; gap: 8px; }
 .proof .ic { color: var(--brand); width: 16px; height: 16px; }
 
 /* Витрина продукта в герое: настоящий интерфейс сравнения с примером данных */
@@ -522,7 +522,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 
 /* ---------- Графики аналитики ---------- */
 .funnel { display: grid; gap: 12px; }
-.funnel-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 96px; gap: 16px; align-items: center; }
+.funnel-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 120px; gap: 16px; align-items: center; }
 .funnel-bar { height: 24px; border-radius: 0 4px 4px 0; background: var(--brand); min-width: 4px; transition: transform 700ms var(--ease); transform-origin: left; }
 .funnel-value { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .funnel-value span { display: block; font-size: 12px; line-height: 16px; color: var(--muted); font-weight: 500; }
@@ -1132,4 +1132,119 @@ details[open] > summary .chev { transform: rotate(90deg); }
   .rv { transform: none !important; }
   .drawer[open], .drawer.closing { animation: none !important; }
   .seg-ink.ready { transition: none; }
+}
+
+/* ==========================================================================
+   Переходы, сцена первого экрана, разбор стоимости, живые предложения (v3).
+   ========================================================================== */
+
+/* Переходы между страницами: меню стоит на месте, содержимое мягко сменяется, сумма заявки переезжает в заголовок */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-group(*) { animation-duration: 500ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  ::view-transition-old(root) { animation: vt-out 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  ::view-transition-new(root) { animation: vt-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(16px); } }
+.sidebar { view-transition-name: app-sidebar; }
+.topbar { view-transition-name: app-topbar; }
+.site-nav { view-transition-name: site-nav; }
+.morph { display: inline-block; }
+
+/* Подвал меню: значки и «Выйти» в один ряд, ничего не упирается в край */
+.foot-actions { display: flex; gap: 8px; }
+.foot-btn { width: 32px; height: 32px; padding: 0; flex: none; }
+.foot-btn > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.foot-btn.foot-logout { flex: 1; width: auto; order: 9; }
+.foot-btn.foot-logout > span { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+.foot-btn:active { transform: scale(0.96); }
+
+/* Спокойные подписи разделов вместо зелёных плашек */
+.eyebrow { display: block; padding: 0; background: none; border: 0; border-radius: 0; color: var(--muted); font-size: 14px; line-height: 20px; font-weight: 600; }
+.section-dark .eyebrow { background: none; color: #9B9B9B; }
+.step-card .n { width: auto; height: auto; display: block; background: none; color: var(--faint); font-size: 30px; line-height: 36px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* Объяснение выбора */
+.insight { font-size: 16px; line-height: 24px; color: var(--ink); margin: 0 0 32px; max-width: 880px; }
+
+/* Из чего складывается полная стоимость */
+.cost-split { display: grid; gap: 8px; }
+.split-track, .sc-bar { display: flex; gap: 2px; height: 8px; }
+.split-track i, .sc-bar i { display: block; height: 100%; transform-origin: left; }
+.split-track .s-rate, .sc-bar .s-rate { background: var(--s1); border-radius: 4px 0 0 4px; }
+.split-track .s-comm, .sc-bar .s-comm { background: var(--s2); border-radius: 0 4px 4px 0; }
+.split-track i { animation: bar-in 900ms var(--ease) both; }
+.split-track .s-comm { animation-delay: 200ms; }
+.still .split-track i { animation: none; }
+.split-legend { display: flex; gap: 8px 24px; flex-wrap: wrap; font-size: 12px; line-height: 16px; color: var(--ink-2); font-weight: 500; }
+.split-legend span, .sc-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.sw.s1 { background: var(--s1); } .sw.s2 { background: var(--s2); }
+
+/* Новое предложение влетает в список, раскрытые ранее блоки не проигрывают анимацию заново */
+.offer-card.is-new { border-color: var(--brand); animation: card-in 700ms var(--ease) both; }
+@keyframes card-in { from { opacity: 0; transform: translateY(32px); } }
+details.smooth.no-unfold[open] > :not(summary) { animation: none; }
+
+/* Решения сотрудников: поле причины раскрывается по кнопке */
+.decision-more > summary { justify-content: center; }
+.decision-more[open] > summary { background: var(--neutral-soft); }
+.decision-more .decision-reject { margin-top: 8px; }
+.decision { min-width: 200px; }
+
+/* Условия платформы и живые цифры */
+.live-item span { max-width: 240px; }
+
+/* ---------- Сцена первого экрана ---------- */
+.scene { text-align: left; }
+.scene-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+.scene-sum { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr; gap: 2px; background: var(--line-2); border-bottom: 1px solid var(--line-2); }
+.scene-sum > div { background: var(--surface); padding: 16px 24px; min-width: 0; }
+.scene-sum span { display: block; color: var(--muted); font-size: 12px; line-height: 16px; font-weight: 600; }
+.scene-sum b { display: block; margin-top: 4px; font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene-sum .best b { color: var(--brand-ink); }
+.scene-sum:not(.on) b { color: var(--faint); }
+.scene-list { padding: 8px 24px 0; }
+.sc-head, .sc-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 120px; gap: 24px; align-items: center; }
+.sc-head { padding: 8px 0; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--muted); }
+.sc-head .num { text-align: right; white-space: normal; }
+.sc-legend { display: flex; gap: 4px 16px; flex-wrap: wrap; }
+.sc-row { position: relative; min-height: 72px; padding: 12px 0; border-top: 1px solid var(--line-2); background: var(--surface); }
+.sc-name { min-width: 0; transition: opacity 500ms var(--ease), transform 500ms var(--ease); }
+.sc-name b { font-weight: 600; }
+.sc-tag { margin-left: 4px; transition: opacity 500ms var(--ease); }
+.sc-bar { transition: opacity 500ms var(--ease); }
+.sc-bar i { transition: transform 900ms var(--ease); }
+.sc-bar .s-comm { transition-delay: 200ms; }
+.sc-cost { text-align: right; font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; transition: opacity 500ms var(--ease); }
+.sc-ghost { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 120px; gap: 24px; align-items: center; opacity: 0; pointer-events: none; transition: opacity 300ms var(--ease); }
+.sc-ghost i { display: block; height: 12px; border-radius: 4px; background: var(--neutral-soft); }
+.sc-ghost i:first-child { width: 72%; }
+.is-ghost .sc-ghost { opacity: 1; }
+.is-ghost .sc-name { opacity: 0; transform: translateY(16px); }
+.is-ghost .sc-bar, .is-ghost .sc-cost { opacity: 0; }
+.is-ghost .sc-bar i { transform: scaleX(0); transition: none; }
+.scene:not(.has-best) .tag-best.sc-tag { opacity: 0; }
+.scene:not(.has-best) .sc-row[data-key="beta"] { --scene-best: 0; }
+.scene-note { padding: 16px 24px 24px; color: var(--ink); font-size: 14px; line-height: 20px; font-weight: 500; transition: opacity 500ms var(--ease), transform 500ms var(--ease); text-wrap: pretty; }
+.scene-note:not(.on) { opacity: 0; transform: translateY(8px); }
+#scene:not([data-played]) .scene-note { }
+@media (max-width: 760px) {
+  .scene-head { padding: 12px 16px; }
+  .scene-sum { grid-template-columns: minmax(0, 1fr); }
+  .scene-sum > div { padding: 12px 16px; }
+  .scene-list { padding: 8px 16px 0; }
+  .sc-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .sc-legend { display: none; }
+  .sc-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .sc-bar { grid-column: 1 / -1; grid-row: 2; }
+  .sc-ghost { grid-template-columns: minmax(0, 1fr) 64px; }
+  .sc-ghost i:nth-child(2) { display: none; }
+  .scene-note { padding: 12px 16px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .split-track i { animation: none; }
+  .offer-card.is-new { animation: none; }
+  .foot-btn:active { transform: none; }
 }
