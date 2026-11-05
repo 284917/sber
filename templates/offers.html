@@ -303,7 +303,7 @@
             if (document.hidden || stopped) return;
             try {
                 const r = await fetch(url + '/version', {headers: {Accept: 'application/json'}});
-                if (!r.ok) { stopped = true; return; }  // вышли из аккаунта или вошли в другой в соседней вкладке
+                if (!r.ok || r.redirected) { stopped = true; return; }  // вышли из аккаунта или вошли в другой в соседней вкладке
                 const data = await r.json();
                 if (data.version === version) return;
                 if (busy()) {
