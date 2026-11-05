@@ -95,8 +95,8 @@ def test_english_version_has_no_russian_in_scripts():
     from liquidity import i18n
     from liquidity.app import app
 
-    make_company("en-c@test.cy", "creditor", "English Capital", "CY", "HE 96")
-    creditor = login("en-c@test.cy")
+    make_company("en-script@test.cy", "creditor", "English Capital", "CY", "HE 96")
+    creditor = login("en-script@test.cy")
     creditor.cookies.set("lang", "en")
     guest = TestClient(app)
     guest.get("/")
