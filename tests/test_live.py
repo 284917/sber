@@ -87,3 +87,30 @@ def test_operator_page_keeps_reason_fields_folded():
     admin = login("admin@test.local", "admin-password")
     page = admin.get("/operator/moderation").text
     assert 'data-tabs="hash"' in page and 'id="complaints"' in page and 'id="published"' in page
+
+
+def test_english_version_has_no_russian_in_scripts():
+    """Строки в скриптах переводятся по точному совпадению: новая строка без перевода осталась бы русской."""
+    from fastapi.testclient import TestClient
+    from liquidity import i18n
+    from liquidity.app import app
+
+    make_company("en-c@test.cy", "creditor", "English Capital", "CY", "HE 96")
+    creditor = login("en-c@test.cy")
+    creditor.cookies.set("lang", "en")
+    guest = TestClient(app)
+    guest.get("/")
+    guest.cookies.set("lang", "en")
+
+    def left(client, url):
+        page = client.get(url).text
+        scripts = [p for i, p in enumerate(i18n._SCRIPT.split(page)) if i % 2 and not p.lower().startswith("<style")]
+        # Куски регулярных выражений для проверки пароля — не текст
+        return [s for block in scripts for s in i18n._JS_STRING.findall(block) if "/" not in s]
+
+    assert left(creditor, "/dashboard") == []
+    assert left(creditor, "/kyc") == []
+    assert left(guest, "/register") == []
+
+    landing = guest.get("/").text
+    assert 'data-suffix=" h"' in landing and "48 h" in landing and " ч<" not in landing

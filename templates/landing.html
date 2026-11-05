@@ -201,7 +201,7 @@
             {% else %}
             <div class="live-item"><b data-count="{{ calc.currencies|length }}">{{ calc.currencies|length }}</b><span>валюты: {{ calc.currencies|join(', ') }}</span></div>
             <div class="live-item"><b data-count="{{ TRANSFER_METHODS|length }}">{{ TRANSFER_METHODS|length }}</b><span>способа передачи средств</span></div>
-            <div class="live-item"><b data-count="{{ SLA_HOURS.kyc }}" data-suffix=" ч">{{ SLA_HOURS.kyc }} ч</b><span>на проверку компании</span></div>
+            <div class="live-item">{% set hours = ' h' if lang == 'en' else ' ч' %}<b data-count="{{ SLA_HOURS.kyc }}" data-suffix="{{ hours }}">{{ SLA_HOURS.kyc }}{{ hours }}</b><span>на проверку компании</span></div>
             <div class="live-item"><b data-count="{{ PLATFORM_COMMISSION }}" data-suffix="%">{{ PLATFORM_COMMISSION|percent }}</b><span>комиссия платформы, только по согласованной сделке</span></div>
             {% endif %}
         </div>
@@ -462,7 +462,7 @@
         const data = {{ calc|tojson }};
         const en = data.lang === 'en';
         const $ = (id) => document.getElementById(id);
-        const num = (v) => parseFloat(String(v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
+        const num = (v) => parseFloat(en ? String(v).replace(/[\s\u00a0,]/g, '') : String(v).replace(/[\s\u00a0]/g, '').replace(',', '.'));
         const money = (v, d = 2) => v.toLocaleString('ru-RU', {minimumFractionDigits: d, maximumFractionDigits: d});
         let rateTouched = false;
         const currency = () => document.querySelector('#calc-form [name=currency]:checked').value;
