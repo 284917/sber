@@ -169,3 +169,10 @@ def test_summary_hides_small_samples():
     full = deal_reports.summary([R(), R(on_time="not_due"), R(terms=False)])
     assert full["shown"] and full["terms"] == {"ok": 2, "total": 3} and full["on_time"] == {"ok": 2, "total": 2}
     assert deal_reports.is_problem(R(funds="none")) and not deal_reports.is_problem(R())
+
+
+def test_login_link_does_not_put_password_into_page():
+    guest = Browser()
+    page = guest.get("/login?email=qr@test.ru&password=SecretFromQr1").text
+    assert "SecretFromQr1" not in page and "qr@test.ru" not in page
+    assert "history.replaceState" in page

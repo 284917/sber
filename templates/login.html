@@ -46,5 +46,20 @@
         </div>
     </main>
 </div>
+<script>
+// Вход по ссылке из QR-кода: подставляет данные в форму и сразу убирает их из адресной строки и истории браузера
+(function () {
+    const params = new URLSearchParams(location.search);
+    const email = params.get('email');
+    const password = params.get('password');
+    if (!email && !password) return;
+    if (email) document.getElementById('email').value = email;
+    if (password) document.getElementById('password').value = password;
+    params.delete('email');
+    params.delete('password');
+    const rest = params.toString();
+    history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+})();
+</script>
 </body>
 </html>
