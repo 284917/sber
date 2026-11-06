@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, NotFound, applications, complaints, deals, expiry, offers
+from liquidity.services import Invalid, NotFound, applications, complaints, deal_reports, deals, expiry, offers
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
 
@@ -47,7 +47,7 @@ def hide_offer(offer_id: int, reason: str = Form(""), user: models.User = Depend
 def deals_page(request: Request, user: models.User = Depends(staff), db: Session = Depends(get_db)):
     items = deals.in_work(db)
     return render(request, "operator_deals.html", user=user, deals=items,
-                  contracts=deals.main_contracts(db, [a.id for a in items]))
+                  contracts=deals.main_contracts(db, [a.id for a in items]), problems=deal_reports.with_problems(db))
 
 
 @router.get("/deal/{app_id}", summary="Проверка сделки перед подтверждением")
@@ -60,6 +60,7 @@ def deal_page(app_id: int, request: Request, user: models.User = Depends(staff),
     return render(request, "operator_deal.html", user=user, app=application, offer=offer, checks=checks,
                   lenders=deals.lenders(offer), contract=deals.room(db, application)[1],
                   stages=applications.stages(db, application), events=get_events(db, app_id),
+                  reports=deal_reports.for_application(db, app_id),
                   can_confirm=application.status == "in_work" and all(checks.values()))
 
 

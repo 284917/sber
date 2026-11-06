@@ -1,6 +1,8 @@
 """KYC/AML: пакет документов компании и решение администратора по всему пакету."""
 import re
 
+from datetime import datetime
+
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -81,6 +83,7 @@ def approve(db: Session, target_user_id: int, actor=None):
                                                 models.Document.status == "pending"):
         doc.status = "approved"
     target.kyc_reject_reason = None
+    target.kyc_approved_at = datetime.utcnow()
     record(db, actor, f"Одобрил верификацию {target.display_name}")
     notify(db, target.id, "Верификация пройдена. " + ("Можно создавать заявки" if target.role == "borrower"
                                                       else "Можно отправлять предложения"), "/dashboard", "ok")

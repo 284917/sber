@@ -11,10 +11,11 @@
 {% set nav = {
     'borrower': [('Заявки', [('apps', 'Мои заявки', '/dashboard', 'files', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None), ('security', 'Безопасность и документы', '/security', 'lock-key', None)])],
     'creditor': [('Работа', [('market', 'Заявки на финансирование', '/dashboard', 'magnifying-glass', None), ('my-offers', 'Мои предложения', '/dashboard#my-offers', 'hand-coins', None)]),
-                 ('Компания', [('profile', 'Профиль и рейтинг', '/creditors/' ~ user.id, 'trend-up', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None)])],
+                 ('Компания', [('profile', 'Профиль и надёжность', '/creditors/' ~ user.id, 'trend-up', None), ('kyc', 'Верификация', '/kyc', 'shield-check', None)])],
     'operator': [('Оператор', [('op-moderation', 'Проверка заявок', '/operator/moderation', 'list-checks', None),
                                ('op-offers', 'Предложения на проверке', '/operator/offers', 'clipboard-text', None),
-                               ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None)])],
+                               ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None),
+                               ('op-support', 'Обращения в поддержку', '/operator/support', 'chat-circle-text', None)])],
     'admin': [('Администрирование', [('analytics', 'Обзор и аналитика', '/admin', 'chart-bar', None),
                                     ('kyc', 'Очередь KYC', '/admin?tab=kyc', 'identification-card', nav_counts.kyc if nav_counts is defined else None),
                                     ('moderation', 'Проверка заявок', '/admin?tab=moderation', 'list-checks', nav_counts.moderation if nav_counts is defined else None),
@@ -22,7 +23,8 @@
                                     ('history', 'Все заявки', '/admin?tab=history', 'files', None),
                                     ('staff', 'Сотрудники', '/admin?tab=staff', 'users-three', None),
                                     ('journal', 'Журнал действий', '/admin?tab=journal', 'clipboard-text', None)]),
-              ('Операции', [('op-offers', 'Предложения на проверке', '/operator/offers', 'clipboard-text', None), ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None)])],
+              ('Операции', [('op-offers', 'Предложения на проверке', '/operator/offers', 'clipboard-text', None), ('op-deals', 'Сделки в работе', '/operator/deals', 'handshake', None),
+                            ('op-support', 'Обращения в поддержку', '/operator/support', 'chat-circle-text', None)])],
 } %}
 <header class="topbar">
     <a href="/dashboard" class="brand">{{ base_ui.brand_mark() }}<span class="brand-name">Сбер<span>Платформа ликвидности</span></span></a>
@@ -42,6 +44,7 @@
             {% endfor %}
             <div class="nav-label">Профиль</div>
             <a href="/account" class="{{ 'active' if active == 'account' }}" {% if active == 'account' %}aria-current="page"{% endif %}>{{ base_ui.icon('identification-card') }}<span>Мой аккаунт</span></a>
+            {% if role in ('borrower', 'creditor') %}<a href="/support" class="{{ 'active' if active == 'support' }}" {% if active == 'support' %}aria-current="page"{% endif %}>{{ base_ui.icon('chat-circle-text') }}<span>Написать в поддержку</span></a>{% endif %}
         </nav>
         <div class="sidebar-foot">
             <div class="who-row">

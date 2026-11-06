@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'support' %}
+{% block title %}Поддержка{% endblock %}
+{% block content %}
+{% set qp = request.query_params %}
+<div class="page-head">
+    <div>
+        <h1>Поддержка</h1>
+        <div class="sub">Вход, документы, заявка или ошибка на сайте: отвечает оператор платформы.</div>
+    </div>
+</div>
+{% include "_support_flash.html" %}
+
+<div class="grid grid-side-left">
+    <section class="card">
+        <h2 class="card-title">Новое обращение</h2>
+        {% include "_support_form.html" %}
+    </section>
+    <section class="card card-tight">
+        <div class="card-head"><h2 class="card-title">Мои обращения {% if tickets %}<span class="tab-count">{{ tickets|length }}</span>{% endif %}</h2></div>
+        {% for t in tickets %}
+        <article class="ticket" id="ticket-{{ t.id }}">
+            <div class="ticket-head">
+                <b>№{{ t.id }} · {{ topics.get(t.topic, t.topic) }}</b>
+                {% if t.status == 'open' %}<span class="pill pill-pending">Ждёт ответа</span>{% else %}<span class="pill pill-ok">Есть ответ</span>{% endif %}
+            </div>
+            <p class="small muted">{{ t.created_at.strftime('%d.%m.%Y %H:%M') if t.created_at else '' }}</p>
+            <p class="ticket-text">{{ t.text }}</p>
+            {% if t.reply %}<div class="ticket-reply"><span class="small muted">Ответ оператора{% if t.answered_at %} · {{ t.answered_at.strftime('%d.%m %H:%M') }}{% endif %}</span><p>{{ t.reply }}</p></div>{% endif %}
+        </article>
+        {% else %}
+        {{ ui.empty('chat-circle-text', 'Обращений пока нет', 'Опишите вопрос в форме, и оператор ответит здесь. Придёт уведомление.') }}
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

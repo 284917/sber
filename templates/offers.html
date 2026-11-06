@@ -4,6 +4,7 @@
 {% block title %}Заявка №{{ application.id }}{% endblock %}
 {% block content %}
 {% set cur = application.currency_code %}
+{% set route_label = cur ~ ' → ' ~ ui.country(application.target_jurisdiction) ~ ', ' ~ TRANSFER_METHODS.get(application.transfer_method, 'способ не указан') %}
 {% set rate_note = ('По курсу ЦБ РФ на ' ~ fx.date.strftime('%d.%m.%Y') ~ ': 1 ' ~ cur ~ ' = ' ~ (fx.rates[cur]|money) ~ ' ₽') if fx and cur in fx.rates else '' %}
 <a href="/dashboard" class="back">{{ ui.icon('arrow-left', 'ic-sm') }} Все заявки</a>
 <div class="page-head">
@@ -40,9 +41,11 @@
                  'counter_pending': 'Сначала дождитесь ответа кредитора на встречную ставку.',
                  'counter_used': 'Встречное предложение по этому офферу уже отправлялось.',
                  'counter_rate': 'Встречная ставка должна быть больше 0 и ниже текущей ставки кредитора.',
-                 'nothing': 'Сначала примите хотя бы одно предложение.', 'decided': 'По этому предложению решение уже принято.'} %}
+                 'nothing': 'Сначала примите хотя бы одно предложение.', 'decided': 'По этому предложению решение уже принято.',
+                 'contract_pdf': 'Контракт нужно приложить в PDF.', 'contract_size': 'Файл больше 4 МБ. Сожмите его и загрузите снова.'} %}
 {% if qp.get('error') %}{{ ui.flash('bad', errors.get(qp.get('error'), 'Не удалось выполнить действие.')) }}{% endif %}
 {% if qp.get('partial') %}{{ ui.flash('ok', 'Предложение принято. Заявка остаётся открытой: примите ещё предложения на оставшуюся сумму или начните сделку с уже собранной.') }}{% endif %}
+{% if qp.get('contract') %}{{ ui.flash('ok', 'Контракт приложен. Кредиторы увидят, что он есть, сам файл откроют только участники сделки и оператор.') }}{% endif %}
 {% if qp.get('countered') %}{{ ui.flash('ok', 'Встречная ставка отправлена кредитору. Когда он ответит, придёт уведомление.') }}{% endif %}
 
 {% if application.status == 'published' %}
@@ -106,12 +109,14 @@
             </div>
         </div>
         {% set term = application.term_months %}
+        {% if rows|length > 1 %}{% include "_offers_compare.html" %}{% endif %}
         {% set max_eff = rows|rejectattr('cost.effective_rate', 'none')|map(attribute='cost.effective_rate')|max %}
         <div class="offer-list" data-reveal>
         {% for row in rows %}
         {% set o, c = row.offer, row.cost %}
         {% set is_best = o.id == best_id %}
-        {% set cs = creditor_stats.get(o.user_id) %}
+        {% set cs = facts.get(o.user_id) %}
+        {% set sim = similar.get(o.user_id) %}
         {% set name = o.sender.display_name if o.sender else 'кредитора' %}
         {% set others = shown_n - 1 %}
         {% set actionable = o.status == 'shown' and application.status == 'published' %}
@@ -127,7 +132,7 @@
                             {{ ui.rating_badge(cs) }}
                         </div>
                         <div class="offer-meta">
-                            <span>{{ ui.country(o.sender.country_code) if o.sender else '' }}{% if cs %} · сделок: {{ cs.deals_done }}{% endif %}</span>
+                            <span>{{ ui.country(o.sender.country_code) if o.sender else '' }}</span>
                             {% if o.status == 'shown' and o.valid_until %}<span>· Действует до {{ o.valid_until.strftime('%d.%m.%Y') }}</span>{% endif %}
                             {% if o.status != 'shown' %}{{ ui.offer_status(o.status) }}{% endif %}
                             {% if o.counter_status == 'pending' %}<span class="pill pill-pending">Ждём ответа на {{ o.counter_rate|percent }}</span>
@@ -163,11 +168,14 @@
                     {% else %}<div class="v">—</div>{% endif %}</div>
             </div>
 
+            {{ ui.trust(cs, sim, cur, route_label) }}
+
             {% if o.extra_terms %}<p class="offer-note"><span>Дополнительные условия:</span> {{ o.extra_terms }}</p>{% endif %}
 
-            {% if row.schedule or actionable %}
+            {% if row.schedule or actionable or rows|length > 1 %}
             <div class="offer-foot">
                 <div class="offer-tools">
+                    {% if rows|length > 1 %}<label class="compare-pick"><input type="checkbox" class="compare-check" value="{{ o.id }}" aria-label="Сравнить предложение {{ name }}"> Сравнить</label>{% endif %}
                     {% if row.schedule %}
                     <details class="schedule smooth">
                         <summary class="btn btn-ghost btn-sm">{{ ui.icon('arrow-right', 'ic-sm chev') }} График платежей</summary>
@@ -244,6 +252,15 @@
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>
             <div class="kv"><span>Способ передачи</span><span>{{ TRANSFER_METHODS.get(application.transfer_method, '—')|terms }}</span></div>
             <div class="kv"><span>Назначение</span><span>{{ application.purpose }}</span></div>
+            <div class="kv"><span>Контракт</span><span>{% if application.contract_path %}<a href="/{{ application.contract_path }}" target="_blank">{{ application.contract_path|filename }}</a>{% else %}не приложен{% endif %}</span></div>
+            {% if not application.contract_path and application.status in ('moderation', 'published') %}
+            <form method="post" action="/applications/{{ application.id }}/contract" enctype="multipart/form-data" class="contract-attach">{{ csrf_field(request) }}
+                <label class="f" for="contract-file">Приложить контракт (PDF до 4 МБ)</label>
+                <input type="file" name="contract" id="contract-file" class="input" accept=".pdf,application/pdf" required>
+                <p class="hint">Кредиторы увидят только отметку «контракт приложен». Файл откроют оператор и участники сделки.</p>
+                <button type="submit" class="btn btn-secondary btn-sm">Приложить</button>
+            </form>
+            {% endif %}
         </section>
     </div>
 
@@ -257,6 +274,54 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+    // Сравнение бок о бок: выбираем до трёх предложений, показываем их колонки, подсвечиваем различия и лучшее значение
+    (function () {
+        const MAX = 3, picked = new Set();
+        const byId = (id) => document.getElementById(id);
+        function sync() {
+            const boxes = [...document.querySelectorAll('.compare-check')];
+            const alive = new Set(boxes.map((b) => b.value));
+            picked.forEach((id) => { if (!alive.has(id)) picked.delete(id); });
+            boxes.forEach((b) => {
+                b.checked = picked.has(b.value);
+                b.disabled = !b.checked && picked.size >= MAX;
+                b.closest('.compare-pick').classList.toggle('on', b.checked);
+            });
+            const bar = byId('compare-bar');
+            if (!bar) return;
+            bar.classList.toggle('show', picked.size > 0);
+            byId('compare-count').textContent = picked.size;
+            byId('compare-open').disabled = picked.size < 2;
+            document.querySelectorAll('#compare [data-col]').forEach((c) => { c.hidden = !picked.has(c.dataset.col); });
+            document.querySelectorAll('#compare-table tbody tr:not(.group)').forEach((tr) => {
+                const cells = [...tr.querySelectorAll('[data-col]')].filter((c) => !c.hidden);
+                const differs = new Set(cells.map((c) => c.textContent.replace(/\s+/g, ' ').trim())).size > 1;
+                tr.classList.toggle('differs', differs);
+                cells.forEach((c) => c.classList.remove('is-better'));
+                if (!tr.dataset.better || !differs) return;
+                const values = cells.map((c) => (c.dataset.num === '' ? NaN : Number(c.dataset.num)));
+                const known = values.filter((v) => !Number.isNaN(v));
+                if (known.length < 2) return;
+                const target = tr.dataset.better === 'min' ? Math.min(...known) : Math.max(...known);
+                if (new Set(known).size > 1) cells.forEach((c, i) => { if (values[i] === target) c.classList.add('is-better'); });
+            });
+        }
+        window.compareSync = sync;
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('.compare-check')) {
+                if (e.target.checked && picked.size < MAX) picked.add(e.target.value); else picked.delete(e.target.value);
+                sync();
+            } else if (e.target.id === 'compare-only') {
+                byId('compare-table').classList.toggle('only-diff', e.target.checked);
+            }
+        });
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#compare-reset')) { picked.clear(); sync(); }
+        });
+        sync();
+    })();
+</script>
 {% if application.status in ('moderation', 'published') %}
 <script>
     // Новые предложения появляются без перезагрузки. Раз в 4 секунды спрашиваем отпечаток;
@@ -314,6 +379,7 @@
                 const page = await fetch(url);
                 if (!page.ok) return;
                 swap(new DOMParser().parseFromString(await page.text(), 'text/html'));
+                if (window.compareSync) window.compareSync();
                 version = data.version; told = false;
             } catch (err) { /* сеть недоступна: попробуем в следующий раз */ }
         }

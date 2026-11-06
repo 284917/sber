@@ -34,11 +34,14 @@ def load_file(db: Session, filename: str, user: models.User, can_access_deal):
 
     doc = db.query(models.Document).filter(models.Document.file_path == path).first()
     msg = db.query(models.Message).filter(models.Message.file_path == path).first()
+    contract_app = db.query(models.Application).filter(models.Application.contract_path == path).first()
     if doc:
         if doc.user_id != user.id and user.role not in config.STAFF_ROLES:
             raise Forbidden()
     elif msg:
         can_access_deal(msg.application_id)
+    elif contract_app:
+        can_access_deal(contract_app.id)
     else:
         raise NotFound()
 

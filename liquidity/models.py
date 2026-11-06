@@ -21,6 +21,10 @@ class User(Base):
     kyc_reject_reason = Column(String(500), nullable=True)
     # Главный администратор: только он создаёт и отключает других сотрудников
     is_superadmin = Column(Boolean, nullable=False, default=False, server_default="false")
+    # Когда пройдена верификация и данные ЕГРЮЛ (статус и дата регистрации заполняются, если подключена DaData)
+    kyc_approved_at = Column(DateTime, nullable=True)
+    egrul_status = Column(String(20), nullable=True)
+    registered_on = Column(Date, nullable=True)
 
     documents = relationship("Document", viewonly=True)
     notifications = relationship("Notification", viewonly=True,
@@ -63,6 +67,8 @@ class Application(Base):
     # До какой даты заявка открыта для предложений (ставится при публикации)
     valid_until = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    # Контракт с поставщиком. Кредиторы видят только факт, что он приложен; файл открывают оператор и участники сделки
+    contract_path = Column(String(255), nullable=True)
 
     # Подтверждение сделки оператором
     confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -217,3 +223,40 @@ class Complaint(Base):
 
     author = relationship("User", foreign_keys=[user_id])
     application = relationship("Application")
+
+
+class SupportTicket(Base):
+    """Обращение в поддержку: open -> answered. Гость без входа оставляет почту для ответа."""
+    __tablename__ = "support_tickets"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    contact_email = Column(String(255), nullable=True)
+    topic = Column(String(30), nullable=False)
+    text = Column(String(1000), nullable=False)
+    status = Column(String(20), nullable=False, default="open")
+    reply = Column(String(1000), nullable=True)
+    answered_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    author = relationship("User", foreign_keys=[user_id])
+
+
+class DealReport(Base):
+    """Отчёт участника после согласованной сделки: один от заёмщика и от каждого кредитора, можно обновлять."""
+    __tablename__ = "deal_reports"
+    __table_args__ = (UniqueConstraint("application_id", "user_id"),)
+    id = Column(Integer, primary_key=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String(20), nullable=False)
+    funds = Column(String(20), nullable=False)  # received / partial / none
+    on_time = Column(String(20), nullable=False)  # yes / no / not_due
+    terms_match = Column(Boolean, nullable=False)
+    new_terms = Column(Boolean, nullable=False)
+    contact_ok = Column(Boolean, nullable=False)
+    comment = Column(String(500), nullable=True)  # видит только оператор
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, nullable=True)
+
+    author = relationship("User")

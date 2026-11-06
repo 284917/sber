@@ -49,6 +49,12 @@ OFFER_STATUSES = {"pending": "На проверке у оператора", "sho
 KYC_STATUSES = {"approved": "Верифицирована", "pending": "На проверке", "rejected": "Отказ в верификации",
                 "none": "Не верифицирована"}
 
+# --- Поддержка ---
+SUPPORT_TOPICS = {"access": "Вход и аккаунт", "kyc": "Верификация и документы", "application": "Заявка или предложение",
+                  "deal": "Сделка и договор", "bug": "Ошибка на сайте", "other": "Другой вопрос"}
+SUPPORT_MIN_LENGTH = 10
+SUPPORT_MAX_LENGTH = 1000
+
 # --- Пакеты документов KYC ---
 KYC_DOCS = {
     "borrower": [("charter", "Устав компании"), ("egrul", "Выписка из ЕГРЮЛ"), ("passport", "Паспорт директора"),

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import get_current_user, require_role
-from liquidity.services import Invalid, applications, complaints, creditors, expiry, kyc, offers, saved_searches
+from liquidity.services import Invalid, applications, complaints, creditors, expiry, kyc, offers, reliability, saved_searches
 from liquidity.web import redirect, render
 
 router = APIRouter(tags=["Кредитор"])
@@ -30,6 +30,7 @@ def dashboard(request: Request, user: models.User, db: Session):
     available_apps = applications.search_published(db, filters)
     return render(request, "creditor.html", user=user, filters=filters, onboarding=onboarding(user, my_offers, my_deals),
                   available_apps=available_apps, my_offers=my_offers, my_deals=my_deals,
+                  cards=reliability.borrower_cards(db, available_apps),
                   funded=offers.funded_map(db, [a.id for a in available_apps]), min_share=config.MIN_OFFER_SHARE,
                   valid_choices=config.OFFER_VALID_CHOICES, valid_default=config.OFFER_VALID_DEFAULT,
                   offered_app_ids={o.application_id for o in my_offers if o.status in offers.ACTIVE_STATUSES},
@@ -72,7 +73,8 @@ def withdraw_offer(offer_id: int, user: models.User = Depends(require_role("cred
 def creditor_profile(creditor_id: int, request: Request, user: models.User = Depends(get_current_user),
                      db: Session = Depends(get_db)):
     data = creditors.profile(db, user, creditor_id)
-    return render(request, "creditor_profile.html", user=user, response_text=creditors.response_text, **data)
+    return render(request, "creditor_profile.html", user=user, response_text=creditors.response_text,
+                  facts=reliability.creditor_facts(db, [creditor_id])[creditor_id], **data)
 
 
 @router.post("/saved-searches", summary="Сохранить фильтр и получать уведомления о новых заявках")

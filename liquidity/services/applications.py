@@ -7,6 +7,7 @@ from liquidity import config, models
 from liquidity.services import Invalid, NotFound, kyc, screening
 from liquidity.services.audit import record
 from liquidity.services.events import log_event
+from liquidity.services.files import MAX_FILE_BYTES, save_upload
 from liquidity.services.notifications import notify, notify_staff
 
 WITHDRAWABLE = ("moderation", "published")
@@ -44,6 +45,26 @@ def create(db: Session, borrower: models.User, *, amount: float, currency: str, 
         _publish(db, application, None, "Заявка прошла автоматическую проверку и опубликована для кредиторов")
     db.commit()
     return application
+
+
+def check_contract(file):
+    """Контракт к заявке: только PDF и не больше лимита. Проверяем до создания заявки."""
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise Invalid("contract_pdf", "Контракт нужно приложить в PDF")
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > MAX_FILE_BYTES:
+        raise Invalid("contract_size", "Файл больше 4 МБ")
+
+
+def attach_contract(db: Session, borrower: models.User, application: models.Application, file):
+    check_contract(file)
+    if application.user_id != borrower.id:
+        raise NotFound()
+    application.contract_path = save_upload(db, file, f"contract_{application.id}")
+    log_event(db, application.id, borrower, "К заявке приложен контракт")
+    db.commit()
 
 
 def _publish(db: Session, application: models.Application, actor, event_text: str):

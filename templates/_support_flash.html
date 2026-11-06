@@ -1,0 +1,6 @@
+{% import "_ui.html" as sf %}
+{% set qp = request.query_params %}
+{% if qp.get('sent') %}{{ sf.flash('ok', 'Обращение отправлено оператору.') }}{% endif %}
+{% set errors = {'topic': 'Выберите тему обращения.', 'text': 'Опишите вопрос: от 10 до 1000 символов.',
+                 'email': 'Укажите почту, на которую ответить.', 'limit': 'Слишком много обращений с этого адреса. Попробуйте через час.'} %}
+{% if qp.get('error') %}{{ sf.flash('bad', errors.get(qp.get('error'), 'Не удалось отправить обращение.')) }}{% endif %}

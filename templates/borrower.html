@@ -21,6 +21,8 @@
 {% if qp.get('error') == 'amount' %}{{ ui.flash('bad', 'Сумма заявки — от ' ~ (APP_MIN_AMOUNT|money) ~ ' до ' ~ (APP_MAX_AMOUNT|money) ~ ' в валюте заявки.') }}{% endif %}
 {% if qp.get('error') == 'purpose' %}{{ ui.flash('bad', 'Опишите назначение подробнее, не короче ' ~ PURPOSE_MIN_LENGTH ~ ' символов: например, контракт и контрагента. Кредиторы решают по этому описанию.') }}{% endif %}
 {% if qp.get('error') == 'stop_word' %}{{ ui.flash('bad', 'Назначение содержит недопустимую цель (азартные игры, оружие, обналичивание и т. п.). Такие заявки платформа не публикует.') }}{% endif %}
+{% if qp.get('error') == 'contract_pdf' %}{{ ui.flash('bad', 'Контракт нужно приложить в PDF. Заявка не отправлена.') }}{% endif %}
+{% if qp.get('error') == 'contract_size' %}{{ ui.flash('bad', 'Файл контракта больше 4 МБ. Сожмите его и отправьте заявку снова.') }}{% endif %}
 {% if qp.get('created') == 'review' %}{{ ui.flash('info', 'Заявка прошла автоматическую проверку, но её посмотрит оператор: это первая заявка компании или крупная сумма. Обычно до ' ~ SLA_HOURS.moderation ~ ' ч.') }}
 {% elif qp.get('created') %}{{ ui.flash('ok', 'Заявка прошла автоматическую проверку и опубликована: кредиторы уже её видят.') }}{% endif %}
 
@@ -74,7 +76,7 @@
     {% endif %}
 </section>
 
-{% set form_error = qp.get('error') in ('form', 'amount', 'purpose', 'stop_word') %}
+{% set form_error = qp.get('error') in ('form', 'amount', 'purpose', 'stop_word', 'contract_pdf', 'contract_size') %}
 <dialog class="drawer" id="new-app" aria-labelledby="new-app-title" {% if form_error and kyc == 'approved' %}data-autoopen{% endif %}>
     <div class="drawer-head">
         <div>
@@ -83,7 +85,7 @@
         </div>
         <button type="button" class="icon-btn" data-close aria-label="Закрыть">{{ ui.icon('x') }}</button>
     </div>
-    <form method="post" action="/create_application" class="drawer-body">{{ csrf_field(request) }}
+    <form method="post" action="/create_application" enctype="multipart/form-data" class="drawer-body">{{ csrf_field(request) }}
         <fieldset {% if kyc != 'approved' %}disabled{% endif %}>
         {% if form_error %}<div class="note note-bad" role="alert">{{ ui.icon('warning-circle') }}<span>Заявка не отправлена. Причина указана над списком заявок, исправьте и отправьте снова.</span></div>{% endif %}
         <div class="form-row field">
@@ -122,6 +124,11 @@
             <label class="f" for="purpose">Назначение средств</label>
             <textarea name="purpose" id="purpose" class="input" rows="3" placeholder="Закупка оборудования у поставщика по контракту №…" minlength="{{ PURPOSE_MIN_LENGTH }}" maxlength="255" required></textarea>
             <p class="hint">Кредиторы решают по этому описанию: укажите контракт и контрагента.</p>
+        </div>
+        <div class="field">
+            <label class="f" for="contract">Контракт с поставщиком, необязательно (PDF до 4 МБ)</label>
+            <input type="file" name="contract" id="contract" class="input" accept=".pdf,application/pdf">
+            <p class="hint">Кредиторы увидят только отметку «контракт приложен». Файл откроют оператор и участники сделки.</p>
         </div>
         <button type="submit" class="btn btn-primary btn-block">Опубликовать заявку</button>
         </fieldset>

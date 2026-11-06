@@ -1,11 +1,11 @@
 """Заёмщик: заявки, сравнение предложений, решение по ним."""
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.database import get_db
 from liquidity.security import require_role
-from liquidity.services import Invalid, applications, creditors, expiry, fx, kyc, offers
+from liquidity.services import Invalid, applications, expiry, fx, kyc, offers, reliability
 from liquidity.services.costs import compare_offers, explain_choice, payment_schedule
 from liquidity.services.events import get_events
 from liquidity.web import redirect, render
@@ -36,10 +36,16 @@ def dashboard(request: Request, user: models.User, db: Session):
 @router.post("/create_application", summary="Создать заявку: автопроверка и публикация, подозрительные — оператору")
 def create_application(amount: float = Form(...), currency: str = Form(...), country: str = Form(...),
                        purpose: str = Form(...), term_months: int = Form(...), transfer_method: str = Form(...),
+                       contract: UploadFile = File(None),
                        user: models.User = Depends(borrower_only), db: Session = Depends(get_db)):
     try:
+        has_contract = contract is not None and bool(contract.filename)
+        if has_contract:
+            applications.check_contract(contract)
         application = applications.create(db, user, amount=amount, currency=currency, country=country,
                                           purpose=purpose, term_months=term_months, transfer_method=transfer_method)
+        if has_contract:
+            applications.attach_contract(db, user, application, contract)
     except Invalid as e:
         return redirect(f"/dashboard?error={e.code}")
     return redirect("/dashboard?created=" + ("review" if application.status == "moderation" else "1"))
@@ -59,7 +65,8 @@ def application_page(app_id: int, request: Request, user: models.User = Depends(
     return render(request, "offers.html", user=user, application=application, rows=rows, best_id=best_id,
                   savings=savings, choice=explain_choice(rows, best_id), version=offers.version(db, application),
                   events=get_events(db, app_id), fx=rates, rub=rub,
-                  creditor_stats=creditors.stats(db, [r["offer"].user_id for r in rows]),
+                  facts=reliability.creditor_facts(db, [r["offer"].user_id for r in rows]),
+                  similar=reliability.similar_deals(db, [r["offer"].user_id for r in rows], application),
                   funded=offers.funded(db, app_id), remaining=offers.remaining(db, application),
                   days_left=expiry.days_left(application.valid_until),
                   stages=applications.stages(db, application, shown))
@@ -69,6 +76,17 @@ def application_page(app_id: int, request: Request, user: models.User = Depends(
 def application_version(app_id: int, user: models.User = Depends(borrower_only), db: Session = Depends(get_db)):
     application = applications.get_own(db, user, app_id)
     return {"version": offers.version(db, application), "status": application.status}
+
+
+@router.post("/applications/{app_id}/contract", summary="Приложить контракт к заявке")
+def attach_contract(app_id: int, contract: UploadFile = File(...), user: models.User = Depends(borrower_only),
+                    db: Session = Depends(get_db)):
+    application = applications.get_own(db, user, app_id)
+    try:
+        applications.attach_contract(db, user, application, contract)
+    except Invalid as e:
+        return redirect(f"/applications/{app_id}/offers?error={e.code}#tab-params")
+    return redirect(f"/applications/{app_id}/offers?contract=1#tab-params")
 
 
 @router.post("/applications/{app_id}/withdraw", summary="Отозвать заявку (до сделки)")

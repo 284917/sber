@@ -1248,3 +1248,78 @@ details.smooth.no-unfold[open] > :not(summary) { animation: none; }
   .offer-card.is-new { animation: none; }
   .foot-btn:active { transform: none; }
 }
+
+/* ==========================================================================
+   Надёжность, сравнение бок о бок, отчёт после сделки, поддержка (v4).
+   ========================================================================== */
+
+/* Факты о надёжности */
+.trust { display: grid; gap: 12px; }
+.trust-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.trust-list li { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--neutral-soft); color: var(--ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
+.trust-list li .ic { color: var(--muted); }
+.trust-list li.ok { background: var(--brand-soft); color: var(--brand-ink); }
+.trust-list li.ok .ic { color: var(--brand); }
+.trust-similar { font-size: 14px; line-height: 20px; color: var(--ink-2); }
+
+/* Заёмщик в карточке заявки у кредитора */
+.borrower-box { display: grid; gap: 12px; margin-top: 16px; }
+.completeness > summary { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-2); transition: color 300ms var(--ease); }
+.completeness > summary:hover { color: var(--ink); }
+.check-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; font-size: 14px; line-height: 20px; color: var(--muted); }
+.check-list li { display: flex; align-items: center; gap: 8px; }
+.check-list li.ok { color: var(--ink-2); }
+.check-list li.ok .ic { color: var(--brand); }
+@media (max-width: 640px) { .check-list { grid-template-columns: minmax(0, 1fr); } }
+
+/* Сравнение бок о бок */
+.compare-pick { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: background-color 300ms var(--ease), color 300ms var(--ease); }
+.compare-pick:hover { background: var(--line-2); color: var(--ink); }
+.compare-pick.on { background: var(--brand-soft); color: var(--brand-ink); }
+.compare-pick input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); }
+.compare-bar { position: fixed; left: 50%; bottom: 24px; z-index: 60; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--glass-strong); border: 1px solid var(--glass-line); box-shadow: 0 12px 32px rgba(11, 11, 12, .18); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); opacity: 0; pointer-events: none; transform: translate(-50%, 16px); transition: opacity 300ms var(--ease), transform 500ms var(--ease); }
+.compare-bar.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.drawer.compare-drawer { width: min(1120px, 100%); }
+.compare-only { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; font-weight: 600; cursor: pointer; }
+.compare-only input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); }
+.compare-table th[scope="row"], .compare-table thead th:first-child { min-width: 240px; font-weight: 500; color: var(--ink-2); background: var(--surface); white-space: normal; position: sticky; left: 0; }
+.compare-table thead th { font-size: 14px; line-height: 20px; color: var(--ink); white-space: normal; min-width: 200px; }
+.compare-table td, .compare-table tbody th { padding: 12px 16px; vertical-align: top; }
+.compare-table tr.group th { padding-top: 24px; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--ink); background: var(--surface); border-top: 0; position: static; }
+.compare-table tr.differs td, .compare-table tr.differs th[scope="row"] { background: var(--surface-2); }
+.compare-table tr.differs th[scope="row"] { color: var(--ink); font-weight: 600; }
+.compare-table td.is-better { color: var(--brand-ink); font-weight: 700; }
+.compare-table.only-diff tbody tr:not(.differs):not(.group) { display: none; }
+@media (max-width: 760px) { .compare-table th[scope="row"], .compare-table thead th:first-child { min-width: 136px; } .compare-table thead th { min-width: 150px; } .compare-bar { left: 16px; right: 16px; transform: translateY(16px); justify-content: space-between; } .compare-bar.show { transform: none; } }
+
+/* Контракт в параметрах заявки */
+.contract-attach { display: grid; gap: 8px; justify-items: start; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-2); }
+.contract-attach .hint { margin: 0; }
+.contract-attach .f { margin: 0; }
+
+/* Отчёт после сделки */
+.report-card { scroll-margin-top: 24px; }
+.report-details > summary { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--brand-ink); }
+.report-details form { margin-top: 16px; }
+.report-q { margin: 0 0 16px; }
+.report-q legend { padding: 0; margin-bottom: 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.report-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-options label { cursor: pointer; }
+.report-options input { position: absolute; opacity: 0; pointer-events: none; }
+.report-options span { display: inline-block; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--input-line); font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 300ms var(--ease), border-color 300ms var(--ease), color 300ms var(--ease); }
+.report-options label:hover span { border-color: var(--input-hover); }
+.report-options input:checked + span { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-ink); }
+.report-options input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Поддержка */
+.ticket { padding: 16px 24px; border-bottom: 1px solid var(--line-2); scroll-margin-top: 24px; }
+.ticket:last-child { border-bottom: 0; }
+.ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.ticket-text { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ticket-reply { margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: var(--brand-soft); }
+.ticket-reply p { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ticket-form { display: grid; gap: 8px; justify-items: start; margin-top: 12px; }
+.ticket-form .input { width: 100%; }
+.answered-tickets { margin-top: 16px; }
+.answered-tickets > summary { display: inline-flex; }
+.support-public { max-width: 680px; }

@@ -1,0 +1,25 @@
+{% import "_site.html" as site %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% include "_head.html" %}
+    <title>Поддержка · Платформа ликвидности</title>
+</head>
+<body class="site">
+<a href="#main" class="skip">Перейти к содержимому</a>
+{{ site.nav(request) }}
+<main id="main" class="section" style="margin-top: 64px;">
+    <div class="wrap support-public">
+        <h1 class="h-section">Поддержка</h1>
+        <p class="lead-lg" style="margin-top: 16px;">Не получается войти или зарегистрироваться? Напишите, и оператор ответит на указанную почту.</p>
+        <div class="card" style="margin-top: 32px;">
+            {% include "_support_flash.html" %}
+            {% with guest = True %}{% include "_support_form.html" %}{% endwith %}
+        </div>
+        <p class="small muted" style="margin-top: 16px;">Уже есть аккаунт? <a href="/login">Войдите</a>: так ответ придёт прямо в кабинет.</p>
+    </div>
+</main>
+{{ site.footer() }}
+{{ site.scripts() }}
+</body>
+</html>

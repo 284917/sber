@@ -57,8 +57,28 @@
 {%- endmacro %}
 
 {% macro rating_badge(stats) -%}
-{% if stats and stats.rating %}<span class="rating" title="Рейтинг платформы из 5">★ {{ stats.rating.score|string|replace('.', ',') }}</span>
-{% elif stats %}<span class="rating rating-new">Новый кредитор</span>{% endif %}
+{% if stats and not stats.deals %}<span class="rating rating-new">Новый кредитор</span>{% endif %}
+{%- endmacro %}
+
+{% macro trust(f, sim, cur, route_label) -%}
+{# Надёжность кредитора в карточке предложения: только факты #}
+{% if f %}
+<div class="trust">
+    <ul class="trust-list" aria-label="Надёжность кредитора">
+        {% if f.verified_on %}<li class="ok">{{ icon('seal-check', 'ic-sm') }} Верификация {{ f.verified_on.strftime('%d.%m.%Y') }}</li>{% endif %}
+        {% if f.ubo and f.source_funds %}<li class="ok">{{ icon('check', 'ic-sm') }} Бенефициары и источник средств проверены</li>{% endif %}
+        <li class="{{ 'ok' if f.deals }}">{{ icon('handshake', 'ic-sm') }} {{ 'Согласованных сделок: ' ~ f.deals if f.deals else 'Сделок пока нет' }}</li>
+        {% if f.response_hours is not none %}<li>{{ icon('clock', 'ic-sm') }} Отвечает за {{ f.response }}</li>{% endif %}
+        {% if f.acceptance is not none %}<li>{{ icon('trend-up', 'ic-sm') }} Принято заёмщиками: {{ f.acceptance }}%</li>{% endif %}
+        {% if f.reports.shown %}<li class="ok">{{ icon('list-checks', 'ic-sm') }} Условия совпали: {{ f.terms_text }}</li>{% endif %}
+    </ul>
+    <p class="trust-similar">
+        {% if sim and sim.route %}<b>Такой же маршрут уже был:</b> {{ route_label }}, сделок: {{ sim.route }}{% if sim.received %}, получение денег подтверждено: {{ sim.received }}{% endif %}
+        {% elif sim and sim.currency %}<b>Опыт в {{ cur }}:</b> сделок {{ sim.currency }}{% if sim.similar_amount %}, из них на сопоставимую сумму: {{ sim.similar_amount }}{% endif %}, но на другом маршруте
+        {% else %}<span class="muted">Похожих сделок у этого кредитора пока нет</span>{% endif %}
+    </p>
+</div>
+{% endif %}
 {%- endmacro %}
 
 {% macro onboarding(steps) -%}

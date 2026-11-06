@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% set active = 'op-support' %}
+{% block title %}Обращения в поддержку{% endblock %}
+{% block content %}
+{% set qp = request.query_params %}
+<div class="page-head">
+    <div>
+        <h1>Обращения в поддержку</h1>
+        <div class="sub">Вопросы компаний и гостей. Вопросы по конкретной сделке приходят ещё и через кнопку «Позвать оператора».</div>
+    </div>
+</div>
+{% if qp.get('answered') %}{{ ui.flash('ok', 'Ответ сохранён.') }}{% endif %}
+{% if qp.get('error') == 'reply' %}{{ ui.flash('bad', 'Напишите ответ.') }}{% endif %}
+{% if qp.get('error') == 'closed' %}{{ ui.flash('warn', 'По обращению уже есть ответ.') }}{% endif %}
+
+<div class="list-bar"><h2>Ждут ответа <span class="tab-count {{ 'hot' if opened }}">{{ opened|length }}</span></h2></div>
+<section class="card card-tight">
+    {% for t in opened %}
+    <article class="ticket" id="ticket-{{ t.id }}">
+        <div class="ticket-head">
+            <b>№{{ t.id }} · {{ topics.get(t.topic, t.topic) }}</b>
+            <span class="small muted">{{ t.created_at.strftime('%d.%m.%Y %H:%M') if t.created_at else '' }}</span>
+        </div>
+        <p class="small muted">{% if t.author %}{{ t.author.display_name }} · {{ ROLE_NAMES.get(t.author.role, t.author.role) }} · {{ t.author.email }}{% else %}Гость без входа · {{ t.contact_email }}{% endif %}</p>
+        <p class="ticket-text">{{ t.text }}</p>
+        <form method="post" action="/operator/support/{{ t.id }}/answer" class="ticket-form">{{ csrf_field(request) }}
+            {% if not t.author %}<p class="small muted">Ответ нужно отправить на почту: <a href="mailto:{{ t.contact_email }}">{{ t.contact_email }}</a>. Здесь сохраните, что вы ответили.</p>{% endif %}
+            <textarea name="reply" class="input reason-input" rows="3" maxlength="1000" required placeholder="Ответ" aria-label="Ответ на обращение №{{ t.id }}"></textarea>
+            <button type="submit" class="btn btn-primary btn-sm">{{ 'Ответить' if t.author else 'Сохранить и закрыть' }}</button>
+        </form>
+    </article>
+    {% else %}
+    {{ ui.empty('seal-check', 'Новых обращений нет', 'Когда компания или гость напишет в поддержку, обращение появится здесь.') }}
+    {% endfor %}
+</section>
+
+{% if answered %}
+<details class="smooth answered-tickets">
+    <summary class="btn btn-ghost btn-sm">{{ ui.icon('arrow-right', 'ic-sm chev') }} Отвеченные: {{ answered|length }}</summary>
+    <section class="card card-tight" style="margin-top: 12px;">
+        {% for t in answered %}
+        <article class="ticket">
+            <div class="ticket-head"><b>№{{ t.id }} · {{ topics.get(t.topic, t.topic) }}</b><span class="small muted">{{ t.author.display_name if t.author else t.contact_email }}</span></div>
+            <p class="ticket-text">{{ t.text }}</p>
+            <div class="ticket-reply"><span class="small muted">Ответ{% if t.answered_at %} · {{ t.answered_at.strftime('%d.%m %H:%M') }}{% endif %}</span><p>{{ t.reply }}</p></div>
+        </article>
+        {% endfor %}
+    </section>
+</details>
+{% endif %}
+{% endblock %}

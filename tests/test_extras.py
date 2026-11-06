@@ -11,7 +11,6 @@ from conftest import PDF, Browser, login
 from liquidity import models
 from liquidity.database import SessionLocal
 from liquidity.services import sla
-from liquidity.services.creditors import rating
 from test_features import make_company
 
 FORM = {"currency": "EUR", "country": "DE", "term_months": "12", "transfer_method": "swift"}
@@ -46,15 +45,6 @@ def test_sla_status():
     assert sla.status(now - timedelta(days=4), "kyc", now)["label"] == "Просрочено на 2 дн."
     assert sla.status(now - timedelta(hours=24, minutes=10), "offer", now)["label"] == "Срок ответа истёк"
     assert sla.overdue_count([now - timedelta(hours=30), now, None], "moderation", now) == 1
-
-
-def test_rating_formula():
-    assert rating({"acceptance": None, "deals_done": 0, "decided": 0, "response_hours": None}) is None
-    assert rating({"acceptance": 0, "deals_done": 0, "decided": 1, "response_hours": 3}) is None  # мало данных
-    top = rating({"acceptance": 100, "deals_done": 4, "decided": 4, "response_hours": 5})
-    assert top["score"] == 5.0
-    slow = rating({"acceptance": 0, "deals_done": 0, "decided": 3, "response_hours": 200})
-    assert slow["score"] == 1.0
 
 
 def test_creditor_profile_contract_draft_and_export():
@@ -96,11 +86,11 @@ def test_creditor_profile_contract_draft_and_export():
     assert creditor2.get(f"/deal/{app_id}/contract-draft.pdf").status_code == 403
     assert "Проект договора" in borrower.get(f"/deal/{app_id}").text
 
-    # Сделка согласована — рейтинг появляется
+    # Сделка согласована — сделка появляется среди фактов о надёжности
     creditor.post(f"/deal/{app_id}/upload_contract", files={"file": PDF})
     admin.post(f"/operator/deal/{app_id}/confirm")
     profile = borrower.get(f"/creditors/{creditor_id}").text
-    assert "Рейтинг платформы" in profile and "из 5" in profile
+    assert "Надёжность" in profile and "Согласованных сделок" in profile
 
     # Excel для администратора
     xlsx = admin.get("/admin/export.xlsx")

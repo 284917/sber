@@ -1,0 +1,49 @@
+{# Сравнение предложений бок о бок. Колонки выбранных предложений показывает скрипт страницы,
+   он же подсвечивает строки с различиями и лучшее значение. #}
+<div class="compare-bar" id="compare-bar" role="region" aria-label="Выбранные для сравнения предложения">
+    <span>Выбрано <b id="compare-count">0</b> из 3</span>
+    <button type="button" class="btn btn-ghost btn-sm" id="compare-reset">Сбросить</button>
+    <button type="button" class="btn btn-primary btn-sm" id="compare-open" data-open="compare" disabled>Сравнить</button>
+</div>
+<dialog class="drawer compare-drawer" id="compare" aria-labelledby="compare-title">
+    <div class="drawer-head">
+        <div>
+            <h2 id="compare-title">Сравнение предложений</h2>
+            <p>Заявка №{{ application.id }} · {{ application.funding_amount|money }} {{ cur }} · {{ route_label }}</p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Закрыть">{{ ui.icon('x') }}</button>
+    </div>
+    <div class="drawer-body">
+        <label class="compare-only"><input type="checkbox" id="compare-only"> Только различия</label>
+        <div class="table-wrap">
+        <table class="t compare-table" id="compare-table">
+            <thead>
+                <tr><th scope="col">Условие</th>{% for row in rows %}<th scope="col" data-col="{{ row.offer.id }}" hidden>{{ row.offer.sender.display_name if row.offer.sender else 'Кредитор' }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                <tr class="group"><th colspan="{{ rows|length + 1 }}">Стоимость</th></tr>
+                <tr data-better="min"><th scope="row">Полная стоимость, годовых</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" data-num="{{ row.cost.effective_rate if row.cost.effective_rate is not none else '' }}" hidden><b>{{ row.cost.effective_rate|round(2)|percent if row.cost.effective_rate is not none else '—' }}</b></td>{% endfor %}</tr>
+                <tr data-better="min"><th scope="row">Ставка</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" data-num="{{ row.offer.annual_interest_rate }}" hidden>{{ row.offer.annual_interest_rate|percent }}</td>{% endfor %}</tr>
+                <tr data-better="min"><th scope="row">Комиссия</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" data-num="{{ row.offer.total_commission }}" hidden>{{ row.offer.total_commission|percent }}</td>{% endfor %}</tr>
+                <tr data-better="min"><th scope="row">Переплата за {{ application.term_months ~ ' мес.' if application.term_months else 'срок' }}</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" data-num="{{ row.cost.overpayment if row.cost.overpayment is not none else '' }}" hidden>{{ row.cost.overpayment|money ~ ' ' ~ cur if row.cost.overpayment is not none else '—' }}</td>{% endfor %}</tr>
+                <tr data-better="max"><th scope="row">Сумма</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" data-num="{{ row.cost.amount }}" hidden>{{ row.cost.amount|money }} {{ cur }} <span class="small muted">{{ row.cost.coverage }}%</span></td>{% endfor %}</tr>
+                <tr><th scope="row">Действует до</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" hidden>{{ row.offer.valid_until.strftime('%d.%m.%Y') if row.offer.valid_until else '—' }}</td>{% endfor %}</tr>
+                <tr><th scope="row">Дополнительные условия</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" class="cell-wrap" hidden>{{ row.offer.extra_terms or '—' }}</td>{% endfor %}</tr>
+
+                <tr class="group"><th colspan="{{ rows|length + 1 }}">Надёжность кредитора</th></tr>
+                <tr><th scope="row">Страна регистрации</th>{% for row in rows %}<td data-col="{{ row.offer.id }}" hidden>{{ ui.country(row.offer.sender.country_code) if row.offer.sender else '—' }}</td>{% endfor %}</tr>
+                <tr><th scope="row">Верификация пройдена</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" hidden>{{ f.verified_on.strftime('%d.%m.%Y') if f and f.verified_on else 'нет данных' }}</td>{% endfor %}</tr>
+                <tr><th scope="row">Бенефициары и источник средств</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" hidden>{{ 'проверены' if f and f.ubo and f.source_funds else 'нет данных' }}</td>{% endfor %}</tr>
+                <tr data-better="max"><th scope="row">Согласованных сделок</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" data-num="{{ f.deals if f else 0 }}" hidden>{{ f.deals if f and f.deals else 'сделок пока нет' }}</td>{% endfor %}</tr>
+                <tr data-better="min"><th scope="row">Скорость ответа</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" data-num="{{ f.response_hours if f and f.response_hours is not none else '' }}" hidden>{{ f.response if f else '—' }}</td>{% endfor %}</tr>
+                <tr data-better="max"><th scope="row">Принято заёмщиками</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" data-num="{{ f.acceptance if f and f.acceptance is not none else '' }}" hidden>{{ f.acceptance ~ '%' if f and f.acceptance is not none else 'решений пока нет' }}</td>{% endfor %}</tr>
+                <tr><th scope="row">Условия совпали с предложением</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" hidden>{{ f.terms_text if f else '—' }}</td>{% endfor %}</tr>
+                <tr><th scope="row">Деньги получены полностью</th>{% for row in rows %}{% set f = facts.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" hidden>{{ f.funds_text if f else '—' }}</td>{% endfor %}</tr>
+                <tr data-better="max"><th scope="row">Такой же маршрут</th>{% for row in rows %}{% set s = similar.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" data-num="{{ s.route if s else 0 }}" hidden>{{ s.route if s and s.route else 'пока не было' }}</td>{% endfor %}</tr>
+                <tr data-better="max"><th scope="row">Сделок в {{ cur }}</th>{% for row in rows %}{% set s = similar.get(row.offer.user_id) %}<td data-col="{{ row.offer.id }}" data-num="{{ s.currency if s else 0 }}" hidden>{{ s.currency if s and s.currency else 'пока не было' }}</td>{% endfor %}</tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="foot-note">Отчёты участников показываем сводно и от трёх сделок. Названия других компаний не раскрываем.</p>
+    </div>
+</dialog>

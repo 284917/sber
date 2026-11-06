@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from liquidity import config, models
 from liquidity.security import hash_password, verify_password
-from liquidity.services import Forbidden, Invalid, NotFound
+from liquidity.services import Forbidden, Invalid, NotFound, company_lookup
 from liquidity.services.audit import record
 
 
@@ -68,6 +68,10 @@ def register_company(db: Session, *, email: str, password: str, role: str, compa
 
     user = models.User(email=email, password_hash=hash_password(password), role=role, company_name=company_name,
                        registration_number=registration_number, country_code=country_code)
+    if role == "borrower":  # без ключа DaData или при сбое просто нет данных: регистрации это не мешает
+        company = company_lookup.find_by_inn(registration_number)
+        if company:
+            user.egrul_status, user.registered_on = company["status"], company["registered_on"]
     db.add(user)
     db.commit()
     return user

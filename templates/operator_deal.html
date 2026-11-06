@@ -73,6 +73,30 @@
             {% endif %}
             </div>
         </section>
+        {% if app.status == 'agreed' %}
+        <section class="card card-tight">
+            <div class="card-head"><h2 class="card-title">Отчёты после сделки</h2></div>
+            {% if reports %}
+            <div class="table-wrap">
+            <table class="t t-top">
+                <thead><tr><th>Участник</th><th>Деньги</th><th>Сроки</th><th>Условия совпали</th><th>Новые условия</th><th>Связь</th></tr></thead>
+                <tbody>
+                {% for r in reports %}
+                <tr>
+                    <td><b>{{ r.author.display_name if r.author else '' }}</b><div class="small muted">{{ ROLE_NAMES.get(r.role, r.role) }}</div>{% if r.comment %}<div class="small cell-wrap" style="margin-top: 4px;">{{ r.comment }}</div>{% endif %}</td>
+                    <td>{% if r.funds == 'received' %}<span class="pill pill-ok">Полностью</span>{% elif r.funds == 'partial' %}<span class="pill pill-warn">Частично</span>{% else %}<span class="pill pill-bad">Нет</span>{% endif %}</td>
+                    <td>{% if r.on_time == 'yes' %}<span class="pill pill-ok">Да</span>{% elif r.on_time == 'no' %}<span class="pill pill-bad">Нет</span>{% else %}<span class="pill">Пока рано</span>{% endif %}</td>
+                    <td><span class="pill {{ 'pill-ok' if r.terms_match else 'pill-bad' }}">{{ 'Да' if r.terms_match else 'Нет' }}</span></td>
+                    <td><span class="pill {{ 'pill-bad' if r.new_terms else 'pill-ok' }}">{{ 'Да' if r.new_terms else 'Нет' }}</span></td>
+                    <td><span class="pill {{ 'pill-ok' if r.contact_ok else 'pill-bad' }}">{{ 'Работает' if r.contact_ok else 'Нет' }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}{{ ui.empty('list-checks', 'Отчётов пока нет', 'Участникам пришло напоминание заполнить отчёт после получения денег.') }}{% endif %}
+        </section>
+        {% endif %}
     </div>
     <aside class="card">
         <h2 class="card-title">История заявки</h2>

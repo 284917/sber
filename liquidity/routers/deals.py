@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from liquidity import models
 from liquidity.database import get_db
 from liquidity.security import get_current_user
-from liquidity.services import Invalid, NotFound, applications, deals, files, fx
+from liquidity.services import Invalid, NotFound, applications, deal_reports, deals, files, fx
 from liquidity.services.costs import offer_cost
 from liquidity.services.documents import contract_draft_pdf, deal_summary_pdf
 from liquidity.services.events import get_events
@@ -30,6 +30,7 @@ def deal_room(app_id: int, request: Request, user: models.User = Depends(get_cur
                   main_contract=main_contract, other_documents=other_documents, offer=offer, cost=cost,
                   overpayment_rub=fx.to_rub(cost["overpayment"], application.currency_code, rates) if cost else None,
                   fx=rates, stages=applications.stages(db, application), lenders=lenders,
+                  my_report=deal_reports.own(db, user, app_id),
                   stress=fx.stress(offer.funding_amount, cost["overpayment"], application.currency_code, rates)
                   if cost else None)
 
@@ -104,6 +105,18 @@ def upload_contract(app_id: int, file: UploadFile = File(...), user: models.User
     except Invalid as e:
         return redirect(f"/deal/{app_id}?error={e.code}")
     return redirect(f"/deal/{app_id}")
+
+
+@router.post("/deal/{app_id}/report", summary="Отчёт участника после согласованной сделки")
+def save_report(app_id: int, funds: str = Form(""), on_time: str = Form(""), terms_match: str = Form(""),
+                new_terms: str = Form(""), contact_ok: str = Form(""), comment: str = Form(""),
+                user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        deal_reports.save(db, user, app_id, funds=funds, on_time=on_time, terms_match=terms_match,
+                          new_terms=new_terms, contact_ok=contact_ok, comment=comment)
+    except Invalid as e:
+        return redirect(f"/deal/{app_id}?error={e.code}#report")
+    return redirect(f"/deal/{app_id}?report=1#report")
 
 
 @router.post("/deal/{app_id}/call_operator", summary="Позвать оператора в сделку")

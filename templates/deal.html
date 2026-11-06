@@ -51,6 +51,38 @@
     </section>
 
     <aside>
+        {% if application.status == 'agreed' and user.role in ('borrower', 'creditor') %}
+        <section class="card report-card" id="report">
+            <h2 class="card-title">Отчёт после сделки</h2>
+            {% if qp.get('report') %}{{ ui.flash('ok', 'Отчёт сохранён. Спасибо.') }}{% endif %}
+            {% if qp.get('error') == 'report' %}{{ ui.flash('bad', 'Ответьте на все вопросы отчёта.') }}{% endif %}
+            {% set r = my_report %}
+            {% macro q(field, label, options, current) %}
+            <fieldset class="report-q">
+                <legend>{{ label }}</legend>
+                <div class="report-options">
+                    {% for value, text in options %}<label><input type="radio" name="{{ field }}" value="{{ value }}" required {% if current == value %}checked{% endif %}><span>{{ text }}</span></label>{% endfor %}
+                </div>
+            </fieldset>
+            {% endmacro %}
+            <details class="smooth report-details" {% if not r %}open{% endif %}>
+                <summary>{% if r %}{{ ui.icon('check', 'ic-sm') }} Заполнен, можно обновить{% else %}<span class="muted">Пять коротких вопросов о том, как всё прошло</span>{% endif %}</summary>
+                <form method="post" action="/deal/{{ application.id }}/report">{{ csrf_field(request) }}
+                    {% set borrower_side = user.role == 'borrower' %}
+                    {{ q('funds', 'Деньги получены?' if borrower_side else 'Деньги выданы?', [('received', 'Полностью'), ('partial', 'Частично'), ('none', 'Нет')], r.funds if r else '') }}
+                    {{ q('on_time', 'Кредитор выдал деньги в обещанный срок?' if borrower_side else 'Заёмщик платит по графику?', [('yes', 'Да'), ('no', 'Нет'), ('not_due', 'Пока рано')], r.on_time if r else '') }}
+                    {{ q('terms_match', 'Итоговые условия совпали с предложением?', [('yes', 'Да'), ('no', 'Нет')], ('yes' if r.terms_match else 'no') if r else '') }}
+                    {{ q('new_terms', 'В договоре появились новые условия?', [('no', 'Нет'), ('yes', 'Да')], ('yes' if r.new_terms else 'no') if r else '') }}
+                    {{ q('contact_ok', 'Связь со второй стороной работает?', [('yes', 'Да'), ('no', 'Нет')], ('yes' if r.contact_ok else 'no') if r else '') }}
+                    <label class="f" for="report-comment">Комментарий для оператора, необязательно</label>
+                    <textarea name="comment" id="report-comment" class="input reason-input" rows="2" maxlength="500">{{ r.comment or '' if r else '' }}</textarea>
+                    <button type="submit" class="btn btn-primary btn-block" style="margin-top: 12px;">Сохранить отчёт</button>
+                    <p class="hint">Ваши ответы видит оператор. Другим компаниям показываем только сводку от трёх сделок, без названий.</p>
+                </form>
+            </details>
+        </section>
+        {% endif %}
+
         {% if offer %}
         <section class="card">
             <h2 class="card-title">Условия сделки</h2>
@@ -63,6 +95,7 @@
             <div class="kv"><span>Срок</span><span>{{ application.term_months ~ ' мес.' if application.term_months else '—' }}</span></div>
             <div class="kv"><span>Передача</span><span>{{ ui.country(application.target_jurisdiction) }} · {{ TRANSFER_METHODS.get(application.transfer_method, '—') }}</span></div>
             {% if offer.extra_terms %}<div class="kv"><span>Доп. условия</span><span>{{ offer.extra_terms }}</span></div>{% endif %}
+            {% if application.contract_path %}<div class="kv"><span>Контракт заёмщика</span><span><a href="/{{ application.contract_path }}" target="_blank">{{ application.contract_path|filename }}</a></span></div>{% endif %}
             {{ ui.stress_table(stress, cur) }}
         </section>
         {% endif %}

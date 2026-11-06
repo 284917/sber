@@ -50,7 +50,9 @@ def parse(payload: dict):
     item = suggestions[0]
     data = item.get("data") or {}
     state = (data.get("state") or {}).get("status")
+    registered = (data.get("state") or {}).get("registration_date")  # миллисекунды от начала эпохи
     return {
+        "registered_on": datetime.utcfromtimestamp(registered / 1000).date() if registered else None,
         "name": (data.get("name") or {}).get("short_with_opf") or item.get("value"),
         "full_name": (data.get("name") or {}).get("full_with_opf"),
         "ogrn": data.get("ogrn"),

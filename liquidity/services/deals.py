@@ -209,4 +209,5 @@ def confirm(db: Session, operator: models.User, app_id: int):
     log_event(db, app_id, operator, "Сделка подтверждена оператором: статус «Согласовано», сделка в архиве")
     for uid in _participants(db, application):
         notify(db, uid, f"Сделка №{app_id} согласована. Сводка в PDF готова", f"/deal/{app_id}", "ok")
+        notify(db, uid, f"Сделка №{app_id}: когда деньги придут, заполните короткий отчёт", f"/deal/{app_id}#report")
     db.commit()

@@ -13,11 +13,11 @@
 </div>
 
 {% if user.id == creditor.id %}
-<div class="note note-info">Так ваш профиль видят заёмщики, которым оператор показал ваше предложение. Рейтинг растёт с каждой завершённой сделкой и быстрыми ответами на новые заявки.</div>
+<div class="note note-info">Так ваш профиль видят заёмщики, которым показано ваше предложение. Факты пополняются с каждой согласованной сделкой и отчётами заёмщиков.</div>
 {% endif %}
 
 <div class="stat-grid">
-    <div class="card stat"><div class="label">Завершённых сделок</div><div class="value">{{ s.deals_done }}</div><div class="hint">ещё в работе: {{ s.deals_in_work }}</div></div>
+    <div class="card stat"><div class="label">Согласованных сделок</div><div class="value">{{ s.deals_done }}</div><div class="hint">ещё в работе: {{ s.deals_in_work }}</div></div>
     <div class="card stat"><div class="label">Средняя ставка</div><div class="value">{{ s.avg_rate|round(2)|percent if s.avg_rate is not none else '—' }}</div><div class="hint">комиссия в среднем {{ s.avg_commission|round(2)|percent if s.avg_commission is not none else '—' }}</div></div>
     <div class="card stat"><div class="label">Скорость ответа</div><div class="value">{{ response_text(s.response_hours) }}</div><div class="hint">от публикации заявки до предложения</div></div>
     <div class="card stat"><div class="label">Принято заёмщиками</div><div class="value">{{ s.acceptance ~ '%' if s.acceptance is not none else '—' }}</div><div class="hint">из предложений, по которым есть решение</div></div>
@@ -48,23 +48,17 @@
     </section>
 
     <section class="card">
-        <h2 class="card-title">Рейтинг платформы</h2>
-        {% if s.rating %}
-        <div class="score-big">{{ s.rating.score|string|replace('.', ',') }} <span class="muted" style="font-size: 18px; font-weight: 600;">из 5</span></div>
-        <div class="score-bar" aria-hidden="true"><i style="width: {{ (s.rating.score / 5 * 100)|round }}%"></i></div>
-        <div class="score-parts">
-            {% for key, label, max in [('deals', 'Завершённые сделки', 2), ('acceptance', 'Доля принятых предложений', 1.5), ('speed', 'Скорость ответа', 1.5)] %}
-            <div>
-                <div class="row"><span>{{ label }}</span><b>{{ s.rating.parts[key]|round(1)|string|replace('.', ',') }} / {{ max|string|replace('.', ',') }}</b></div>
-                <div class="score-bar"><i style="width: {{ (s.rating.parts[key] / max * 100)|round }}%"></i></div>
-            </div>
-            {% endfor %}
-        </div>
-        <p class="hint" style="margin-top: 16px;">Сделки: 0,5 балла за каждую, до 2. Ответ быстрее 24 часов даёт 1,5 балла, до 3 дней или без данных — 1, дольше — 0,5. Минимальная оценка 1.</p>
-        {% else %}
-        <span class="rating rating-new">Новый кредитор</span>
-        <p class="muted" style="margin-top: 12px;">Рейтинг появится после первой завершённой сделки или трёх решений заёмщиков по предложениям этого кредитора.</p>
-        {% endif %}
+        <h2 class="card-title">Надёжность</h2>
+        <div class="kv"><span>Верификация</span><span>{{ 'пройдена ' ~ facts.verified_on.strftime('%d.%m.%Y') if facts.verified_on else 'не пройдена' }}</span></div>
+        <div class="kv"><span>Страна регистрации</span><span>{{ ui.country(facts.country) }}</span></div>
+        <div class="kv"><span>Бенефициары</span><span>{{ 'проверены' if facts.ubo else 'нет данных' }}</span></div>
+        <div class="kv"><span>Источник средств</span><span>{{ 'проверен' if facts.source_funds else 'нет данных' }}</span></div>
+        <div class="kv"><span>Согласованных сделок</span><span>{{ facts.deals if facts.deals else 'сделок пока нет' }}</span></div>
+        <div class="kv"><span>Условия совпали с предложением</span><span>{{ facts.terms_text }}</span></div>
+        <div class="kv"><span>Деньги получены полностью</span><span>{{ facts.funds_text }}</span></div>
+        <div class="kv"><span>Выплаты и сроки соблюдены</span><span>{{ facts.on_time_text }}</span></div>
+        <div class="kv"><span>Связь после сделки</span><span>{{ facts.contact_text }}</span></div>
+        <p class="hint" style="margin-top: 16px;">Показываем факты, а не общий балл. Данные из отчётов заёмщиков появляются от трёх сделок и только сводно.</p>
     </section>
 </div>
 {% endblock %}

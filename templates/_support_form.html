@@ -1,0 +1,20 @@
+{# Форма обращения: для кабинета и для страницы без входа (там ещё нужна почта для ответа) #}
+<form method="post" action="/support">{{ csrf_field(request) }}
+    {% if guest %}
+    <div class="field">
+        <label class="f" for="contact_email">Почта для ответа</label>
+        <input type="email" name="contact_email" id="contact_email" class="input" maxlength="255" autocomplete="email" required>
+    </div>
+    {% endif %}
+    <div class="field">
+        <label class="f" for="topic">Тема обращения</label>
+        <select name="topic" id="topic" class="input" required>
+            {% for code, name in topics.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label class="f" for="text">Что случилось</label>
+        <textarea name="text" id="text" class="input" rows="5" minlength="10" maxlength="1000" required placeholder="Что вы делали и что пошло не так. Номер заявки, если он есть"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Отправить обращение</button>
+</form>

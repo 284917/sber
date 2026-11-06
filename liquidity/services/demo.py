@@ -4,7 +4,7 @@
 Пароли демо-аккаунтов случайные: войти в них можно только кнопками демо-входа.
 """
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,9 @@ COMPANIES = [
 ]
 
 
+EGRUL = {"alfa": ("ACTIVE", date(2014, 3, 18)), "sever": ("ACTIVE", date(2009, 11, 2))}
+
+
 def is_demo_email(email: str) -> bool:
     return (email or "").endswith(DEMO_DOMAIN)
 
@@ -53,6 +56,7 @@ def clear(db: Session):
     files = [m.file_path for m in db.query(models.Message).filter(
         (models.Message.application_id.in_(app_ids or [0])) | (models.Message.sender_id.in_(ids)))]
     files += [d.file_path for d in db.query(models.Document).filter(models.Document.user_id.in_(ids))]
+    files += [a.contract_path for a in db.query(models.Application).filter(models.Application.id.in_(app_ids or [0]))]
     db.query(models.StoredFile).filter(models.StoredFile.path.in_([f for f in files if f] or [""])).delete(
         synchronize_session=False)
     db.query(models.ApplicationEvent).filter(models.ApplicationEvent.application_id.in_(app_ids or [0])).delete(
@@ -61,6 +65,11 @@ def clear(db: Session):
         {"actor_id": None}, synchronize_session=False)
     db.query(models.Message).filter((models.Message.application_id.in_(app_ids or [0]))
                                     | (models.Message.sender_id.in_(ids))).delete(synchronize_session=False)
+    db.query(models.DealReport).filter((models.DealReport.application_id.in_(app_ids or [0]))
+                                       | (models.DealReport.user_id.in_(ids))).delete(synchronize_session=False)
+    db.query(models.SupportTicket).filter(models.SupportTicket.user_id.in_(ids)).delete(synchronize_session=False)
+    db.query(models.SupportTicket).filter(models.SupportTicket.answered_by.in_(ids)).update(
+        {"answered_by": None}, synchronize_session=False)
     db.query(models.Offer).filter((models.Offer.application_id.in_(app_ids or [0]))
                                   | (models.Offer.user_id.in_(ids))).delete(synchronize_session=False)
     db.query(models.Document).filter(models.Document.user_id.in_(ids)).delete(synchronize_session=False)
@@ -88,7 +97,10 @@ def seed(db: Session):
     for key, email, role, name, country, regnum, kyc_state in COMPANIES:
         user = models.User(email=email, password_hash=hash_password(secrets.token_urlsafe(16)), role=role,
                            company_name=name, country_code=country, registration_number=regnum,
-                           created_at=at(14), is_superadmin=(key == "admin"))
+                           created_at=at(14), is_superadmin=(key == "admin"),
+                           kyc_approved_at=at(12) if kyc_state == "approved" else None)
+        if key in EGRUL:
+            user.egrul_status, user.registered_on = EGRUL[key]
         db.add(user)
         db.flush()
         users[key] = user
@@ -196,12 +208,48 @@ def seed(db: Session):
     db.add(models.Complaint(application_id=a6.id, user_id=users["gulf"].id, status="open", created_at=at(1),
                             reason="В назначении не указаны поставщик и контракт — непонятно, какое оборудование закупается"))
 
+    # 7–9. Прошлые согласованные сделки: опыт на том же маршруте и отчёты сторон для блока надёжности
+    def past_deal(owner, creditor, amount, purpose, days):
+        app = application(owner, amount, "EUR", "DE", 9, "swift", purpose, "agreed", days)
+        app.confirmed_by, app.confirmed_at = users["operator"].id, at(days - 8)
+        moderated(app, days)
+        offer(app, creditor, amount, 8.2, 1.0, "accepted", days - 2)
+        auto_shown(app, creditor, days - 2)
+        message(app, creditor, "Загружен основной договор займа", days - 7, file="dogovor_zayma_signed.pdf")
+        return app
+
+    def report(app, author, funds="received", on_time="yes", terms=True, new_terms=False, contact=True):
+        db.add(models.DealReport(application_id=app.id, user_id=users[author].id, role=users[author].role, funds=funds,
+                                 on_time=on_time, terms_match=terms, new_terms=new_terms, contact_ok=contact))
+
+    a7 = past_deal("alfa", "gulf", 300000, "Оплата промышленных насосов поставщику в Германии по контракту 41-Д", 40)
+    a8 = past_deal("sever", "gulf", 800000, "Закупка складской техники у немецкого производителя по контракту 7/25", 60)
+    a9 = past_deal("sever", "beta", 400000, "Предоплата за логистическое оборудование по контракту с поставщиком", 35)
+    report(a3, "sever", on_time="not_due")
+    report(a3, "gulf", funds="received", on_time="not_due")
+    report(a7, "alfa")
+    report(a7, "gulf")
+    report(a8, "sever", terms=False, new_terms=True)
+    report(a8, "gulf")
+    report(a9, "sever", funds="partial", on_time="no")
+    report(a9, "beta")
+
+    # Контракт, приложенный к заявке, и обращение в поддержку для кабинета оператора
+    contract_file = f"{config.UPLOAD_DIR}/demo_{a1.id}_kontrakt_postavka.pdf"
+    db.add(models.StoredFile(path=contract_file, content=DEMO_PDF))
+    a1.contract_path = contract_file
+    db.add(models.SupportTicket(user_id=users["vostok"].id, topic="kyc", created_at=at(0, 3),
+                                text="Отправили документы на проверку два дня назад. Подскажите, нужно ли что-то ещё?"))
+    db.add(models.SupportTicket(user_id=users["alfa"].id, topic="application", created_at=at(5), status="answered",
+                                text="Можно ли изменить срок уже опубликованной заявки?", answered_by=users["operator"].id, answered_at=at(4),
+                                reply="Срок менять нельзя: отзовите заявку и подайте новую, предложения по ней придут заново."))
+
     # Договоры в демо — настоящие PDF с условиями сделки: их можно открыть и просмотреть у оператора
     from liquidity.services.deals import accepted_offer
     from liquidity.services.documents import contract_draft_pdf
 
     db.flush()
-    for app in (a2, a3):
+    for app in (a2, a3, a7, a8, a9):
         deal_offer = accepted_offer(db, app.id)
         if deal_offer:
             content = contract_draft_pdf(app, deal_offer, None)

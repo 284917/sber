@@ -39,4 +39,26 @@
     {{ ui.empty('handshake', 'Сделок в работе нет', 'Сделка появится здесь, когда заёмщик примет предложение.') }}
     {% endif %}
 </section>
+
+{% if problems %}
+<div class="list-bar" style="margin-top: 32px;"><h2>Проблемы после сделки <span class="tab-count hot">{{ problems|length }}</span></h2></div>
+<section class="card card-tight">
+    <div class="table-wrap">
+    <table class="t">
+        <thead><tr><th>№</th><th>Заёмщик</th><th class="num">Сумма</th><th>Сообщил</th><th></th></tr></thead>
+        <tbody>
+        {% for app, report in problems %}
+        <tr>
+            <td class="muted">{{ app.id }}</td>
+            <td><b>{{ app.borrower.display_name if app.borrower else '' }}</b></td>
+            <td class="num"><b>{{ app.funding_amount|money }}</b> {{ app.currency_code }}</td>
+            <td>{{ report.author.display_name if report.author else '' }}</td>
+            <td class="r"><a href="/operator/deal/{{ app.id }}" class="btn btn-secondary btn-sm">Открыть отчёт</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
 {% endblock %}

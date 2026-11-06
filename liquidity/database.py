@@ -60,6 +60,10 @@ MIGRATIONS = [
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS counter_status VARCHAR(20)",
     "ALTER TABLE applications ADD COLUMN IF NOT EXISTS review_reason VARCHAR(255)",
     "ALTER TABLE offers ADD COLUMN IF NOT EXISTS review_reason VARCHAR(255)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_approved_at TIMESTAMP",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS egrul_status VARCHAR(20)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS registered_on DATE",
+    "ALTER TABLE applications ADD COLUMN IF NOT EXISTS contract_path VARCHAR(255)",
 ]
 
 

@@ -119,6 +119,26 @@
                     <div class="market-amount">{{ app.funding_amount|money }} {{ app.currency_code }}</div>
                     <div class="market-who"><b>{{ app.borrower.display_name if app.borrower else '' }}</b> <span class="muted">· заявка №{{ app.id }}</span></div>
                     <p class="market-purpose">{{ app.purpose }}</p>
+                    {% set card = cards.get(app.id) %}
+                    {% if card %}
+                    <div class="borrower-box">
+                        <ul class="trust-list" aria-label="Что известно о заёмщике">
+                            {% if card.verified_on %}<li class="ok">{{ ui.icon('seal-check', 'ic-sm') }} Верификация {{ card.verified_on.strftime('%d.%m.%Y') }}</li>{% endif %}
+                            {% if card.egrul_name %}<li class="{{ 'ok' if card.egrul_status == 'ACTIVE' }}">{{ ui.icon('buildings', 'ic-sm') }} ЕГРЮЛ: {{ card.egrul_name }}</li>{% endif %}
+                            {% if card.years is not none %}<li>{{ ui.icon('clock', 'ic-sm') }} Компании {{ card.years }} {{ 'год' if card.years % 10 == 1 and card.years % 100 != 11 else 'года' if card.years % 10 in (2, 3, 4) and card.years % 100 not in (12, 13, 14) else 'лет' }}</li>{% endif %}
+                            <li>{{ ui.icon('files', 'ic-sm') }} Заявок на платформе: {{ card.apps_total }}, согласовано: {{ card.apps_agreed }}</li>
+                            {% if card.contract %}<li class="ok">{{ ui.icon('file-text', 'ic-sm') }} Контракт приложен</li>{% endif %}
+                            {% if card.reports.shown %}<li class="ok">{{ ui.icon('list-checks', 'ic-sm') }} Платежи в срок: {{ card.on_time_text }}</li>{% endif %}
+                        </ul>
+                        <details class="completeness smooth">
+                            <summary>{{ ui.icon('arrow-right', 'ic-sm chev') }} <span>Полнота данных: {{ card.done }} из {{ card.total }}</span></summary>
+                            <ul class="check-list">
+                                {% for label, ok in card.checks %}<li class="{{ 'ok' if ok }}">{{ ui.icon('check' if ok else 'x', 'ic-sm') }} {{ label }}</li>{% endfor %}
+                            </ul>
+                            <p class="hint">Это то, что платформа знает о заёмщике, а не оценка его кредитоспособности.</p>
+                        </details>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="market-tags">
                     <span class="tag">{{ ui.country(app.target_jurisdiction) }}</span>

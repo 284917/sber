@@ -8,7 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from liquidity import config
 from liquidity.web import templates
 from liquidity.database import SessionLocal, create_schema, find_database_url
-from liquidity.routers import account, admin, auth, borrower, creditor, deals, kyc, notifications, operator
+from liquidity.routers import account, admin, auth, borrower, creditor, deals, kyc, notifications, operator, support
 from liquidity.security import SESSION_COOKIE, WrongRole, csrf_cookie_middleware, verify_csrf
 from liquidity.services import Forbidden, Invalid, NotFound, accounts, demo, fx
 
@@ -20,7 +20,7 @@ app = FastAPI(
     dependencies=[Depends(verify_csrf)],  # CSRF-проверка для всех изменяющих запросов
 )
 app.mount("/static", StaticFiles(directory=config.STATIC_DIR), name="static")
-for module in (auth, borrower, creditor, kyc, deals, operator, admin, notifications, account):
+for module in (auth, borrower, creditor, kyc, deals, operator, admin, notifications, account, support):
     app.include_router(module.router)
 
 

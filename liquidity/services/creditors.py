@@ -1,11 +1,10 @@
-"""Профиль и рейтинг кредитора: сделки, ставки, скорость ответа. Помогает заёмщику выбрать, кому доверять."""
+"""Профиль кредитора: сделки, ставки, скорость ответа. Помогает заёмщику выбрать, кому доверять."""
 from sqlalchemy.orm import Session
 
 from liquidity import models
 from liquidity.services import Forbidden, NotFound
 
 PUBLISHED_EVENT = "%опубликована для кредиторов%"
-MIN_DECISIONS = 3
 
 
 def can_view(db: Session, viewer: models.User, creditor_id: int) -> bool:
@@ -55,24 +54,8 @@ def stats(db: Session, creditor_ids):
             "response_hours": sum(hours) / len(hours) if hours else None,
             "currencies": sorted({o.application.currency_code for o in own if o.application}),
         }
-        row["rating"] = rating(row)
         result[cid] = row
     return result
-
-
-def rating(row):
-    """Рейтинг от 1 до 5 из трёх понятных частей. Пока данных мало (нет завершённых сделок и меньше
-    MIN_DECISIONS решений заёмщиков), рейтинга нет: одно отклонённое предложение не должно ронять оценку.
-    Завершённые сделки (до 2 баллов), доля принятых предложений (до 1,5), скорость ответа (до 1,5)."""
-    if not row["deals_done"] and row.get("decided", 0) < MIN_DECISIONS:
-        return None
-    parts = {
-        "deals": min(2.0, row["deals_done"] * 0.5),
-        "acceptance": 1.5 * (row["acceptance"] or 0) / 100,
-        "speed": 1.0 if row["response_hours"] is None else
-                 1.5 if row["response_hours"] <= 24 else 1.0 if row["response_hours"] <= 72 else 0.5,
-    }
-    return {"score": round(max(1.0, sum(parts.values())), 1), "parts": parts}
 
 
 def response_text(hours):
