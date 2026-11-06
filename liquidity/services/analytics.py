@@ -83,9 +83,10 @@ def overview(db: Session):
 def market_rates(db: Session):
     """Средние условия предложений, которые увидели заёмщики, по валютам: подсказка для калькулятора."""
     result = {}
+    hidden = _showcase_ids(db)
     rows = db.query(models.Offer).filter(models.Offer.status.in_(["shown", "accepted", "rejected"])).all()
     for offer in rows:
-        if offer.application:
+        if offer.application and offer.user_id not in hidden and offer.application.user_id not in hidden:
             result.setdefault(offer.application.currency_code, []).append(offer)
     return {cur: {"count": len(items),
                   "rate": round(sum(float(o.annual_interest_rate) for o in items) / len(items), 2),
@@ -188,14 +189,22 @@ def trend_lines(trend, low, high, weeks):
     return {"series": result, "ticks": [(t, xy(0, t)[1]) for t in ticks], "w": CHART_W, "h": CHART_H}
 
 
+def _showcase_ids(db: Session):
+    from liquidity import config
+
+    return {u.id for u in db.query(models.User).filter(models.User.email.like(f"%{config.SHOWCASE_DOMAIN}"))}
+
+
 def public_stats(db: Session):
-    """Живые цифры и потоки для главной: только агрегаты, без названий компаний."""
+    """Живые цифры и потоки для главной: только агрегаты, без названий компаний и показательных данных."""
     from liquidity import config
     from liquidity.services.costs import offer_cost
 
-    apps = db.query(models.Application).filter(
-        models.Application.status.in_(["published", "in_work", "agreed", "expired", "withdrawn"])).all()
-    offers = db.query(models.Offer).filter(models.Offer.status.in_(["shown", "accepted", "rejected"])).all()
+    hidden = _showcase_ids(db)
+    apps = [a for a in db.query(models.Application).filter(
+        models.Application.status.in_(["published", "in_work", "agreed", "expired", "withdrawn"])) if a.user_id not in hidden]
+    offers = [o for o in db.query(models.Offer).filter(models.Offer.status.in_(["shown", "accepted", "rejected"]))
+              if o.user_id not in hidden and o.application and o.application.user_id not in hidden]
     effective = [c["effective_rate"] for o in offers if o.application
                  for c in [offer_cost(o, o.application)] if c["effective_rate"] is not None]
     agreed = [a for a in apps if a.status == "agreed"]

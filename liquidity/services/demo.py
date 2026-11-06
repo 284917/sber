@@ -38,8 +38,8 @@ def is_demo_email(email: str) -> bool:
     return (email or "").endswith(DEMO_DOMAIN)
 
 
-def demo_user_ids(db: Session):
-    return [u.id for u in db.query(models.User).filter(models.User.email.like(f"%{DEMO_DOMAIN}"))]
+def demo_user_ids(db: Session, domain: str = DEMO_DOMAIN):
+    return [u.id for u in db.query(models.User).filter(models.User.email.like(f"%{domain}"))]
 
 
 def reset(db: Session):
@@ -48,8 +48,8 @@ def reset(db: Session):
     seed(db)
 
 
-def clear(db: Session):
-    ids = demo_user_ids(db)
+def clear(db: Session, domain: str = DEMO_DOMAIN):
+    ids = demo_user_ids(db, domain)
     if not ids:
         return
     app_ids = [a.id for a in db.query(models.Application).filter(models.Application.user_id.in_(ids))]
@@ -65,6 +65,9 @@ def clear(db: Session):
         {"actor_id": None}, synchronize_session=False)
     db.query(models.Message).filter((models.Message.application_id.in_(app_ids or [0]))
                                     | (models.Message.sender_id.in_(ids))).delete(synchronize_session=False)
+    db.query(models.Notification).filter(models.Notification.user_id.in_(ids)).delete(synchronize_session=False)
+    db.query(models.SavedSearch).filter(models.SavedSearch.user_id.in_(ids)).delete(synchronize_session=False)
+    db.query(models.AuditEntry).filter(models.AuditEntry.actor_id.in_(ids)).update({"actor_id": None}, synchronize_session=False)
     db.query(models.DealReport).filter((models.DealReport.application_id.in_(app_ids or [0]))
                                        | (models.DealReport.user_id.in_(ids))).delete(synchronize_session=False)
     db.query(models.SupportTicket).filter(models.SupportTicket.user_id.in_(ids)).delete(synchronize_session=False)
