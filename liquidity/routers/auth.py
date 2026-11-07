@@ -49,18 +49,21 @@ def terms(request: Request):
 @router.post("/login", summary="Вход по email и паролю")
 def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     ip = throttle.client_ip(request, config.ON_VERCEL)
-    left = throttle.locked_for(db, email, ip)
+    left = throttle.locked_for(db, email, ip) if config.LOGIN_LOCKOUT else None
     if left:
         minutes = max(1, -(-int(left.total_seconds()) // 60))
         return render(request, "login.html", status_code=429, email=email,
                       error=f"Слишком много неудачных попыток. Вход временно заблокирован, повторите через {minutes} мин.")
     user = accounts.authenticate(db, email, password)
     if not user:
+        if not config.LOGIN_LOCKOUT:
+            return render(request, "login.html", status_code=400, email=email, error="Неверный email или пароль.")
         remaining = throttle.register_failure(db, email, ip)
         hint = f" Осталось попыток: {remaining}." if remaining else " Вход заблокирован на 15 минут."
         return render(request, "login.html", status_code=400, email=email,
                       error="Неверный email или пароль." + (hint if remaining is not None and remaining < 3 else ""))
-    throttle.register_success(db, email)
+    if config.LOGIN_LOCKOUT:
+        throttle.register_success(db, email)
     response = redirect("/dashboard")
     start_session(response, user)
     return response

@@ -35,7 +35,19 @@ def test_register_shows_error_next_to_field():
     assert ok.status_code == 303
 
 
-def test_login_lockout_after_five_failures():
+def test_login_has_no_lockout_by_default():
+    with SessionLocal() as db:
+        db.add(models.User(email="many@test.ru", password_hash=hash_password("Str0ng!Pass1"), role="borrower"))
+        db.commit()
+    browser = Browser()
+    for attempt in range(30):
+        r = browser.post("/login", data={"email": "many@test.ru", "password": f"wrong-{attempt}"})
+        assert r.status_code == 400 and "Осталось попыток" not in r.text
+    assert browser.post("/login", data={"email": "many@test.ru", "password": "Str0ng!Pass1"}).status_code == 303
+
+
+def test_login_lockout_after_five_failures(monkeypatch):
+    monkeypatch.setattr(config, "LOGIN_LOCKOUT", True)
     with SessionLocal() as db:
         db.add(models.User(email="brute@test.ru", password_hash=hash_password("Str0ng!Pass1"), role="borrower"))
         db.commit()

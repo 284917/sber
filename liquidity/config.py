@@ -12,6 +12,8 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # --- Окружение ---
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me")
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "8"))
+# Блокировка входа после неверных паролей выключена, включается переменной LOGIN_LOCKOUT=1
+LOGIN_LOCKOUT = os.getenv("LOGIN_LOCKOUT", "0") == "1"
 ON_VERCEL = bool(os.getenv("VERCEL"))
 # Cookie только по HTTPS: на Vercel всегда HTTPS, локально и в тестах — HTTP
 SECURE_COOKIES = os.getenv("SECURE_COOKIES", "1" if ON_VERCEL else "0") == "1"

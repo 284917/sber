@@ -75,7 +75,6 @@
             <h2 class="card-title">Безопасность</h2>
             <ul class="check-list" style="margin: 0;">
                 <li>{{ ui.icon('lock-key') }}<span class="small">Пароль хранится только в виде хеша, сотрудники его не видят.</span></li>
-                <li>{{ ui.icon('warning-circle') }}<span class="small">После пяти неверных паролей вход блокируется на 15 минут.</span></li>
                 <li>{{ ui.icon('clock') }}<span class="small">Сессия завершается автоматически через {{ session_hours }} ч.</span></li>
             </ul>
             <a href="/logout" class="btn btn-secondary btn-block" style="margin-top: 16px;">{{ ui.icon('sign-out') }} Выйти из аккаунта</a>
